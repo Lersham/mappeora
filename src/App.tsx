@@ -10,6 +10,34 @@ import { NewMapDialog } from './features/home/NewMapDialog';
 import type { MapTemplate } from './types/map';
 import { useAutosave } from './hooks/useAutosave';
 import { useReadAloud } from './hooks/useReadAloud';
+import { embedMissingImages } from './services/embed';
+import { pictogramUrl } from './services/pictograms';
+import { illustrationUrl } from './services/illustrations';
+import type { ConceptMap } from './types/map';
+
+/** Saves into the map the symbols of older maps, so they work offline too. */
+async function embedOldImages(map: ConceptMap) {
+  const found = await embedMissingImages(map.nodes, (image) =>
+    image.kind === 'arasaac' ? pictogramUrl(image.ref) : image.kind === 'illustrazione' ? illustrationUrl(image.ref) : undefined,
+  );
+  if (found.size === 0) return;
+  // Not an edit by the child: keep it out of the undo history.
+  mapHistory().pause();
+  useMapStore.setState((s) =>
+    s.map?.id !== map.id
+      ? {}
+      : {
+          map: {
+            ...s.map,
+            nodes: s.map.nodes.map((n) => {
+              const f = found.get(n.id);
+              return f && n.image && !n.image.src && n.image.ref === f.ref ? { ...n, image: { ...n.image, src: f.src } } : n;
+            }),
+          },
+        },
+  );
+  mapHistory().resume();
+}
 
 /** Mirrors accessibility settings onto <html> so plain CSS can react to them. */
 function useApplySettings() {
@@ -37,6 +65,7 @@ export default function App() {
     if (!map) return;
     useMapStore.getState().load(map);
     mapHistory().clear();
+    void embedOldImages(map);
   };
 
   const create = async (title: string, template: MapTemplate) => {

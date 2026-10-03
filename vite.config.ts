@@ -43,6 +43,16 @@ export default defineConfig({
             },
           },
           {
+            // Fluent Emoji illustrations: previews in the picker (pinned version).
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/gh\/microsoft\/fluentui-emoji@/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'illustrations',
+              expiration: { maxEntries: 1000, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: /^https:\/\/api\.arasaac\.org\//,
             handler: 'NetworkFirst',
             options: {

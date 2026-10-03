@@ -1,9 +1,17 @@
 export type NodeShape = 'rettangolo' | 'ellisse' | 'nuvola';
 
 export interface NodeImage {
-  kind: 'emoji' | 'arasaac' | 'foto';
-  /** Emoji character, ARASAAC pictogram id or, for photos, a JPEG data URL. */
+  kind: 'emoji' | 'arasaac' | 'illustrazione' | 'foto';
+  /**
+   * Emoji character, ARASAAC pictogram id, Fluent Emoji asset path
+   * (see services/illustrations.ts) or, for photos, a JPEG data URL.
+   */
   ref: string;
+  /**
+   * The picture itself as a data URL, saved when it is chosen: it keeps
+   * showing offline and travels inside ".mappeora" files.
+   */
+  src?: string;
 }
 
 /** A short voice note recorded on a concept ("spiegalo con la tua voce"). */

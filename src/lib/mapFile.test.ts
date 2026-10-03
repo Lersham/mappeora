@@ -23,6 +23,16 @@ describe('mapFile', () => {
     expect(() => parseMapFile('{"format":"mappeora","version":99,"map":{}}')).toThrow(/più nuova/);
   });
 
+  it('keeps embedded pictures of symbols and illustrations, drops remote ones', () => {
+    const map = createMap('Test');
+    map.nodes[0].image = { kind: 'illustrazione', ref: 'Droplet/3D/droplet_3d', src: 'data:image/png;base64,AAAA' };
+    expect(parseMapFile(serializeMap(map)).nodes[0].image).toEqual(map.nodes[0].image);
+    map.nodes[0].image = { kind: 'arasaac', ref: '2248', src: 'https://evil.example/x.png' };
+    expect(parseMapFile(serializeMap(map)).nodes[0].image).toEqual({ kind: 'arasaac', ref: '2248' });
+    map.nodes[0].image = { kind: 'illustrazione', ref: '../../etc/passwd' };
+    expect(parseMapFile(serializeMap(map)).nodes[0].image).toBeUndefined();
+  });
+
   it('drops remote media, unknown fields and dangling links', () => {
     const file = JSON.stringify({
       format: 'mappeora',

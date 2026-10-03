@@ -37,12 +37,21 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' && Number
 const PHOTO_URL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 const AUDIO_URL = /^data:audio\/[a-z0-9.+-]+(;codecs=[a-z0-9.,"-]+)?;base64,[A-Za-z0-9+/=]+$/i;
 
+/** Fluent Emoji asset path, e.g. "Droplet/3D/droplet_3d". */
+const ILLUSTRATION_PATH = /^[\p{L}\p{N} _.,'’&!()#*:-]+(\/[\p{L}\p{N} _.,'’&!()#*:-]+){2,3}$/u;
+
 function readImage(v: unknown): MapNode['image'] {
   if (!isObj(v)) return undefined;
   const ref = str(v.ref, 10_000_000);
   if (!ref) return undefined;
+  const src = str(v.src, 10_000_000);
+  const withSrc = <T extends NonNullable<MapNode['image']>>(image: T): T =>
+    src && PHOTO_URL.test(src) ? { ...image, src } : image;
   if (v.kind === 'emoji' && ref.length <= 16) return { kind: 'emoji', ref };
-  if (v.kind === 'arasaac' && /^\d{1,7}$/.test(ref)) return { kind: 'arasaac', ref };
+  if (v.kind === 'arasaac' && /^\d{1,7}$/.test(ref)) return withSrc({ kind: 'arasaac', ref });
+  if (v.kind === 'illustrazione' && ref.length <= 200 && !ref.includes('..') && ILLUSTRATION_PATH.test(ref)) {
+    return withSrc({ kind: 'illustrazione', ref });
+  }
   if (v.kind === 'foto' && PHOTO_URL.test(ref)) return { kind: 'foto', ref };
   return undefined;
 }

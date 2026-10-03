@@ -35,7 +35,7 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 
 | Funzione | Dove |
 |---|---|
-| 🖼️ Pittogrammi ARASAAC (ricerca in italiano, anche a voce) ed emoji nei nodi, con colore e forma | `src/features/editor/NodeStyleDialog.tsx`, `src/services/pictograms.ts` |
+| 🖼️ Immagini nei nodi, con colore e forma. Tre schede: **✨ Illustrazioni** (Fluent Emoji di Microsoft, licenza MIT: circa 1.600 immagini cercabili in italiano **sul dispositivo** grazie ai nomi e alle parole chiave Unicode CLDR, es. «Vesuvio» → 🌋), **🧩 Simboli CAA** (ARASAAC, per chi li usa già a scuola) e **📷 Foto**. La ricerca ignora articoli e preposizioni, cerca la frase e poi le singole parole e mette prima i risultati esatti. L'immagine scelta viene **salvata dentro la mappa**, quindi funziona offline e nel file `.mappeora`; le mappe vecchie la salvano alla prima apertura con internet | `src/features/editor/NodeStyleDialog.tsx`, `src/services/illustrations.ts`, `src/services/pictograms.ts`, `src/lib/searchText.ts`, `src/services/embed.ts` |
 | 🧩 Modelli pronti: Libera, 5 W, Causa ed effetto, Linea del tempo (orizzontale), Confronto | `src/lib/templates.ts`, `src/features/home/NewMapDialog.tsx` |
 | 🧠 Ripasso "Un passo alla volta" e "Indovina" (concetto nascosto, poi «Scopri») | `src/store/reviewStore.ts`, `src/features/editor/ReviewBar.tsx` |
 | 📤 Esporta PDF A4/A3 o PNG, con **versione per la verifica** (bianco e nero, senza decorazioni) | `src/services/export.ts`, `src/features/editor/ExportDialog.tsx` |
@@ -71,6 +71,10 @@ Limite: l'OCR sul dispositivo legge bene il testo stampato, male la scrittura a 
 | 🎙️ **Spiega a voce**: si registra la spiegazione di un concetto con parole proprie (max 2 minuti) e si riascolta dal nodo (🎧) | `src/features/editor/AudioNoteDialog.tsx`, `src/services/audioNote.ts` |
 | ➖ **Nodi comprimibili**: il pulsante sotto un concetto nasconde i concetti che dipendono da lui (resta il numero, es. «+3»). Lettura, ripasso, «Riordina» ed esportazione lavorano su ciò che si vede | `src/lib/collapse.ts` |
 | 🖨️ **Stampa A4/A3 su più fogli**: 1, 2 o 4 fogli con orientamento scelto in automatico, titolo, data e «pagina 1 di 2», una striscia ripetuta tra un foglio e l'altro per unirli. Sul web c'è anche «Stampa» diretta | `src/lib/pagePlan.ts`, `src/services/export.ts` |
+
+### Indice delle illustrazioni
+
+`src/data/illustrations.json` è generato da `node scripts/build-illustrations.mjs`, che scarica i metadati di Fluent Emoji (versione fissata da un commit) e le parole chiave italiane di Unicode CLDR. Il file generato è nel repo: la build dell'app non ha bisogno di rete. Se si cambia versione di Fluent, va aggiornato anche `FLUENT_COMMIT` in `src/services/illustrations.ts` (un test controlla che coincidano).
 
 ## Architettura
 

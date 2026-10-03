@@ -6,6 +6,7 @@ import { useReading } from '../../store/readingStore';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { reviewVisibility, useReview } from '../../store/reviewStore';
 import { pictogramUrl } from '../../services/pictograms';
+import { illustrationUrl } from '../../services/illustrations';
 import { formatDuration, playNote, stopPlayback } from '../../services/audioNote';
 
 export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'audio' | 'collapsed'> & {
@@ -42,7 +43,12 @@ function NodeImageView({ image }: { image: NonNullable<ConceptNodeData['image']>
     );
   }
   if (image.kind === 'arasaac') {
-    return <img className="concept-picto" src={pictogramUrl(image.ref)} alt="" crossOrigin="anonymous" draggable={false} />;
+    return <img className="concept-picto" src={image.src ?? pictogramUrl(image.ref)} alt="" crossOrigin="anonymous" draggable={false} />;
+  }
+  if (image.kind === 'illustrazione') {
+    return (
+      <img className="concept-illustration" src={image.src ?? illustrationUrl(image.ref)} alt="" crossOrigin="anonymous" draggable={false} />
+    );
   }
   return <img className="concept-photo" src={image.ref} alt="" draggable={false} />;
 }
