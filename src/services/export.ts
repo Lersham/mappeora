@@ -1,5 +1,5 @@
 import { toPng } from 'html-to-image';
-import { getNodesBounds, getViewportForBounds, type Node } from '@xyflow/react';
+import { getNodesBounds, type Node } from '@xyflow/react';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { isNative } from './platform';
@@ -8,7 +8,9 @@ import { MAP_FILE_EXTENSION, serializeMap, textToDataUrl } from '../lib/mapFile'
 import { planPages, type PageCount, type Paper } from '../lib/pagePlan';
 import type { ConceptMap } from '../types/map';
 
-const PADDING = 0.1;
+/** Margin around the map in the image, in CSS px (a fixed amount: a
+ * percentage would leave huge empty bands around a long map). */
+const PADDING = 32;
 
 export type ExportFormat = 'png' | 'pdf';
 
@@ -64,9 +66,14 @@ async function renderMap(nodes: Node[], background: string, simple: boolean): Pr
   const bounds = getNodesBounds(shown);
   // Small minimums only: a narrow "scaletta" must stay narrow to fill a
   // portrait sheet instead of floating in a wide empty image.
-  const width = Math.max(320, Math.ceil(bounds.width * (1 + PADDING * 2)));
-  const height = Math.max(240, Math.ceil(bounds.height * (1 + PADDING * 2)));
-  const viewport = getViewportForBounds(bounds, width, height, 0.2, 2, PADDING);
+  const width = Math.max(320, Math.ceil(bounds.width + PADDING * 2));
+  const height = Math.max(240, Math.ceil(bounds.height + PADDING * 2));
+  // Real size (zoom 1), centred: the PDF scales it to the sheet.
+  const viewport = {
+    zoom: 1,
+    x: (width - bounds.width) / 2 - bounds.x,
+    y: (height - bounds.height) / 2 - bounds.y,
+  };
   const flow = document.querySelector<HTMLElement>('.react-flow');
   const el = flow?.querySelector<HTMLElement>('.react-flow__viewport');
   if (!flow || !el) throw new Error('viewport-not-found');
@@ -113,7 +120,8 @@ function crop(img: HTMLImageElement, cssWidth: number, tile: { x: number; y: num
   canvas.width = Math.round(tile.w * ratio);
   canvas.height = Math.round(tile.h * ratio);
   canvas.getContext('2d')!.drawImage(img, tile.x * ratio, tile.y * ratio, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/png');
+  // JPEG: a long map as PNG would make a PDF of tens of megabytes.
+  return canvas.toDataURL('image/jpeg', 0.88);
 }
 
 async function buildPdf(img: RenderedMap, opts: ExportOptions) {
@@ -122,12 +130,12 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const header = 12;
   const footer = opts.usesPictograms ? 8 : 4;
   const plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks);
-  const doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper });
+  const doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper, compress: true });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const boxW = pageW - margin * 2;
   const whole = plan.tiles.length === 1;
-  const full = whole ? null : await loadImage(img.dataUrl);
+  const full = await loadImage(img.dataUrl);
   const date = new Date().toLocaleDateString('it-IT');
 
   for (let page = 0; page < plan.pageCount; page++) {
@@ -146,7 +154,7 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
       const h = tile.h * plan.scale;
       const x = margin + tile.dx;
       const y = margin + header + tile.dy;
-      doc.addImage(full ? crop(full, img.width, tile) : img.dataUrl, 'PNG', x, y, w, h);
+      doc.addImage(crop(full, img.width, tile), 'JPEG', x, y, w, h);
       if (!whole) {
         doc.setDrawColor(180);
         doc.rect(x, y, w, h); // shows the pieces, in reading order
