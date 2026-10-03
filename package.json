@@ -12,7 +12,9 @@
     "cap:sync": "npm run build && cap sync",
     "android": "npm run cap:sync && cap open android",
     "ios": "npm run cap:sync && cap open ios",
-    "android:apk": "npm run cap:sync && cd android && ./gradlew assembleDebug"
+    "android:apk": "npm run cap:sync && cd android && ANDROID_HOME=${ANDROID_HOME:-/opt/android-sdk} ./gradlew assembleDebug",
+    "setup:android": "bash scripts/setup-android-sdk.sh",
+    "setup:webapp-testing": "pip install playwright==1.56.0"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "^8.1.1",

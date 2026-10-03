@@ -13,7 +13,8 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 - **Web / PWA**: https://mappeora.vercel.app. Si aggiorna da solo a ogni push sul branch. Dal browser del tablet: menu → "Aggiungi a schermata Home".
 - **Android**: APK di debug da installare a mano (sul dispositivo va permessa l'installazione da "origini sconosciute"). Per crearlo serve l'Android SDK con JDK 21:
   ```bash
-  npm run android:apk   # → android/app/build/outputs/apk/debug/app-debug.apk
+  npm run setup:android  # una volta per macchina/sessione: SDK in /opt/android-sdk (~650 MB)
+  npm run android:apk    # → android/app/build/outputs/apk/debug/app-debug.apk
   ```
 - **iOS**: serve un Mac con Xcode (`npm run ios`).
 
@@ -150,7 +151,11 @@ In `.claude/skills/` ci sono skill installate con `npx skills add … -a claude-
 | `capacitor-app-development` | capawesome-team/skills | Icone e splash screen, bordi dello schermo (safe area, edge-to-edge), SPM su iOS, risoluzione problemi Android/iOS |
 | `webapp-testing` | anthropics/skills | Test dell'app nel browser con Playwright (Python) |
 
-`webapp-testing` usa Playwright per Python, che nelle sessioni cloud va reinstallato: `pip install playwright==1.56.0` (versione compatibile con il Chromium preinstallato). Per aggiornare le skill: `npx skills update`.
+`webapp-testing` usa Playwright per Python, che nelle sessioni cloud va reinstallato: `npm run setup:webapp-testing` (Playwright 1.56, compatibile con il Chromium preinstallato).
+
+### Sessioni cloud di Claude Code
+
+`.claude/hooks/session-start.sh` (registrato in `.claude/settings.json`) esegue `npm install` all'avvio di ogni sessione cloud, così typecheck, test e server di sviluppo funzionano subito. Su un computer locale non fa nulla. L'Android SDK e Playwright per Python **non** vengono installati in automatico (sono pesanti): si installano solo quando servono con `npm run setup:android` e `npm run setup:webapp-testing`. Per aggiornare le skill: `npx skills update`.
 
 ## Prossimi passi
 
