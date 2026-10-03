@@ -11,7 +11,8 @@
     "test": "vitest run",
     "cap:sync": "npm run build && cap sync",
     "android": "npm run cap:sync && cap open android",
-    "ios": "npm run cap:sync && cap open ios"
+    "ios": "npm run cap:sync && cap open ios",
+    "android:apk": "npm run cap:sync && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "^8.1.1",

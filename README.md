@@ -8,6 +8,15 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 - **Web / PWA**, installabile dal browser e utilizzabile offline;
 - **Android** e **iOS**, come app native tramite [Capacitor](https://capacitorjs.com).
 
+## Provare l'app
+
+- **Web / PWA**: https://mappeora.vercel.app. Si aggiorna da solo a ogni push sul branch. Dal browser del tablet: menu → "Aggiungi a schermata Home".
+- **Android**: APK di debug da installare a mano (sul dispositivo va permessa l'installazione da "origini sconosciute"). Per crearlo serve l'Android SDK con JDK 21:
+  ```bash
+  npm run android:apk   # → android/app/build/outputs/apk/debug/app-debug.apk
+  ```
+- **iOS**: serve un Mac con Xcode (`npm run ios`).
+
 ## Fase 1: MVP
 
 | Funzione | Dove |
@@ -132,13 +141,17 @@ Dopo ogni modifica al codice web: `npm run cap:sync`.
 - [ ] Android/iOS: salvare in locale i pittogrammi usati (nelle app non c'è il service worker, quindi senza internet non si caricano)
 - [ ] Note di approfondimento nei nodi, nascoste nella versione per la verifica
 
-**Fase 3b: AI e cloud**
-- [ ] Dal testo alla mappa (LLM chiamato da una Edge Function: chiavi API mai nel client), partendo anche dal testo letto con la fase 3a
-- [ ] Scrittura a mano (appunti sul quaderno) con un modello AI che legge le immagini
+**Fase 3b: AI (rinviata, dopo l'MVP)**
+- L'AI che crea l'intera mappa **per ora non serve**.
+- Funzioni AI avanzate da progettare in seguito, con un modello economico: **Gemini Flash** (la versione indicata è "3.8": da verificare quando si implementa) oppure il piano token **Alibaba Cloud** già disponibile.
+- Vincolo di costo: **tetto di 1 $ al giorno**, applicato sul server (Edge Function) con un contatore giornaliero. Raggiunto il tetto, le funzioni AI si disattivano fino al giorno dopo e l'app continua a funzionare senza.
+- La chiave API va solo sul server, mai nell'app. Per i minori servono consenso dei genitori e attivazione da parte di un adulto.
+- [ ] Scrittura a mano (appunti sul quaderno)
 - [ ] Account docente/genitore e sincronizzazione (Supabase); consenso dei genitori per gli under 14
 - [ ] TTS cloud per voci più naturali ed esportazione MP3
 
 **Pubblicazione sugli store**
 - [ ] Icone e splash screen (`@capacitor/assets`)
+- [ ] Build di release firmata (AAB per Google Play: scarica solo le librerie del processore del dispositivo, molto più leggera dell'APK di debug da 64 MB)
 - [ ] Apple, categoria Kids: niente analytics di terze parti, parental gate per link esterni
 - [ ] Google Play, programma Families: dichiarazione del pubblico di destinazione e informativa privacy
