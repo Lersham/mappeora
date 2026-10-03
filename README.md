@@ -170,32 +170,12 @@ In `.claude/skills/` ci sono skill installate con `npx skills add … -a claude-
 
 ## Sviluppi da fare
 
-**Sincronizzazione e condivisione** (prossimo grande passo; serve un server, es. Supabase)
-- [ ] Account facoltativo e sincronizzazione delle mappe tra dispositivi (casa ↔ scuola)
-- [ ] Condivisione con la classe e con l'insegnante; consenso dei genitori per gli under 14
-- [ ] Base per le **licenze scuola** (vendute direttamente agli istituti: su iOS è consentito senza acquisto in-app, regola 3.1.3(c)) e per i crediti AI della fase 3b. Ai privati, su iOS, le funzioni a pagamento vanno vendute con l'acquisto in-app (commissione 15% per i piccoli sviluppatori)
+L'elenco degli sviluppi, delle idee e delle verifiche da fare è nelle **[issue di GitHub](https://github.com/Lersham/mappeora/issues)**. Le etichette aiutano a filtrare:
 
-**iOS** (in pausa: per ora si lavora su web e Android)
-- [ ] Prima compilazione: il codice iOS non è mai stato compilato (manca un Mac). Si può fare senza Mac con **GitHub Actions** (macOS gratuito per i repo pubblici), firmando con i certificati creati dal sito Apple e salvati nei *secrets* di GitHub, mai nel repo
-- [ ] Apple Developer Program: 99 $/anno; prove su iPhone/iPad con TestFlight
-- [ ] Verificare su iPhone: OCR con Vision, dettatura, registrazione delle spiegazioni a voce, «Condividi» del file `.mappeora`
-
-**Rifiniture**
-- [ ] Android: «Apri con Mappeora» per i file `.mappeora` ricevuti in chat o da Drive (intent filter)
-- [ ] Android/iOS: salvare in locale i pittogrammi usati (nelle app non c'è il service worker, quindi senza internet non si caricano)
-- [ ] Note di approfondimento nei nodi, nascoste nella versione per la verifica
-
-**Fase 3b: AI (rinviata, dopo l'MVP)**
-- L'AI che crea l'intera mappa **per ora non serve**.
-- Funzioni AI avanzate da progettare in seguito, con un modello economico: **Gemini Flash** (la versione indicata è "3.8": da verificare quando si implementa) oppure il piano token **Alibaba Cloud** già disponibile.
-- Vincolo di costo: **tetto di 1 $ al giorno**, applicato sul server (Edge Function) con un contatore giornaliero. Raggiunto il tetto, le funzioni AI si disattivano fino al giorno dopo e l'app continua a funzionare senza.
-- La chiave API va solo sul server, mai nell'app. Per i minori servono consenso dei genitori e attivazione da parte di un adulto.
-- [ ] Scrittura a mano (appunti sul quaderno)
-- [ ] TTS cloud per voci più naturali ed esportazione MP3
-
-**Pubblicazione sugli store**
-- [ ] Icone e splash screen (`@capacitor/assets`)
-- [ ] Build di release firmata (AAB per Google Play: scarica solo le librerie del processore del dispositivo, molto più leggera dell'APK di debug da 64 MB) con un keystore di release tenuto fuori dal repo
-- [ ] Google Play: account 25 $ una tantum; per gli account personali nuovi, test chiuso con almeno 12 tester per 14 giorni
-- [ ] Apple, categoria Kids: niente analytics di terze parti, parental gate per link esterni
-- [ ] Google Play, programma Families: dichiarazione del pubblico di destinazione e informativa privacy
+| Etichetta | Significato |
+|---|---|
+| `idea` | Possibilità da valutare, non ancora decisa (es. sincronizzazione con Google Drive) |
+| `rinviata` | Decisa ma rimandata a dopo l'MVP (es. funzioni AI con tetto di 1 $ al giorno) |
+| `da verificare` | Funzioni da provare su dispositivi o browser reali |
+| `sincronizzazione`, `monetizzazione`, `editor`, `voce`, `ai` | Area dell'app |
+| `android`, `ios`, `pubblicazione` | Piattaforme e store (iOS è in pausa) |
