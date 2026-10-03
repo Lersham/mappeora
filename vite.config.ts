@@ -33,6 +33,16 @@ export default defineConfig({
             },
           },
           {
+            // OCR engine and Italian model (Tesseract.js), downloaded on first use.
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/(?:tesseract\.js|tesseract\.js-core|@tesseract\.js-data)@?/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'ocr-engine',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: /^https:\/\/api\.arasaac\.org\//,
             handler: 'NetworkFirst',
             options: {

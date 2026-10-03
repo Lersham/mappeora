@@ -17,6 +17,7 @@ import { NodeStyleDialog } from './NodeStyleDialog';
 import { LinkWordDialog } from './LinkWordDialog';
 import { ExportDialog } from './ExportDialog';
 import { ReviewBar } from './ReviewBar';
+import { PhotoTextDialog } from '../ocr/PhotoTextDialog';
 import { BigButton } from '../../components/BigButton';
 import { Dialog } from '../../components/Dialog';
 import { DictationOverlay } from '../../components/DictationOverlay';
@@ -30,7 +31,13 @@ import { parseVoiceCommand } from '../../lib/voiceCommands';
 
 const nodeTypes = { concept: ConceptNode };
 
-type DialogState = { kind: 'style' } | { kind: 'link'; edgeId: string } | { kind: 'export' } | { kind: 'review' } | null;
+type DialogState =
+  | { kind: 'style' }
+  | { kind: 'link'; edgeId: string }
+  | { kind: 'export' }
+  | { kind: 'review' }
+  | { kind: 'photo' }
+  | null;
 
 interface Props {
   onBack(): void;
@@ -106,7 +113,10 @@ function Editor({ onBack, onOpenSettings }: Props) {
   const tidy = async () => {
     setBusy(true);
     try {
-      actions.applyPositions(await autoLayout(map.nodes, map.edges, sizes, horizontal ? 'RIGHT' : 'DOWN'));
+      // Read fresh state: tidy() also runs right after adding concepts.
+      const { map: current, sizes: measured } = useMapStore.getState();
+      if (!current) return;
+      actions.applyPositions(await autoLayout(current.nodes, current.edges, measured, horizontal ? 'RIGHT' : 'DOWN'));
       // Give React Flow a frame to render the new positions before fitting.
       setTimeout(() => void fitView({ padding: 0.2, duration: 400 }), 50);
     } finally {
@@ -122,6 +132,15 @@ function Editor({ onBack, onOpenSettings }: Props) {
     else if (command.type === 'tidy') await tidy();
     else if (command.type === 'undo') mapHistory().undo();
     else if (command.type === 'redo') mapHistory().redo();
+  };
+
+  const addFromPhoto = (concepts: string[]) => {
+    const parent = parentForNew();
+    for (const label of concepts) actions.addChild(parent, label);
+    actions.select(parent);
+    setDialog(null);
+    // Let React Flow measure the new nodes, then lay the map out again.
+    setTimeout(() => void tidy(), 150);
   };
 
   const doExport = async (format: ExportFormat, simple: boolean) => {
@@ -231,6 +250,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
           ) : (
             <BigButton icon="🔊" label="Leggi" onClick={reader.readMap} />
           )}
+          <BigButton icon="📷" label="Dal libro" onClick={() => setDialog({ kind: 'photo' })} />
           <BigButton icon="🖼️" label="Immagine" onClick={() => setDialog({ kind: 'style' })} disabled={!selectedNode} />
           <BigButton icon="✨" label="Riordina" onClick={tidy} disabled={busy} />
           <BigButton icon="🧠" label="Ripasso" onClick={() => setDialog({ kind: 'review' })} />
@@ -255,6 +275,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
           return edge ? <LinkWordDialog edge={edge} onClose={() => setDialog(null)} /> : null;
         })()}
       {dialog?.kind === 'export' && <ExportDialog busy={busy} onExport={doExport} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
     </div>
   );

@@ -32,6 +32,25 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 | 🔗 Parole di collegamento: si tocca la freccia e si sceglie tra i suggerimenti, si scrive o si detta | `src/features/editor/LinkWordDialog.tsx` |
 | 🗣️ Comandi vocali: «leggi la mappa», «riordina», «annulla», «rifai», «nuovo concetto …» | `src/lib/voiceCommands.ts` |
 
+## Fase 3a: dal libro alla mappa (OCR sul dispositivo)
+
+| Funzione | Dove |
+|---|---|
+| 📷 Si fotografa una pagina (o si sceglie una foto) e il testo viene letto **sul dispositivo**: la foto non esce mai dal telefono | `src/features/ocr/PhotoTextDialog.tsx`, `src/services/ocr` |
+| 🔊 Il testo si legge ad alta voce, frase per frase, con la parola evidenziata | `src/hooks/useReadLongText.ts` |
+| 👆 Si toccano le parole importanti: quelle vicine diventano un unico concetto («luce» + «del» + «sole» → «Luce del sole») e si aggiungono alla mappa | `src/lib/ocrText.ts` |
+| ✏️ Il testo si può correggere a mano prima di scegliere le parole | |
+
+| | Motore OCR |
+|---|---|
+| Web / PWA | Tesseract.js (WebAssembly). Al primo uso scarica da jsDelivr il motore e il modello italiano (circa 6 MB in tutto), poi resta in cache |
+| Android | Google ML Kit (`@capacitor-mlkit/text-recognition`), modello incluso nell'app |
+| iOS | Apple Vision, con un plugin nostro: `ios/App/App/OcrPlugin.swift`, registrato in `MainViewController.swift` |
+
+Il plugin ML Kit su iOS funziona solo con CocoaPods, mentre il progetto usa Swift Package Manager. Per questo `capacitor.config.ts` lo esclude da iOS con `ios.includePlugins`: **quando si aggiunge un nuovo plugin nativo va aggiunto anche lì**.
+
+Limite: l'OCR sul dispositivo legge bene il testo stampato, male la scrittura a mano. Per quella servirà l'AI (fase 3b).
+
 ## Architettura
 
 ```
@@ -59,6 +78,8 @@ L'implementazione viene scelta all'avvio con `Capacitor.isNativePlatform()`, men
 | Voce → testo | `SpeechRecognition` (Chrome, Edge, Safari; **non Firefox**) | `@capgo/capacitor-speech-recognition`, **sul dispositivo** quando possibile |
 | Archivio | IndexedDB (Dexie) con `navigator.storage.persist()` | SQLite (`@capacitor-community/sqlite`) |
 | Esporta | download | `Filesystem` + `Share` |
+| Foto | `<input type="file" capture>` | `@capacitor/camera` |
+| OCR | Tesseract.js | ML Kit (Android), Vision (iOS) |
 
 Scelte importanti:
 
@@ -102,8 +123,8 @@ Dopo ogni modifica al codice web: `npm run cap:sync`.
 
 ### Permessi già configurati
 
-- **Android** (`android/app/src/main/AndroidManifest.xml`): `RECORD_AUDIO` e `<queries>` per i servizi di riconoscimento e sintesi vocale (Android 11+).
-- **iOS** (`ios/App/App/Info.plist`): `NSMicrophoneUsageDescription` e `NSSpeechRecognitionUsageDescription` con testi in italiano; lingua di sviluppo `it`.
+- **Android** (`android/app/src/main/AndroidManifest.xml`): `RECORD_AUDIO` e `<queries>` per i servizi di riconoscimento e sintesi vocale (Android 11+). La fotocamera non richiede permessi (usa il selettore di sistema).
+- **iOS** (`ios/App/App/Info.plist`): microfono, riconoscimento vocale, fotocamera e libreria foto, con testi in italiano; lingua di sviluppo `it`.
 
 ## Prossimi passi
 
@@ -111,9 +132,9 @@ Dopo ogni modifica al codice web: `npm run cap:sync`.
 - [ ] Android/iOS: salvare in locale i pittogrammi usati (nelle app non c'è il service worker, quindi senza internet non si caricano)
 - [ ] Note di approfondimento nei nodi, nascoste nella versione per la verifica
 
-**Fase 3: AI e cloud**
-- [ ] Dal testo alla mappa (LLM chiamato da una Edge Function: chiavi API mai nel client)
-- [ ] Foto della pagina → OCR → mappa
+**Fase 3b: AI e cloud**
+- [ ] Dal testo alla mappa (LLM chiamato da una Edge Function: chiavi API mai nel client), partendo anche dal testo letto con la fase 3a
+- [ ] Scrittura a mano (appunti sul quaderno) con un modello AI che legge le immagini
 - [ ] Account docente/genitore e sincronizzazione (Supabase); consenso dei genitori per gli under 14
 - [ ] TTS cloud per voci più naturali ed esportazione MP3
 

@@ -40,7 +40,9 @@
 [data-uppercase='true'] .map-title,
 [data-uppercase='true'] .sample,
 [data-uppercase='true'] .dictation-text,
-[data-uppercase='true'] .react-flow__edge-text {
+[data-uppercase='true'] .react-flow__edge-text,
+[data-uppercase='true'] .ocr-text,
+[data-uppercase='true'] .chip {
   text-transform: uppercase;
 }
 
