@@ -1,4 +1,5 @@
 import { DICTATION_ERRORS, type DictationError } from '../hooks/useDictation';
+import { VOICE_COMMAND_HINTS } from '../lib/voiceCommands';
 
 interface Props {
   listening: boolean;
@@ -20,6 +21,9 @@ export function DictationOverlay({ listening, partial, error, onStop, onClose }:
             </div>
             <p className="dictation-hint">Ti ascolto… parla pure!</p>
             <p className="dictation-text">{partial || '…'}</p>
+            <p className="dictation-commands">
+              Puoi anche dire: {VOICE_COMMAND_HINTS.map((h) => `«${h}»`).join(', ')}
+            </p>
             <button type="button" className="big-button primary" onClick={onStop}>
               <span className="big-button-icon" aria-hidden>
                 ✅

@@ -207,7 +207,8 @@ textarea {
 }
 .react-flow__edge-text {
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 1rem;
+  font-weight: 600;
 }
 .react-flow__handle {
   width: 16px;
@@ -337,6 +338,11 @@ textarea {
   color: var(--muted);
   margin: 0;
 }
+.dictation-commands {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
 .dictation-text {
   font-size: 1.4rem;
   font-weight: 600;
@@ -418,4 +424,252 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+
+/* ---------- Dialogs (phase 2) ---------- */
+
+.dialog-title {
+  margin: 0 0 16px;
+  font-size: 1.4rem;
+}
+.overlay-card > .dialog-actions {
+  /* Keep "Crea" / "Fatto" reachable in long dialogs on small screens. */
+  position: sticky;
+  bottom: -24px;
+  margin: 16px -24px -24px;
+  padding: 12px 24px 24px;
+  background: var(--surface);
+}
+.overlay-card fieldset {
+  border: none;
+  padding: 0;
+  margin: 16px 0 0;
+}
+.overlay-card legend,
+.setting-label {
+  font-weight: 600;
+  margin: 16px 0 8px;
+}
+.muted {
+  color: var(--muted);
+}
+.field-error {
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+.text-field {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  font-size: 1.05rem;
+}
+.search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.mic-button {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+.mic-button.is-listening {
+  border-color: var(--danger);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.picto-grid,
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.emoji-grid {
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+}
+.picto-tile,
+.emoji-tile {
+  aspect-ratio: 1;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: #ffffff;
+  cursor: pointer;
+  padding: 4px;
+}
+.picto-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.emoji-tile {
+  font-size: 1.8rem;
+  background: var(--surface);
+}
+.picto-tile:hover,
+.emoji-tile:hover {
+  border-color: var(--primary);
+}
+.credit {
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: normal;
+  word-spacing: normal;
+  line-height: 1.3;
+}
+.color-swatch {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.color-swatch[aria-pressed='true'] {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.chip {
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  cursor: pointer;
+}
+.chip:hover {
+  border-color: var(--primary);
+}
+.export-simple-toggle {
+  margin-top: 16px;
+}
+
+/* New map: template picker */
+.new-map-dialog {
+  width: min(640px, 100%);
+}
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+.template-card {
+  display: flex;
+  align-items: flex-start;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.template-card[aria-pressed='true'] {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+.template-pick,
+.review-option {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.template-icon {
+  grid-row: span 2;
+  font-size: 2rem;
+}
+.template-name {
+  font-weight: 600;
+}
+.template-desc {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.review-option {
+  width: 100%;
+  margin-bottom: 10px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.review-option:hover {
+  border-color: var(--primary);
+}
+
+/* ---------- Node images ---------- */
+
+.concept-picto {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: #ffffff;
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+/* ---------- Review mode ---------- */
+
+.review-bar {
+  align-items: center;
+}
+.review-bar .big-button {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.review-progress {
+  flex: none;
+  min-width: 64px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+.concept-node.review-current {
+  box-shadow: 0 0 0 6px var(--highlight);
+}
+.concept-node.review-mystery {
+  background: var(--surface) !important;
+  border-style: dashed;
+  border-color: var(--primary);
+}
+.concept-mystery {
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 4px 24px;
+  color: var(--primary);
+}
+
+/* ---------- Export: "versione per la verifica" ---------- */
+
+.export-simple .concept-node {
+  background: #ffffff !important;
+  border-color: #1f2430;
+  box-shadow: none;
+}
+.export-simple .react-flow__edge-path {
+  stroke: #1f2430;
+}
+.export-simple .react-flow__edge-textbg {
+  fill: #ffffff;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Background,
   Controls,
@@ -9,18 +9,28 @@ import {
   type EdgeChange,
   type NodeChange,
 } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import { beginDrag, endDrag, mapHistory, useMapStore } from '../../store/mapStore';
 import { useStore } from 'zustand';
+import { beginDrag, endDrag, mapHistory, useMapStore } from '../../store/mapStore';
+import { reviewVisibility, useReview } from '../../store/reviewStore';
 import { ConceptNode, type ConceptFlowNode } from './ConceptNode';
+import { NodeStyleDialog } from './NodeStyleDialog';
+import { LinkWordDialog } from './LinkWordDialog';
+import { ExportDialog } from './ExportDialog';
+import { ReviewBar } from './ReviewBar';
 import { BigButton } from '../../components/BigButton';
+import { Dialog } from '../../components/Dialog';
 import { DictationOverlay } from '../../components/DictationOverlay';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { useDictation } from '../../hooks/useDictation';
 import { autoLayout } from '../../services/layout';
-import { renderMapPng, shareImage } from '../../services/export';
+import { exportMap, type ExportFormat } from '../../services/export';
+import { readingOrder } from '../../lib/readingOrder';
+import { templateInfo } from '../../lib/templates';
+import { parseVoiceCommand } from '../../lib/voiceCommands';
 
 const nodeTypes = { concept: ConceptNode };
+
+type DialogState = { kind: 'style' } | { kind: 'link'; edgeId: string } | { kind: 'export' } | { kind: 'review' } | null;
 
 interface Props {
   onBack(): void;
@@ -34,10 +44,14 @@ function Editor({ onBack, onOpenSettings }: Props) {
   const actions = useMapStore.getState();
   const canUndo = useStore(useMapStore.temporal, (t) => t.pastStates.length > 0);
   const canRedo = useStore(useMapStore.temporal, (t) => t.futureStates.length > 0);
-  const { fitView, getNodes } = useReactFlow();
+  const review = useReview();
+  const { fitView, getNodes, setCenter, getZoom } = useReactFlow();
   const reader = useReadAloud();
   const dictation = useDictation();
   const [busy, setBusy] = useState(false);
+  const [dialog, setDialog] = useState<DialogState>(null);
+  const horizontal = templateInfo(map.template).direction === 'RIGHT';
+  const selectedNode = map.nodes.find((n) => n.id === selectedId);
 
   // The store holds our document model; React Flow nodes are derived from it.
   const nodes = useMemo<ConceptFlowNode[]>(
@@ -46,11 +60,12 @@ function Editor({ onBack, onOpenSettings }: Props) {
         id: n.id,
         type: 'concept',
         position: n.position,
-        selected: n.id === selectedId,
+        selected: !review.active && n.id === selectedId,
+        hidden: reviewVisibility(review, n.id) === 'hidden',
         measured: sizes[n.id],
-        data: { label: n.label, color: n.color, shape: n.shape, image: n.image },
+        data: { label: n.label, color: n.color, shape: n.shape, image: n.image, horizontal },
       })),
-    [map.nodes, selectedId, sizes],
+    [map.nodes, selectedId, sizes, review, horizontal],
   );
   const edges = useMemo<Edge[]>(
     () =>
@@ -61,6 +76,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
         label: e.label,
         labelBgPadding: [8, 4],
         labelBgBorderRadius: 6,
+        interactionWidth: 32, // easier to tap with a finger
         className: 'concept-edge',
       })),
     [map.edges],
@@ -85,19 +101,12 @@ function Editor({ onBack, onOpenSettings }: Props) {
     if (removed.length) useMapStore.getState().removeEdges(removed);
   }, []);
 
-  const addConcept = () => {
-    actions.addChild(selectedId ?? map.nodes[0]?.id ?? null);
-  };
-
-  const dictate = async () => {
-    const text = await dictation.start();
-    if (text) actions.addChild(selectedId ?? map.nodes[0]?.id ?? null, text);
-  };
+  const parentForNew = () => selectedId ?? map.nodes[0]?.id ?? null;
 
   const tidy = async () => {
     setBusy(true);
     try {
-      actions.applyPositions(await autoLayout(map.nodes, map.edges, sizes));
+      actions.applyPositions(await autoLayout(map.nodes, map.edges, sizes, horizontal ? 'RIGHT' : 'DOWN'));
       // Give React Flow a frame to render the new positions before fitting.
       setTimeout(() => void fitView({ padding: 0.2, duration: 400 }), 50);
     } finally {
@@ -105,19 +114,63 @@ function Editor({ onBack, onOpenSettings }: Props) {
     }
   };
 
-  const exportPng = async () => {
+  const dictate = async () => {
+    const command = parseVoiceCommand(await dictation.start());
+    if (!command) return;
+    if (command.type === 'add') actions.addChild(parentForNew(), command.label);
+    else if (command.type === 'read') reader.readMap();
+    else if (command.type === 'tidy') await tidy();
+    else if (command.type === 'undo') mapHistory().undo();
+    else if (command.type === 'redo') mapHistory().redo();
+  };
+
+  const doExport = async (format: ExportFormat, simple: boolean) => {
     setBusy(true);
     try {
       const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff';
-      await shareImage(await renderMapPng(getNodes(), bg), map.title);
+      await exportMap(getNodes(), bg, {
+        format,
+        simple,
+        title: map.title,
+        usesPictograms: map.nodes.some((n) => n.image?.kind === 'arasaac'),
+      });
+      setDialog(null);
     } finally {
       setBusy(false);
     }
   };
 
-  const remove = () => {
-    if (selectedId) actions.removeNodes([selectedId]);
+  const startReview = (quiz: boolean) => {
+    setDialog(null);
+    actions.select(null);
+    review.start(readingOrder(map), quiz);
   };
+
+  const exitReview = () => {
+    void reader.stop();
+    review.exit();
+    setTimeout(() => void fitView({ padding: 0.2, duration: 400 }), 50);
+  };
+
+  // Review: follow the current concept and read it once it is visible.
+  const current = review.active ? review.steps[review.index] : undefined;
+  useEffect(() => {
+    if (!current) return;
+    const node = useMapStore.getState().map?.nodes.find((n) => n.id === current.nodeId);
+    if (!node) return;
+    const size = useMapStore.getState().sizes[node.id] ?? { width: 180, height: 72 };
+    void setCenter(node.position.x + size.width / 2, node.position.y + size.height / 2, {
+      zoom: Math.max(getZoom(), 1),
+      duration: 500,
+    });
+    if (review.revealed) void reader.readSteps([current]);
+    else void reader.readText('Che cosa c’è qui?');
+  }, [current, review.revealed]);
+
+  // Leaving the editor must not leave a half-finished review behind.
+  useEffect(() => () => useReview.getState().exit(), []);
+
+  const editing = !review.active;
 
   return (
     <div className="editor">
@@ -127,10 +180,17 @@ function Editor({ onBack, onOpenSettings }: Props) {
           className="title-input"
           value={map.title}
           aria-label="Titolo della mappa"
+          readOnly={!editing}
           onChange={(e) => actions.setTitle(e.target.value)}
         />
-        <BigButton icon="↩️" label="Annulla" disabled={!canUndo} onClick={() => mapHistory().undo()} />
-        <BigButton icon="↪️" label="Ripeti" disabled={!canRedo} onClick={() => mapHistory().redo()} />
+        {editing ? (
+          <>
+            <BigButton icon="↩️" label="Annulla" disabled={!canUndo} onClick={() => mapHistory().undo()} />
+            <BigButton icon="↪️" label="Ripeti" disabled={!canRedo} onClick={() => mapHistory().redo()} />
+          </>
+        ) : (
+          <BigButton icon="✖️" label="Esci" onClick={exitReview} />
+        )}
       </header>
 
       <div className="canvas">
@@ -144,11 +204,11 @@ function Editor({ onBack, onOpenSettings }: Props) {
           onNodeDragStart={beginDrag}
           onNodeDragStop={endDrag}
           onPaneClick={() => actions.select(null)}
-          onEdgeDoubleClick={(_, edge) => {
-            const label = window.prompt('Parola di collegamento (es. "è formato da")', String(edge.label ?? ''));
-            if (label !== null) actions.updateEdge(edge.id, { label: label.trim() || undefined });
-          }}
-          deleteKeyCode={['Backspace', 'Delete']}
+          onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
+          nodesDraggable={editing}
+          nodesConnectable={editing}
+          elementsSelectable={editing}
+          deleteKeyCode={editing ? ['Backspace', 'Delete'] : null}
           zoomOnDoubleClick={false}
           fitView
           fitViewOptions={{ padding: 0.3, maxZoom: 1.2 }}
@@ -160,19 +220,25 @@ function Editor({ onBack, onOpenSettings }: Props) {
         </ReactFlow>
       </div>
 
-      <nav className="toolbar" aria-label="Strumenti">
-        <BigButton icon="➕" label="Concetto" variant="primary" onClick={addConcept} />
-        <BigButton icon="🎤" label="Detta" onClick={dictate} disabled={dictation.listening} />
-        {reader.active ? (
-          <BigButton icon="⏹️" label="Stop" onClick={() => void reader.stop()} />
-        ) : (
-          <BigButton icon="🔊" label="Leggi" onClick={reader.readMap} />
-        )}
-        <BigButton icon="✨" label="Riordina" onClick={tidy} disabled={busy} />
-        <BigButton icon="🗑️" label="Elimina" variant="danger" onClick={remove} disabled={!selectedId} />
-        <BigButton icon="📤" label="Esporta" onClick={exportPng} disabled={busy} />
-        <BigButton icon="🎨" label="Aspetto" onClick={onOpenSettings} />
-      </nav>
+      {review.active ? (
+        <ReviewBar onRepeat={() => current && void reader.readSteps([current])} onExit={exitReview} />
+      ) : (
+        <nav className="toolbar" aria-label="Strumenti">
+          <BigButton icon="➕" label="Concetto" variant="primary" onClick={() => actions.addChild(parentForNew())} />
+          <BigButton icon="🎤" label="Detta" onClick={dictate} disabled={dictation.listening} />
+          {reader.active ? (
+            <BigButton icon="⏹️" label="Stop" onClick={() => void reader.stop()} />
+          ) : (
+            <BigButton icon="🔊" label="Leggi" onClick={reader.readMap} />
+          )}
+          <BigButton icon="🖼️" label="Immagine" onClick={() => setDialog({ kind: 'style' })} disabled={!selectedNode} />
+          <BigButton icon="✨" label="Riordina" onClick={tidy} disabled={busy} />
+          <BigButton icon="🧠" label="Ripasso" onClick={() => setDialog({ kind: 'review' })} />
+          <BigButton icon="🗑️" label="Elimina" variant="danger" onClick={() => selectedId && actions.removeNodes([selectedId])} disabled={!selectedId} />
+          <BigButton icon="📤" label="Esporta" onClick={() => setDialog({ kind: 'export' })} />
+          <BigButton icon="🎨" label="Aspetto" onClick={onOpenSettings} />
+        </nav>
+      )}
 
       <DictationOverlay
         listening={dictation.listening}
@@ -181,7 +247,40 @@ function Editor({ onBack, onOpenSettings }: Props) {
         onStop={() => void dictation.stop()}
         onClose={dictation.clearError}
       />
+
+      {dialog?.kind === 'style' && selectedNode && <NodeStyleDialog node={selectedNode} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'link' &&
+        (() => {
+          const edge = map.edges.find((e) => e.id === dialog.edgeId);
+          return edge ? <LinkWordDialog edge={edge} onClose={() => setDialog(null)} /> : null;
+        })()}
+      {dialog?.kind === 'export' && <ExportDialog busy={busy} onExport={doExport} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
     </div>
+  );
+}
+
+function ReviewStartDialog({ onStart, onClose }: { onStart(quiz: boolean): void; onClose(): void }) {
+  return (
+    <Dialog title="Ripasso" onClose={onClose} className="review-start">
+      <button type="button" className="review-option" onClick={() => onStart(false)}>
+        <span className="template-icon" aria-hidden>
+          👣
+        </span>
+        <span className="template-name">Un passo alla volta</span>
+        <span className="template-desc">La mappa appare un concetto alla volta, letto ad alta voce.</span>
+      </button>
+      <button type="button" className="review-option" onClick={() => onStart(true)}>
+        <span className="template-icon" aria-hidden>
+          🙈
+        </span>
+        <span className="template-name">Indovina</span>
+        <span className="template-desc">Il concetto è nascosto: prova a ricordarlo, poi premi «Scopri».</span>
+      </button>
+      <div className="dialog-actions">
+        <BigButton icon="✖️" label="Annulla" onClick={onClose} />
+      </div>
+    </Dialog>
   );
 }
 

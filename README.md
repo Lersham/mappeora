@@ -8,7 +8,7 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 - **Web / PWA**, installabile dal browser e utilizzabile offline;
 - **Android** e **iOS**, come app native tramite [Capacitor](https://capacitorjs.com).
 
-## Cosa c'è già (MVP, fase 1)
+## Fase 1: MVP
 
 | Funzione | Dove |
 |---|---|
@@ -20,6 +20,17 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 | ↩️ Annulla/Ripeti illimitati (uno spostamento = un solo passo) | `src/store/mapStore.ts` |
 | 💾 Salvataggio automatico, nessun account, funziona offline | `src/services/storage` |
 | 📤 Esporta PNG: download sul web, menu "Condividi" nativo su Android/iOS | `src/services/export.ts` |
+
+## Fase 2: contenuti
+
+| Funzione | Dove |
+|---|---|
+| 🖼️ Pittogrammi ARASAAC (ricerca in italiano, anche a voce) ed emoji nei nodi, con colore e forma | `src/features/editor/NodeStyleDialog.tsx`, `src/services/pictograms.ts` |
+| 🧩 Modelli pronti: Libera, 5 W, Causa ed effetto, Linea del tempo (orizzontale), Confronto | `src/lib/templates.ts`, `src/features/home/NewMapDialog.tsx` |
+| 🧠 Ripasso "Un passo alla volta" e "Indovina" (concetto nascosto, poi «Scopri») | `src/store/reviewStore.ts`, `src/features/editor/ReviewBar.tsx` |
+| 📤 Esporta PDF A4/A3 o PNG, con **versione per la verifica** (bianco e nero, senza decorazioni) | `src/services/export.ts`, `src/features/editor/ExportDialog.tsx` |
+| 🔗 Parole di collegamento: si tocca la freccia e si sceglie tra i suggerimenti, si scrive o si detta | `src/features/editor/LinkWordDialog.tsx` |
+| 🗣️ Comandi vocali: «leggi la mappa», «riordina», «annulla», «rifai», «nuovo concetto …» | `src/lib/voiceCommands.ts` |
 
 ## Architettura
 
@@ -54,6 +65,8 @@ Scelte importanti:
 - **Il riconoscimento vocale nativo è obbligatorio nelle app**: le WebView di Android e iOS non supportano la Web Speech API per la dettatura.
 - **Si usa SQLite su mobile** perché iOS può cancellare i dati IndexedDB di una WebView quando lo spazio scarseggia.
 - **La voce resta sul dispositivo, se possibile**: gli utenti sono spesso minorenni, quindi si usa `useOnDeviceRecognition` quando il sistema riconosce l'italiano offline.
+- **ARASAAC**: licenza CC BY-NC-SA, quindi i crediti compaiono nella finestra di ricerca e in fondo ai PDF, e l'app deve restare non commerciale. I pittogrammi segnati come violenti o sessuali sono esclusi. Sul web il service worker li mette in cache, così restano visibili anche offline.
+- **`html-to-image` è bloccato alla 1.11.11**: le versioni successive perdono gli stili delle frecce (SVG) nell'esportazione.
 - **Le impostazioni di accessibilità appartengono all'utente, non alla mappa**: una mappa condivisa da un docente si vede con il font e i colori del bambino.
 - Si usa `@capgo/capacitor-speech-recognition` al posto di `@capacitor-community/speech-recognition`, che non supporta ancora Swift Package Manager (richiesto da Capacitor 8 su iOS).
 
@@ -94,13 +107,9 @@ Dopo ogni modifica al codice web: `npm run cap:sync`.
 
 ## Prossimi passi
 
-**Fase 2: contenuti**
-- [ ] Pittogrammi ARASAAC nei nodi (licenza CC BY-NC-SA: citare la fonte, uso non commerciale)
-- [ ] Modelli pronti: causa-effetto, linea del tempo, confronto, 5W
-- [ ] Modalità ripasso: un nodo alla volta, nodi nascosti per l'autoverifica
-- [ ] Esportazione PDF A4/A3 e "versione per la verifica"
-- [ ] Interfaccia touch per le parole di collegamento (oggi si usa `prompt()`)
-- [ ] Comandi vocali ("nuovo concetto", "leggi la mappa")
+**Rifiniture della fase 2**
+- [ ] Android/iOS: salvare in locale i pittogrammi usati (nelle app non c'è il service worker, quindi senza internet non si caricano)
+- [ ] Note di approfondimento nei nodi, nascoste nella versione per la verifica
 
 **Fase 3: AI e cloud**
 - [ ] Dal testo alla mappa (LLM chiamato da una Edge Function: chiavi API mai nel client)

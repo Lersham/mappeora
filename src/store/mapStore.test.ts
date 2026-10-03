@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { beginDrag, endDrag, mapHistory, useMapStore } from './mapStore';
-import { createEmptyMap } from '../lib/mapFactory';
+import { createMap as createEmptyMap } from '../lib/mapFactory';
 
 const state = () => useMapStore.getState();
 

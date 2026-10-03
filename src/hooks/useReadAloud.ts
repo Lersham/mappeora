@@ -57,5 +57,5 @@ export function useReadAloud() {
     await speech().stopSpeaking();
   }, []);
 
-  return { active, readMap, readNode, readText, stop };
+  return { active, readMap, readNode, readSteps, readText, stop };
 }

@@ -8,13 +8,18 @@ export function useDictation() {
   const [partial, setPartial] = useState('');
   const [error, setError] = useState<DictationError | null>(null);
 
-  const start = useCallback(async (): Promise<string> => {
+  const start = useCallback(async (onPartial?: (text: string) => void): Promise<string> => {
     setError(null);
     setPartial('');
     setListening(true);
     try {
       await speech().stopSpeaking();
-      return await speech().listen({ onPartial: setPartial });
+      return await speech().listen({
+        onPartial: (text) => {
+          setPartial(text);
+          onPartial?.(text);
+        },
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : '';
       setError(msg === 'stt-unsupported' ? 'stt-unsupported' : msg === 'not-allowed' ? 'not-allowed' : 'other');

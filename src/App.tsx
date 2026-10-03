@@ -5,7 +5,9 @@ import { SettingsPanel } from './features/accessibility/SettingsPanel';
 import { useMapStore, mapHistory } from './store/mapStore';
 import { useSettings } from './store/settingsStore';
 import { storage } from './services/storage';
-import { createEmptyMap } from './lib/mapFactory';
+import { createMap } from './lib/mapFactory';
+import { NewMapDialog } from './features/home/NewMapDialog';
+import type { MapTemplate } from './types/map';
 import { useAutosave } from './hooks/useAutosave';
 import { useReadAloud } from './hooks/useReadAloud';
 
@@ -27,6 +29,7 @@ export default function App() {
   useAutosave();
   const hasMap = useMapStore((s) => s.map !== null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [newMapOpen, setNewMapOpen] = useState(false);
   const { stop } = useReadAloud();
 
   const open = async (id: string) => {
@@ -36,8 +39,9 @@ export default function App() {
     mapHistory().clear();
   };
 
-  const create = async () => {
-    const map = createEmptyMap();
+  const create = async (title: string, template: MapTemplate) => {
+    setNewMapOpen(false);
+    const map = createMap(title, template);
     await storage().save(map);
     useMapStore.getState().load(map);
     mapHistory().clear();
@@ -57,8 +61,9 @@ export default function App() {
       {hasMap ? (
         <MapEditor onBack={back} onOpenSettings={() => setSettingsOpen(true)} />
       ) : (
-        <HomeScreen onOpen={open} onCreate={create} onOpenSettings={() => setSettingsOpen(true)} />
+        <HomeScreen onOpen={open} onCreate={() => setNewMapOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
       )}
+      {newMapOpen && <NewMapDialog onCreate={create} onClose={() => setNewMapOpen(false)} />}
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
     </>
   );

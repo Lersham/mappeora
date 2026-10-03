@@ -21,6 +21,27 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        runtimeCaching: [
+          {
+            // Pictograms already used in a map must keep showing offline.
+            urlPattern: /^https:\/\/static\.arasaac\.org\/pictograms\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'arasaac-pictograms',
+              expiration: { maxEntries: 1000, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/api\.arasaac\.org\//,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'arasaac-search',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+        ],
       },
     }),
   ],

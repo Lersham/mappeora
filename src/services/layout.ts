@@ -17,12 +17,13 @@ export async function autoLayout(
   nodes: MapNode[],
   edges: MapEdge[],
   sizes: NodeSizes = {},
+  direction: 'DOWN' | 'RIGHT' = 'DOWN',
 ): Promise<Record<string, { x: number; y: number }>> {
   const graph = await (await getElk()).layout({
     id: 'root',
     layoutOptions: {
       'elk.algorithm': 'layered',
-      'elk.direction': 'DOWN',
+      'elk.direction': direction,
       'elk.spacing.nodeNode': '48',
       'elk.layered.spacing.nodeNodeBetweenLayers': '80',
       'elk.edgeLabels.inline': 'true',
