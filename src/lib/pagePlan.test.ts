@@ -4,33 +4,46 @@ import { planPages } from './pagePlan';
 const layout = { margin: 12, header: 12, footer: 4 };
 
 describe('planPages', () => {
-  it('always prints on portrait sheets', () => {
-    const plan = planPages(2000, 1000, 'a4', 1, layout);
+  it('prints a small map whole, on one portrait sheet', () => {
+    const plan = planPages(600, 400, 'a4', 1, layout);
     expect(plan.orientation).toBe('portrait');
-    expect(plan.tiles).toEqual([{ x: 0, y: 0, w: 2000, h: 1000 }]);
+    expect(plan.tiles).toEqual([expect.objectContaining({ x: 0, y: 0, w: 600, h: 400, page: 0 })]);
   });
 
-  it('cuts a tall map into strips, one under the other, larger than on one sheet', () => {
-    const one = planPages(800, 4000, 'a4', 1, layout);
-    const two = planPages(800, 4000, 'a4', 2, layout);
-    expect(two.tiles).toHaveLength(2);
-    expect(two.tiles[0].x).toBe(two.tiles[1].x); // same column
-    expect(two.tiles[1].y).toBeGreaterThan(two.tiles[0].y);
-    expect(two.scale).toBeGreaterThan(one.scale * 1.5);
+  it('lays a tall, narrow "scaletta" out in columns, much larger than one long strip', () => {
+    const plan = planPages(450, 4000, 'a4', 1, layout);
+    const oneStrip = Math.min(186 / 450, 257 / 4000);
+    expect(plan.tiles.length).toBeGreaterThan(1);
+    expect(plan.tiles.every((t) => t.page === 0)).toBe(true);
+    expect(plan.scale).toBeGreaterThan(oneStrip * 1.8);
+    // columns side by side, read top to bottom then left to right
+    expect(plan.tiles[1].dx).toBeGreaterThan(plan.tiles[0].dx);
+    expect(plan.tiles[1].y).toBeGreaterThan(plan.tiles[0].y);
   });
 
-  it('overlaps neighbouring sheets and covers the whole map', () => {
-    const { tiles } = planPages(3000, 3000, 'a4', 4, layout);
-    expect(tiles).toHaveLength(4);
-    const [a, b] = tiles;
-    expect(b.x).toBeLessThan(a.x + a.w); // overlap
-    const right = Math.max(...tiles.map((t) => t.x + t.w));
-    const bottom = Math.max(...tiles.map((t) => t.y + t.h));
-    expect(right).toBe(3000);
-    expect(bottom).toBe(3000);
+  it('cuts between concepts when it can, and covers the whole map', () => {
+    const breaks = [900, 1950, 3100];
+    const plan = planPages(450, 4000, 'a4', 2, layout, breaks);
+    const cuts = plan.tiles.slice(1).map((t) => t.y);
+    for (const c of cuts) expect(breaks).toContain(c);
+    const last = plan.tiles[plan.tiles.length - 1];
+    expect(last.y + last.h).toBe(4000);
+    expect(new Set(plan.tiles.map((t) => t.page))).toEqual(new Set([0, 1]));
+  });
+
+  it('overlaps the pieces where no safe cut exists', () => {
+    const plan = planPages(450, 4000, 'a4', 2, layout);
+    const [a, b] = plan.tiles;
+    expect(b.y).toBeLessThan(a.y + a.h);
+  });
+
+  it('uses a 2×2 poster for a wide map on four sheets', () => {
+    const plan = planPages(3000, 2000, 'a4', 4, layout);
+    expect(plan.tiles).toHaveLength(4);
+    expect(new Set(plan.tiles.map((t) => t.x)).size).toBe(2);
   });
 
   it('does not blow up a tiny map', () => {
-    expect(planPages(800, 600, 'a3', 1, layout).scale).toBeLessThanOrEqual(0.35);
+    expect(planPages(320, 240, 'a3', 1, layout).scale).toBeLessThanOrEqual(0.35);
   });
 });

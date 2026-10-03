@@ -33,6 +33,23 @@ interface RenderedMap {
   dataUrl: string;
   width: number;
   height: number;
+  /** Heights (CSS px of the image) where a page cut won't split a concept. */
+  breaks: number[];
+}
+
+/**
+ * Safe places to cut the image: just below a concept, in the empty space
+ * before the next one (linking words sit near the next concept's top).
+ */
+export function safeBreaks(spans: { top: number; bottom: number }[]): number[] {
+  const sorted = [...spans].sort((a, b) => a.top - b.top);
+  const breaks: number[] = [];
+  let bottom = -Infinity;
+  for (const s of sorted) {
+    if (s.top > bottom && Number.isFinite(bottom)) breaks.push(bottom + Math.min(8, (s.top - bottom) / 2));
+    bottom = Math.max(bottom, s.bottom);
+  }
+  return breaks;
 }
 
 /** Interactive bits that must never end up on paper. */
@@ -43,7 +60,8 @@ function keepInExport(node: HTMLElement): boolean {
 
 /** Renders the whole map (not just the visible area) to a PNG. */
 async function renderMap(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
-  const bounds = getNodesBounds(nodes.filter((n) => !n.hidden));
+  const shown = nodes.filter((n) => !n.hidden);
+  const bounds = getNodesBounds(shown);
   // Small minimums only: a narrow "scaletta" must stay narrow to fill a
   // portrait sheet instead of floating in a wide empty image.
   const width = Math.max(320, Math.ceil(bounds.width * (1 + PADDING * 2)));
@@ -67,7 +85,13 @@ async function renderMap(nodes: Node[], background: string, simple: boolean): Pr
         transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
       },
     });
-    return { dataUrl, width, height };
+    const breaks = safeBreaks(
+      shown.map((n) => ({
+        top: n.position.y * viewport.zoom + viewport.y,
+        bottom: (n.position.y + (n.measured?.height ?? 0)) * viewport.zoom + viewport.y,
+      })),
+    );
+    return { dataUrl, width, height, breaks };
   } finally {
     flow.classList.remove('export-simple', 'exporting');
   }
@@ -97,33 +121,36 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const margin = 12;
   const header = 12;
   const footer = opts.usesPictograms ? 8 : 4;
-  const plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer });
+  const plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks);
   const doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const boxW = pageW - margin * 2;
-  const full = plan.tiles.length > 1 ? await loadImage(img.dataUrl) : null;
+  const whole = plan.tiles.length === 1;
+  const full = whole ? null : await loadImage(img.dataUrl);
   const date = new Date().toLocaleDateString('it-IT');
 
-  plan.tiles.forEach((tile, i) => {
-    if (i > 0) doc.addPage(opts.paper, plan.orientation);
+  for (let page = 0; page < plan.pageCount; page++) {
+    if (page > 0) doc.addPage(opts.paper, plan.orientation);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
     doc.text(opts.title, margin, margin + 6, { maxWidth: boxW - 40 });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    const right = plan.tiles.length > 1 ? `${date} · pagina ${i + 1} di ${plan.tiles.length}` : date;
+    const right = plan.pageCount > 1 ? `${date} · pagina ${page + 1} di ${plan.pageCount}` : date;
     doc.text(right, pageW - margin, margin + 6, { align: 'right' });
 
-    const w = tile.w * plan.scale;
-    const h = tile.h * plan.scale;
-    const x = margin + (boxW - w) / 2;
-    const y = margin + header; // top-aligned: strips line up when the sheets are joined
-    doc.addImage(full ? crop(full, img.width, tile) : img.dataUrl, 'PNG', x, y, w, h);
-    if (plan.tiles.length > 1) {
-      doc.setDrawColor(180);
-      doc.rect(x, y, w, h); // shows where to join the sheets
+    for (const tile of plan.tiles.filter((t) => t.page === page)) {
+      const w = tile.w * plan.scale;
+      const h = tile.h * plan.scale;
+      const x = margin + tile.dx;
+      const y = margin + header + tile.dy;
+      doc.addImage(full ? crop(full, img.width, tile) : img.dataUrl, 'PNG', x, y, w, h);
+      if (!whole) {
+        doc.setDrawColor(180);
+        doc.rect(x, y, w, h); // shows the pieces, in reading order
+      }
     }
 
     if (opts.usesPictograms) {
@@ -131,7 +158,7 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
       doc.setTextColor(100);
       doc.text(ARASAAC_CREDIT, margin, pageH - margin + 2, { maxWidth: boxW });
     }
-  });
+  }
   return doc;
 }
 
