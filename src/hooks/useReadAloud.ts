@@ -1,9 +1,11 @@
 import { useCallback } from 'react';
 import { speech } from '../services/speech';
+import { stopPlayback } from '../services/audioNote';
 import { useSettings } from '../store/settingsStore';
 import { useReading } from '../store/readingStore';
 import { useMapStore } from '../store/mapStore';
 import { readingOrder, type ReadingStep } from '../lib/readingOrder';
+import { visiblePart } from '../lib/collapse';
 
 /** Incremented on every new read/stop so an older loop knows it was cancelled. */
 let runId = 0;
@@ -15,6 +17,7 @@ export function useReadAloud() {
     const myRun = ++runId;
     const { speechRate, voiceId, highlightWords } = useSettings.getState();
     const reading = useReading.getState();
+    stopPlayback();
     await speech().stopSpeaking();
     reading.set({ active: true });
     for (const step of steps) {
@@ -32,7 +35,7 @@ export function useReadAloud() {
 
   const readMap = useCallback(() => {
     const map = useMapStore.getState().map;
-    if (map) void readSteps(readingOrder(map));
+    if (map) void readSteps(readingOrder(visiblePart(map)));
   }, [readSteps]);
 
   const readNode = useCallback(
@@ -48,11 +51,13 @@ export function useReadAloud() {
     runId++;
     useReading.getState().set({ active: false, nodeId: null, word: null });
     const { speechRate, voiceId } = useSettings.getState();
+    stopPlayback();
     await speech().speak(text, { rate: speechRate, voiceId });
   }, []);
 
   const stop = useCallback(async () => {
     runId++;
+    stopPlayback();
     useReading.getState().set({ active: false, nodeId: null, word: null });
     await speech().stopSpeaking();
   }, []);

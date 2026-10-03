@@ -41,6 +41,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Dettatura (voce → testo) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Spiegazioni a voce sui concetti: la WebView lo chiede insieme a RECORD_AUDIO. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <!-- Aggiunti dal plugin SQLite per la cifratura con impronta, che non usiamo:
          un'app per bambini deve chiedere solo i permessi necessari. -->

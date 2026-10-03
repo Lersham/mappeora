@@ -6,10 +6,14 @@ import { useReading } from '../../store/readingStore';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { reviewVisibility, useReview } from '../../store/reviewStore';
 import { pictogramUrl } from '../../services/pictograms';
+import { formatDuration, playNote, stopPlayback } from '../../services/audioNote';
 
-export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image'> & {
+export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'audio' | 'collapsed'> & {
   /** Timelines flow left → right, everything else top → bottom. */
   horizontal?: boolean;
+  hasChildren?: boolean;
+  /** How many concepts this one hides while collapsed. */
+  hiddenBelow?: number;
 };
 export type ConceptFlowNode = Node<ConceptNodeData, 'concept'>;
 
@@ -40,11 +44,31 @@ function NodeImageView({ image }: { image: NonNullable<ConceptNodeData['image']>
   if (image.kind === 'arasaac') {
     return <img className="concept-picto" src={pictogramUrl(image.ref)} alt="" crossOrigin="anonymous" draggable={false} />;
   }
-  return null;
+  return <img className="concept-photo" src={image.ref} alt="" draggable={false} />;
+}
+
+function AudioNoteButton({ audio }: { audio: NonNullable<ConceptNodeData['audio']> }) {
+  const [playing, setPlaying] = useState(false);
+  return (
+    <button
+      type="button"
+      className="concept-audio nodrag"
+      aria-label={playing ? 'Ferma la spiegazione a voce' : 'Ascolta la spiegazione a voce'}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (playing) return stopPlayback();
+        setPlaying(true);
+        playNote(audio.dataUrl, () => setPlaying(false)).catch(() => setPlaying(false));
+      }}
+    >
+      {playing ? '⏹️' : '🎧'} {formatDuration(audio.durationMs)}
+    </button>
+  );
 }
 
 function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const updateNode = useMapStore((s) => s.updateNode);
+  const toggleCollapsed = useMapStore((s) => s.toggleCollapsed);
   const isReading = useReading((s) => s.nodeId === id);
   const visibility = useReview((s) => reviewVisibility(s, id));
   const reviewing = useReview((s) => s.active);
@@ -114,7 +138,22 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
           >
             🔊
           </button>
+          {data.audio && <AudioNoteButton audio={data.audio} />}
         </>
+      )}
+      {data.hasChildren && !reviewing && (
+        <button
+          type="button"
+          className={`concept-toggle nodrag${data.collapsed ? ' is-collapsed' : ''}`}
+          aria-expanded={!data.collapsed}
+          aria-label={data.collapsed ? `Mostra ${data.hiddenBelow} concetti nascosti` : 'Nascondi i concetti sotto'}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleCollapsed(id);
+          }}
+        >
+          {data.collapsed ? `+${data.hiddenBelow}` : '−'}
+        </button>
       )}
       <Handle type="source" position={data.horizontal ? Position.Right : Position.Bottom} />
     </div>

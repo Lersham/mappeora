@@ -3,6 +3,8 @@ import type { MapSummary } from '../../types/map';
 import { storage } from '../../services/storage';
 import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
+import { pickMapFile } from '../../services/openFile';
+import { MapFileError, parseMapFile } from '../../lib/mapFile';
 
 interface Props {
   onOpen(id: string): void;
@@ -12,6 +14,7 @@ interface Props {
 
 export function HomeScreen({ onOpen, onCreate, onOpenSettings }: Props) {
   const [maps, setMaps] = useState<MapSummary[] | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const { readText } = useReadAloud();
 
   const refresh = () => void storage().list().then(setMaps);
@@ -23,6 +26,19 @@ export function HomeScreen({ onOpen, onCreate, onOpenSettings }: Props) {
     refresh();
   };
 
+  const importFile = async () => {
+    setImportError(null);
+    const text = await pickMapFile();
+    if (text === null) return;
+    try {
+      const map = parseMapFile(text);
+      await storage().save(map);
+      onOpen(map.id);
+    } catch (e) {
+      setImportError(e instanceof MapFileError ? e.message : 'Non riesco ad aprire questo file.');
+    }
+  };
+
   return (
     <main className="home">
       <header className="home-header">
@@ -30,7 +46,15 @@ export function HomeScreen({ onOpen, onCreate, onOpenSettings }: Props) {
         <BigButton icon="🎨" label="Aspetto" onClick={onOpenSettings} />
       </header>
 
-      <BigButton icon="➕" label="Nuova mappa" variant="primary" className="home-new" onClick={onCreate} />
+      <div className="home-actions">
+        <BigButton icon="➕" label="Nuova mappa" variant="primary" className="home-new" onClick={onCreate} />
+        <BigButton icon="📂" label="Apri file" className="home-new" onClick={() => void importFile()} />
+      </div>
+      {importError && (
+        <p className="field-error" role="alert">
+          {importError}
+        </p>
+      )}
 
       {maps && maps.length === 0 && <p className="empty">Non hai ancora mappe. Creane una!</p>}
 

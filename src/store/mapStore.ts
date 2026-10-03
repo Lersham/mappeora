@@ -3,6 +3,7 @@ import { temporal } from 'zundo';
 import type { ConceptMap, MapEdge, MapNode } from '../types/map';
 import { newId } from '../lib/id';
 import { colorForDepth } from '../lib/palette';
+import { collapseInfo } from '../lib/collapse';
 
 type Size = { width: number; height: number };
 
@@ -18,6 +19,8 @@ interface MapState {
   /** Adds a node linked under `parentId` (or unlinked if null). Returns its id. */
   addChild(parentId: string | null, label?: string): string;
   updateNode(id: string, patch: Partial<Omit<MapNode, 'id'>>): void;
+  /** Hides or shows the concepts below `id`. */
+  toggleCollapsed(id: string): void;
   moveNode(id: string, position: MapNode['position']): void;
   applyPositions(positions: Record<string, MapNode['position']>): void;
   removeNodes(ids: string[]): void;
@@ -73,7 +76,9 @@ export const useMapStore = create<MapState>()(
             const depth = parent ? depthOf(map, parent.id) + 1 : 0;
             const node: MapNode = { id, label, position, color: colorForDepth(depth), shape: 'rettangolo' };
             const edges = parent ? [...map.edges, { id: newId(), source: parent.id, target: id }] : map.edges;
-            return { nodes: [...map.nodes, node], edges };
+            // A new child must be visible: open its parent if it was collapsed.
+            const nodes = map.nodes.map((n) => (n.id === parentId && n.collapsed ? { ...n, collapsed: false } : n));
+            return { nodes: [...nodes, node], edges };
           }),
         );
         set({ selectedId: id });
@@ -82,6 +87,15 @@ export const useMapStore = create<MapState>()(
 
       updateNode: (id, patch) =>
         set((s) => edit(s, (map) => ({ nodes: map.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) }))),
+
+      toggleCollapsed: (id) => {
+        const node = get().map?.nodes.find((n) => n.id === id);
+        if (!node) return;
+        get().updateNode(id, { collapsed: !node.collapsed });
+        // Don't leave the selection on a concept that just disappeared.
+        const selected = get().selectedId;
+        if (selected && selected !== id && collapseInfo(get().map!).hidden.has(selected)) get().select(id);
+      },
 
       moveNode: (id, position) => get().updateNode(id, { position }),
 

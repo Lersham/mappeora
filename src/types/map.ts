@@ -2,8 +2,15 @@ export type NodeShape = 'rettangolo' | 'ellisse' | 'nuvola';
 
 export interface NodeImage {
   kind: 'emoji' | 'arasaac' | 'foto';
-  /** Emoji character, ARASAAC pictogram id or local file URI. */
+  /** Emoji character, ARASAAC pictogram id or, for photos, a JPEG data URL. */
   ref: string;
+}
+
+/** A short voice note recorded on a concept ("spiegalo con la tua voce"). */
+export interface NodeAudio {
+  /** Self-contained data URL, so the note travels with the map file. */
+  dataUrl: string;
+  durationMs: number;
 }
 
 export interface MapNode {
@@ -14,6 +21,9 @@ export interface MapNode {
   shape?: NodeShape;
   image?: NodeImage;
   note?: string;
+  audio?: NodeAudio;
+  /** Hides the concepts below this one (see lib/collapse.ts). */
+  collapsed?: boolean;
 }
 
 export interface MapEdge {

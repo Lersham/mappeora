@@ -27,6 +27,17 @@ describe('mapStore', () => {
     expect(state().selectedId).toBeNull();
   });
 
+  it('collapsing moves the selection off hidden concepts; adding a child reopens', () => {
+    const root = state().map!.nodes[0];
+    const child = state().addChild(root.id, 'Idrogeno');
+    state().toggleCollapsed(root.id);
+    expect(state().map!.nodes.find((n) => n.id === root.id)?.collapsed).toBe(true);
+    expect(state().selectedId).toBe(root.id);
+    state().addChild(root.id, 'Ossigeno');
+    expect(state().map!.nodes.find((n) => n.id === root.id)?.collapsed).toBe(false);
+    expect(state().map!.nodes.some((n) => n.id === child)).toBe(true);
+  });
+
   it('does not record selection changes in the undo history', () => {
     state().select(state().map!.nodes[0].id);
     expect(mapHistory().pastStates).toHaveLength(0);

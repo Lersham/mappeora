@@ -11,11 +11,12 @@ import {
 } from '@xyflow/react';
 import { useStore } from 'zustand';
 import { beginDrag, endDrag, mapHistory, useMapStore } from '../../store/mapStore';
-import { reviewVisibility, useReview } from '../../store/reviewStore';
+import { reviewVisibility, useReview, type ReviewMode } from '../../store/reviewStore';
 import { ConceptNode, type ConceptFlowNode } from './ConceptNode';
 import { NodeStyleDialog } from './NodeStyleDialog';
+import { AudioNoteDialog } from './AudioNoteDialog';
 import { LinkWordDialog } from './LinkWordDialog';
-import { ExportDialog } from './ExportDialog';
+import { ExportDialog, type ExportChoice } from './ExportDialog';
 import { ReviewBar } from './ReviewBar';
 import { PhotoTextDialog } from '../ocr/PhotoTextDialog';
 import { BigButton } from '../../components/BigButton';
@@ -24,8 +25,9 @@ import { DictationOverlay } from '../../components/DictationOverlay';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { useDictation } from '../../hooks/useDictation';
 import { autoLayout } from '../../services/layout';
-import { exportMap, type ExportFormat } from '../../services/export';
+import { exportMap, saveMapFile } from '../../services/export';
 import { readingOrder } from '../../lib/readingOrder';
+import { collapseInfo, visiblePart } from '../../lib/collapse';
 import { templateInfo } from '../../lib/templates';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 
@@ -33,6 +35,7 @@ const nodeTypes = { concept: ConceptNode };
 
 type DialogState =
   | { kind: 'style' }
+  | { kind: 'audio' }
   | { kind: 'link'; edgeId: string }
   | { kind: 'export' }
   | { kind: 'review' }
@@ -60,6 +63,9 @@ function Editor({ onBack, onOpenSettings }: Props) {
   const horizontal = templateInfo(map.template).direction === 'RIGHT';
   const selectedNode = map.nodes.find((n) => n.id === selectedId);
 
+  const collapse = useMemo(() => collapseInfo(map), [map]);
+  const parents = useMemo(() => new Set(map.edges.map((e) => e.source)), [map.edges]);
+
   // The store holds our document model; React Flow nodes are derived from it.
   const nodes = useMemo<ConceptFlowNode[]>(
     () =>
@@ -68,11 +74,21 @@ function Editor({ onBack, onOpenSettings }: Props) {
         type: 'concept',
         position: n.position,
         selected: !review.active && n.id === selectedId,
-        hidden: reviewVisibility(review, n.id) === 'hidden',
+        hidden: collapse.hidden.has(n.id) || reviewVisibility(review, n.id) === 'hidden',
         measured: sizes[n.id],
-        data: { label: n.label, color: n.color, shape: n.shape, image: n.image, horizontal },
+        data: {
+          label: n.label,
+          color: n.color,
+          shape: n.shape,
+          image: n.image,
+          audio: n.audio,
+          horizontal,
+          hasChildren: parents.has(n.id),
+          collapsed: n.collapsed,
+          hiddenBelow: collapse.hiddenBelow[n.id] ?? 0,
+        },
       })),
-    [map.nodes, selectedId, sizes, review, horizontal],
+    [map.nodes, selectedId, sizes, review, horizontal, collapse, parents],
   );
   const edges = useMemo<Edge[]>(
     () =>
@@ -116,7 +132,9 @@ function Editor({ onBack, onOpenSettings }: Props) {
       // Read fresh state: tidy() also runs right after adding concepts.
       const { map: current, sizes: measured } = useMapStore.getState();
       if (!current) return;
-      actions.applyPositions(await autoLayout(current.nodes, current.edges, measured, horizontal ? 'RIGHT' : 'DOWN'));
+      // Collapsed branches keep their place and are laid out when reopened.
+      const part = visiblePart(current);
+      actions.applyPositions(await autoLayout(part.nodes, part.edges, measured, horizontal ? 'RIGHT' : 'DOWN'));
       // Give React Flow a frame to render the new positions before fitting.
       setTimeout(() => void fitView({ padding: 0.2, duration: 400 }), 50);
     } finally {
@@ -143,33 +161,45 @@ function Editor({ onBack, onOpenSettings }: Props) {
     setTimeout(() => void tidy(), 150);
   };
 
-  const doExport = async (format: ExportFormat, simple: boolean) => {
+  const doExport = async ({ kind, paper, pages, simple, print }: ExportChoice) => {
     setBusy(true);
     try {
-      const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff';
-      await exportMap(getNodes(), bg, {
-        format,
-        simple,
-        title: map.title,
-        usesPictograms: map.nodes.some((n) => n.image?.kind === 'arasaac'),
-      });
+      if (kind === 'file') {
+        await saveMapFile(map);
+      } else {
+        const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff';
+        await exportMap(getNodes(), bg, {
+          format: kind,
+          paper,
+          pages,
+          print,
+          simple,
+          title: map.title,
+          usesPictograms: map.nodes.some((n) => n.image?.kind === 'arasaac'),
+        });
+      }
       setDialog(null);
     } finally {
       setBusy(false);
     }
   };
 
-  const startReview = (quiz: boolean) => {
+  const startReview = (mode: ReviewMode) => {
     setDialog(null);
     actions.select(null);
-    review.start(readingOrder(map), quiz);
+    // Full screen helps on the class whiteboard; not every WebView allows it.
+    if (mode === 'interrogazione') document.documentElement.requestFullscreen?.().catch(() => {});
+    review.start(readingOrder(visiblePart(map)), mode);
   };
 
   const exitReview = () => {
     void reader.stop();
     review.exit();
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
     setTimeout(() => void fitView({ padding: 0.2, duration: 400 }), 50);
   };
+
+  const overview = () => void fitView({ padding: 0.15, duration: 500 });
 
   // Review: follow the current concept and read it once it is visible.
   const current = review.active ? review.steps[review.index] : undefined;
@@ -182,9 +212,30 @@ function Editor({ onBack, onOpenSettings }: Props) {
       zoom: Math.max(getZoom(), 1),
       duration: 500,
     });
+    // At the "interrogazione" the child speaks: the app reads only on request.
+    if (review.mode === 'interrogazione') return;
     if (review.revealed) void reader.readSteps([current]);
     else void reader.readText('Che cosa c’è qui?');
   }, [current, review.revealed]);
+
+  // Arrows, Page Up/Down (presentation clickers) and Space move through the map.
+  useEffect(() => {
+    if (!review.active) return;
+    const onKey = (e: KeyboardEvent) => {
+      const s = useReview.getState();
+      const onControl = e.target instanceof HTMLElement && e.target.closest('button, input, textarea, select');
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || (e.key === ' ' && !onControl)) {
+        e.preventDefault();
+        if (s.mode === 'quiz' && !s.revealed) s.reveal();
+        else s.next();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        s.prev();
+      } else if (e.key === 'Escape') exitReview();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [review.active]);
 
   // Leaving the editor must not leave a half-finished review behind.
   useEffect(() => () => useReview.getState().exit(), []);
@@ -192,7 +243,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
   const editing = !review.active;
 
   return (
-    <div className="editor">
+    <div className={`editor${review.active ? ' is-reviewing' : ''}`}>
       <header className="topbar">
         <BigButton icon="⬅️" label="Mappe" onClick={onBack} />
         <input
@@ -223,6 +274,11 @@ function Editor({ onBack, onOpenSettings }: Props) {
           onNodeDragStart={beginDrag}
           onNodeDragStop={endDrag}
           onPaneClick={() => actions.select(null)}
+          onNodeClick={(_, node) => {
+            if (review.mode !== 'interrogazione' || !review.active) return;
+            const i = review.order[node.id];
+            if (i !== undefined) review.goTo(i);
+          }}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
           nodesDraggable={editing}
           nodesConnectable={editing}
@@ -239,8 +295,13 @@ function Editor({ onBack, onOpenSettings }: Props) {
         </ReactFlow>
       </div>
 
+      {review.active && review.mode === 'interrogazione' && current && (
+        <p className="present-caption" aria-live="polite">
+          {current.text}
+        </p>
+      )}
       {review.active ? (
-        <ReviewBar onRepeat={() => current && void reader.readSteps([current])} onExit={exitReview} />
+        <ReviewBar onRepeat={() => current && void reader.readSteps([current])} onOverview={overview} onExit={exitReview} />
       ) : (
         <nav className="toolbar" aria-label="Strumenti">
           <BigButton icon="➕" label="Concetto" variant="primary" onClick={() => actions.addChild(parentForNew())} />
@@ -252,10 +313,11 @@ function Editor({ onBack, onOpenSettings }: Props) {
           )}
           <BigButton icon="📷" label="Dal libro" onClick={() => setDialog({ kind: 'photo' })} />
           <BigButton icon="🖼️" label="Immagine" onClick={() => setDialog({ kind: 'style' })} disabled={!selectedNode} />
+          <BigButton icon="🎙️" label="Spiega" onClick={() => setDialog({ kind: 'audio' })} disabled={!selectedNode} />
           <BigButton icon="✨" label="Riordina" onClick={tidy} disabled={busy} />
-          <BigButton icon="🧠" label="Ripasso" onClick={() => setDialog({ kind: 'review' })} />
+          <BigButton icon="🧠" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
           <BigButton icon="🗑️" label="Elimina" variant="danger" onClick={() => selectedId && actions.removeNodes([selectedId])} disabled={!selectedId} />
-          <BigButton icon="📤" label="Esporta" onClick={() => setDialog({ kind: 'export' })} />
+          <BigButton icon="💾" label="Salva" onClick={() => setDialog({ kind: 'export' })} />
           <BigButton icon="🎨" label="Aspetto" onClick={onOpenSettings} />
         </nav>
       )}
@@ -269,6 +331,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
       />
 
       {dialog?.kind === 'style' && selectedNode && <NodeStyleDialog node={selectedNode} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'audio' && selectedNode && <AudioNoteDialog node={selectedNode} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'link' &&
         (() => {
           const edge = map.edges.find((e) => e.id === dialog.edgeId);
@@ -281,22 +344,31 @@ function Editor({ onBack, onOpenSettings }: Props) {
   );
 }
 
-function ReviewStartDialog({ onStart, onClose }: { onStart(quiz: boolean): void; onClose(): void }) {
+function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): void; onClose(): void }) {
   return (
-    <Dialog title="Ripasso" onClose={onClose} className="review-start">
-      <button type="button" className="review-option" onClick={() => onStart(false)}>
+    <Dialog title="Ripassa" onClose={onClose} className="review-start">
+      <button type="button" className="review-option" onClick={() => onStart('passo')}>
         <span className="template-icon" aria-hidden>
           👣
         </span>
         <span className="template-name">Un passo alla volta</span>
         <span className="template-desc">La mappa appare un concetto alla volta, letto ad alta voce.</span>
       </button>
-      <button type="button" className="review-option" onClick={() => onStart(true)}>
+      <button type="button" className="review-option" onClick={() => onStart('quiz')}>
         <span className="template-icon" aria-hidden>
           🙈
         </span>
         <span className="template-name">Indovina</span>
         <span className="template-desc">Il concetto è nascosto: prova a ricordarlo, poi premi «Scopri».</span>
+      </button>
+      <button type="button" className="review-option" onClick={() => onStart('interrogazione')}>
+        <span className="template-icon" aria-hidden>
+          🙋
+        </span>
+        <span className="template-name">Interrogazione</span>
+        <span className="template-desc">
+          Tutta la mappa davanti a te, a schermo intero: spiega un concetto alla volta e vai avanti con le frecce.
+        </span>
       </button>
       <div className="dialog-actions">
         <BigButton icon="✖️" label="Annulla" onClick={onClose} />

@@ -61,6 +61,17 @@ Il plugin ML Kit su iOS funziona solo con CocoaPods, mentre il progetto usa Swif
 
 Limite: l'OCR sul dispositivo legge bene il testo stampato, male la scrittura a mano. Per quella servirà l'AI (fase 3b).
 
+## Fase 4: mappe concettuali complete
+
+| Funzione | Dove |
+|---|---|
+| ✏️ **File modificabile `.mappeora`**: «Salva» → «File modificabile» (download sul web, «Condividi» su Android/iOS); «Apri file» nella schermata iniziale. Si apre sempre come copia nuova; foto e spiegazioni a voce viaggiano dentro il file. Il file viene controllato all'apertura: si accettano solo immagini e audio incorporati, mai indirizzi web | `src/lib/mapFile.ts`, `src/services/openFile.ts` |
+| 🙋 **Interrogazione**: tutta la mappa a schermo intero, un concetto alla volta in evidenza (gli altri sbiaditi), testo grande in basso. Si va avanti con frecce, barra spaziatrice o PagSu/PagGiù (telecomandi per presentazioni sulla LIM), oppure toccando un concetto. L'app legge solo se si preme «Leggi»: a parlare è lo studente | `src/store/reviewStore.ts`, `src/features/editor/MapEditor.tsx` |
+| 📷 **Foto nei nodi**: scattata o presa dalla galleria, ridotta a 480 px e salvata dentro la mappa | `src/features/editor/NodeStyleDialog.tsx`, `src/services/photo.ts` |
+| 🎙️ **Spiega a voce**: si registra la spiegazione di un concetto con parole proprie (max 2 minuti) e si riascolta dal nodo (🎧) | `src/features/editor/AudioNoteDialog.tsx`, `src/services/audioNote.ts` |
+| ➖ **Nodi comprimibili**: il pulsante sotto un concetto nasconde i concetti che dipendono da lui (resta il numero, es. «+3»). Lettura, ripasso, «Riordina» ed esportazione lavorano su ciò che si vede | `src/lib/collapse.ts` |
+| 🖨️ **Stampa A4/A3 su più fogli**: 1, 2 o 4 fogli con orientamento scelto in automatico, titolo, data e «pagina 1 di 2», una striscia ripetuta tra un foglio e l'altro per unirli. Sul web c'è anche «Stampa» diretta | `src/lib/pagePlan.ts`, `src/services/export.ts` |
+
 ## Architettura
 
 ```
@@ -133,7 +144,7 @@ Dopo ogni modifica al codice web: `npm run cap:sync`.
 
 ### Permessi già configurati
 
-- **Android** (`android/app/src/main/AndroidManifest.xml`): `RECORD_AUDIO` e `<queries>` per i servizi di riconoscimento e sintesi vocale (Android 11+). La fotocamera non richiede permessi (usa il selettore di sistema).
+- **Android** (`android/app/src/main/AndroidManifest.xml`): `RECORD_AUDIO` e `MODIFY_AUDIO_SETTINGS` (la WebView li chiede entrambi per registrare le spiegazioni a voce) e `<queries>` per i servizi di riconoscimento e sintesi vocale (Android 11+). La fotocamera non richiede permessi (usa il selettore di sistema).
 - **iOS** (`ios/App/App/Info.plist`): microfono, riconoscimento vocale, fotocamera e libreria foto, con testi in italiano; lingua di sviluppo `it`.
 
 ## Skill per l'agente di sviluppo (Claude Code)
@@ -157,9 +168,20 @@ In `.claude/skills/` ci sono skill installate con `npx skills add … -a claude-
 
 `.claude/hooks/session-start.sh` (registrato in `.claude/settings.json`) esegue `npm install` all'avvio di ogni sessione cloud, così typecheck, test e server di sviluppo funzionano subito. Su un computer locale non fa nulla. L'Android SDK e Playwright per Python **non** vengono installati in automatico (sono pesanti): si installano solo quando servono con `npm run setup:android` e `npm run setup:webapp-testing`. Per aggiornare le skill: `npx skills update`.
 
-## Prossimi passi
+## Sviluppi da fare
 
-**Rifiniture della fase 2**
+**Sincronizzazione e condivisione** (prossimo grande passo; serve un server, es. Supabase)
+- [ ] Account facoltativo e sincronizzazione delle mappe tra dispositivi (casa ↔ scuola)
+- [ ] Condivisione con la classe e con l'insegnante; consenso dei genitori per gli under 14
+- [ ] Base per le **licenze scuola** (vendute direttamente agli istituti: su iOS è consentito senza acquisto in-app, regola 3.1.3(c)) e per i crediti AI della fase 3b. Ai privati, su iOS, le funzioni a pagamento vanno vendute con l'acquisto in-app (commissione 15% per i piccoli sviluppatori)
+
+**iOS** (in pausa: per ora si lavora su web e Android)
+- [ ] Prima compilazione: il codice iOS non è mai stato compilato (manca un Mac). Si può fare senza Mac con **GitHub Actions** (macOS gratuito per i repo pubblici), firmando con i certificati creati dal sito Apple e salvati nei *secrets* di GitHub, mai nel repo
+- [ ] Apple Developer Program: 99 $/anno; prove su iPhone/iPad con TestFlight
+- [ ] Verificare su iPhone: OCR con Vision, dettatura, registrazione delle spiegazioni a voce, «Condividi» del file `.mappeora`
+
+**Rifiniture**
+- [ ] Android: «Apri con Mappeora» per i file `.mappeora` ricevuti in chat o da Drive (intent filter)
 - [ ] Android/iOS: salvare in locale i pittogrammi usati (nelle app non c'è il service worker, quindi senza internet non si caricano)
 - [ ] Note di approfondimento nei nodi, nascoste nella versione per la verifica
 
@@ -169,11 +191,11 @@ In `.claude/skills/` ci sono skill installate con `npx skills add … -a claude-
 - Vincolo di costo: **tetto di 1 $ al giorno**, applicato sul server (Edge Function) con un contatore giornaliero. Raggiunto il tetto, le funzioni AI si disattivano fino al giorno dopo e l'app continua a funzionare senza.
 - La chiave API va solo sul server, mai nell'app. Per i minori servono consenso dei genitori e attivazione da parte di un adulto.
 - [ ] Scrittura a mano (appunti sul quaderno)
-- [ ] Account docente/genitore e sincronizzazione (Supabase); consenso dei genitori per gli under 14
 - [ ] TTS cloud per voci più naturali ed esportazione MP3
 
 **Pubblicazione sugli store**
 - [ ] Icone e splash screen (`@capacitor/assets`)
-- [ ] Build di release firmata (AAB per Google Play: scarica solo le librerie del processore del dispositivo, molto più leggera dell'APK di debug da 64 MB)
+- [ ] Build di release firmata (AAB per Google Play: scarica solo le librerie del processore del dispositivo, molto più leggera dell'APK di debug da 64 MB) con un keystore di release tenuto fuori dal repo
+- [ ] Google Play: account 25 $ una tantum; per gli account personali nuovi, test chiuso con almeno 12 tester per 14 giorni
 - [ ] Apple, categoria Kids: niente analytics di terze parti, parental gate per link esterni
 - [ ] Google Play, programma Families: dichiarazione del pubblico di destinazione e informativa privacy
