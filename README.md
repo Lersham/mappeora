@@ -135,6 +135,21 @@ Dopo ogni modifica al codice web: `npm run cap:sync`.
 - **Android** (`android/app/src/main/AndroidManifest.xml`): `RECORD_AUDIO` e `<queries>` per i servizi di riconoscimento e sintesi vocale (Android 11+). La fotocamera non richiede permessi (usa il selettore di sistema).
 - **iOS** (`ios/App/App/Info.plist`): microfono, riconoscimento vocale, fotocamera e libreria foto, con testi in italiano; lingua di sviluppo `it`.
 
+## Skill per l'agente di sviluppo (Claude Code)
+
+In `.claude/skills/` ci sono skill installate con `npx skills add … -a claude-code --copy` (le sorgenti sono registrate in `skills-lock.json`):
+
+| Skill | Da | Uso |
+|---|---|---|
+| `find-skills` | vercel-labs/skills | Cerca e propone altre skill (`npx skills find …`) |
+| `vercel-react-best-practices` | vercel-labs/agent-skills | Prestazioni e buone pratiche React |
+| `web-design-guidelines` | vercel-labs/agent-skills | Revisione dell'interfaccia (scarica le regole aggiornate da GitHub a ogni uso) |
+| `accessibility` | addyosmani/web-quality-skills | Accessibilità WCAG 2.2: utile a tutti gli studenti, indispensabile per chi ha un DSA |
+| `capacitor-best-practices`, `debugging-capacitor` | cap-go/capgo-skills | App native con Capacitor |
+| `webapp-testing` | anthropics/skills | Test dell'app nel browser con Playwright (Python) |
+
+`webapp-testing` usa Playwright per Python, che nelle sessioni cloud va reinstallato: `pip install playwright==1.56.0` (versione compatibile con il Chromium preinstallato). Per aggiornare le skill: `npx skills update`.
+
 ## Prossimi passi
 
 **Rifiniture della fase 2**
