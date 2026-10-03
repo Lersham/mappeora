@@ -7,11 +7,23 @@
       "skillPath": "skills/accessibility/SKILL.md",
       "computedHash": "612f913bcb03f0787b103c848cd7664b676a9aaf31f25d3270cc69cf5caaab95"
     },
+    "capacitor-app-development": {
+      "source": "capawesome-team/skills",
+      "sourceType": "github",
+      "skillPath": "skills/capacitor-app-development/SKILL.md",
+      "computedHash": "f9ed46d94010df018f0152cf5caf195b98c0251ff92b01bce6382968bd64767b"
+    },
     "capacitor-best-practices": {
       "source": "cap-go/capgo-skills",
       "sourceType": "github",
       "skillPath": "skills/capacitor-best-practices/SKILL.md",
       "computedHash": "5070b60d829a8bfab87c5a51db0543174d1b9be4a990e305a9b56a06054770a3"
+    },
+    "capacitor-react": {
+      "source": "capawesome-team/skills",
+      "sourceType": "github",
+      "skillPath": "skills/capacitor-react/SKILL.md",
+      "computedHash": "a9d904d0a897e804ed444a4b39d666c72f992d5b40657763421bde4d56578947"
     },
     "debugging-capacitor": {
       "source": "cap-go/capgo-skills",
