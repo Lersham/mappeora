@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import type { MapNode } from '../../types/map';
 import type { MapLayout } from '../../lib/templates';
+import type { NodeRole } from '../../lib/sheetLayout';
 import { LADDER } from '../../lib/ladder';
 import { useMapStore } from '../../store/mapStore';
 import { useReading } from '../../store/readingStore';
@@ -12,6 +13,8 @@ import { illustrationUrl } from '../../services/illustrations';
 
 export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'collapsed'> & {
   layout: MapLayout;
+  /** "Foglio" maps: main concept, branch, or concept inside a branch. */
+  role?: NodeRole;
   hasChildren?: boolean;
   /** How many concepts this one hides while collapsed. */
   hiddenBelow?: number;
@@ -53,6 +56,27 @@ function NodeImageView({ image }: { image: NonNullable<ConceptNodeData['image']>
   return <img className="concept-photo" src={image.ref} alt="" draggable={false} />;
 }
 
+/**
+ * "Foglio" maps: lines reach a branch from above and the concepts inside it
+ * from the left; they leave the main concept from the bottom centre and
+ * the others from the bottom-left (the branch's vertical line). Every node
+ * has all four, the ones its role doesn't use are invisible.
+ */
+function SheetHandles({ role, kind }: { role: NodeRole; kind: 'source' | 'target' }) {
+  const hidden = (shown: boolean) => (shown ? undefined : 'handle-hidden');
+  return kind === 'target' ? (
+    <>
+      <Handle id="t-top" type="target" position={Position.Top} className={hidden(role === 'head')} />
+      <Handle id="t-left" type="target" position={Position.Left} className={hidden(role === 'item')} />
+    </>
+  ) : (
+    <>
+      <Handle id="s-bottom" type="source" position={Position.Bottom} className={hidden(role === 'root')} />
+      <Handle id="s-spine" type="source" position={Position.Bottom} style={{ left: LADDER.spine }} className={hidden(role !== 'root')} />
+    </>
+  );
+}
+
 function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const updateNode = useMapStore((s) => s.updateNode);
   const toggleCollapsed = useMapStore((s) => s.toggleCollapsed);
@@ -84,8 +108,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
         setEditing(true);
       }}
     >
-      {/* "Scaletta": lines arrive from the left and leave from the bottom-left. */}
-      <Handle type="target" position={data.layout === 'scaletta' ? Position.Left : Position.Top} />
+      {data.layout === 'foglio' ? <SheetHandles role={data.role ?? 'item'} kind="target" /> : <Handle type="target" position={Position.Top} />}
       {visibility === 'mystery' ? (
         <span className="concept-mystery" aria-label="Concetto nascosto">
           ?
@@ -142,7 +165,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
           {data.collapsed ? `+${data.hiddenBelow}` : '−'}
         </button>
       )}
-      <Handle type="source" position={Position.Bottom} style={data.layout === 'scaletta' ? { left: LADDER.spine } : undefined} />
+      {data.layout === 'foglio' ? <SheetHandles role={data.role ?? 'item'} kind="source" /> : <Handle type="source" position={Position.Bottom} />}
     </div>
   );
 }

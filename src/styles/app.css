@@ -101,8 +101,17 @@ textarea {
 }
 .home-actions {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
+}
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 @media (max-width: 520px) {
   .home-actions {
@@ -239,6 +248,11 @@ textarea {
 }
 .ladder-label:disabled {
   cursor: default;
+}
+/* "Foglio" maps: connection points a concept's role doesn't use. */
+.react-flow__handle.handle-hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 .react-flow__handle {
   width: 16px;

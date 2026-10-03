@@ -53,6 +53,12 @@ export default defineConfig({
             },
           },
           {
+            // Example maps (public/esempi): fetched on demand, then available offline.
+            urlPattern: ({ url }) => url.pathname.includes('/esempi/'),
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'esempi' },
+          },
+          {
             urlPattern: /^https:\/\/api\.arasaac\.org\//,
             handler: 'NetworkFirst',
             options: {

@@ -15,7 +15,8 @@ import { beginDrag, endDrag, mapHistory, useMapStore } from '../../store/mapStor
 import { reviewVisibility, useReview, type ReviewMode } from '../../store/reviewStore';
 import { ConceptNode, type ConceptFlowNode } from './ConceptNode';
 import { LadderEdge } from './LadderEdge';
-import { ladderLayout } from '../../lib/ladder';
+import { BusEdge } from './BusEdge';
+import { sheetLayout } from '../../lib/sheetLayout';
 import { NodeStyleDialog } from './NodeStyleDialog';
 import { LinkWordDialog } from './LinkWordDialog';
 import { ExportDialog, type ExportChoice } from './ExportDialog';
@@ -35,7 +36,7 @@ import type { MapNode } from '../../types/map';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 
 const nodeTypes = { concept: ConceptNode };
-const edgeTypes: EdgeTypes = { ladder: LadderEdge };
+const edgeTypes: EdgeTypes = { ladder: LadderEdge, bus: BusEdge };
 
 type DialogState =
   | { kind: 'style' }
@@ -64,16 +65,16 @@ function Editor({ onBack, onOpenSettings }: Props) {
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<DialogState>(null);
   const layout = templateInfo(map.template).layout;
-  const ladderMode = layout === 'scaletta';
+  const sheetMode = layout === 'foglio';
   const selectedNode = map.nodes.find((n) => n.id === selectedId);
 
   const collapse = useMemo(() => collapseInfo(map), [map]);
   const parents = useMemo(() => new Set(map.edges.map((e) => e.source)), [map.edges]);
 
-  // "Scaletta": where every visible concept should be. Anchored to the
-  // first root, so dragging the main concept moves the whole map.
-  const ladder = useMemo(() => {
-    if (!ladderMode) return null;
+  // "Foglio": where every visible concept should be. Anchored to the main
+  // concept, so dragging it moves the whole map.
+  const sheet = useMemo(() => {
+    if (!sheetMode) return null;
     const part = visiblePart(map);
     const targets = new Set(part.edges.map((e) => e.target));
     const roots = part.nodes.filter((n) => !targets.has(n.id));
@@ -81,17 +82,17 @@ function Editor({ onBack, onOpenSettings }: Props) {
       (best, n) => (!best || n.position.y < best.position.y || (n.position.y === best.position.y && n.position.x < best.position.x) ? n : best),
       undefined,
     );
-    return ladderLayout(part.nodes, part.edges, sizes, first?.position);
-  }, [ladderMode, map, sizes]);
+    return sheetLayout(part.nodes, part.edges, sizes, first?.position);
+  }, [sheetMode, map, sizes]);
 
-  // Keep the "scaletta" in order after every change (adding, deleting,
+  // Keep the sheet in order after every change (adding, deleting,
   // collapsing, dropping a dragged concept). Not an edit by the child, so
   // it stays out of the undo history.
   const dragging = useRef(false);
   const [dragTick, setDragTick] = useState(0);
   useEffect(() => {
-    if (!ladder || dragging.current || review.active) return;
-    const moved = Object.entries(ladder.positions).filter(([id, p]) => {
+    if (!sheet || dragging.current || review.active) return;
+    const moved = Object.entries(sheet.positions).filter(([id, p]) => {
       const n = map.nodes.find((x) => x.id === id);
       return n && (Math.abs(n.position.x - p.x) > 0.5 || Math.abs(n.position.y - p.y) > 0.5);
     });
@@ -99,7 +100,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
     mapHistory().pause();
     actions.applyPositions(Object.fromEntries(moved));
     mapHistory().resume();
-  }, [ladder, dragTick, review.active]);
+  }, [sheet, dragTick, review.active]);
 
   // The store holds our document model; React Flow nodes are derived from it.
   const nodes = useMemo<ConceptFlowNode[]>(
@@ -117,40 +118,33 @@ function Editor({ onBack, onOpenSettings }: Props) {
           shape: n.shape,
           image: n.image,
           layout,
+          role: sheet?.roles[n.id],
           hasChildren: parents.has(n.id),
           collapsed: n.collapsed,
           hiddenBelow: collapse.hiddenBelow[n.id] ?? 0,
         },
       })),
-    [map.nodes, selectedId, sizes, review, layout, collapse, parents],
+    [map.nodes, selectedId, sizes, review, layout, collapse, parents, sheet],
   );
-  const edges = useMemo<Edge[]>(
-    () =>
-      map.edges.map((e) =>
-        ladder?.treeEdges.has(e.id)
-          ? {
-              id: e.id,
-              type: 'ladder',
-              source: e.source,
-              target: e.target,
-              label: e.label,
-              interactionWidth: 32,
-              className: 'concept-edge',
-              data: { onEdit: review.active ? undefined : () => setDialog({ kind: 'link', edgeId: e.id }) },
-            }
-          : {
-              id: e.id,
-              source: e.source,
-              target: e.target,
-              label: e.label,
-              labelBgPadding: [8, 4] as [number, number],
-              labelBgBorderRadius: 6,
-              interactionWidth: 32, // easier to tap with a finger
-              className: 'concept-edge',
-            },
-      ),
-    [map.edges, ladder, review.active],
-  );
+  const edges = useMemo<Edge[]>(() => {
+    const onEdit = (edgeId: string) => (review.active ? undefined : () => setDialog({ kind: 'link', edgeId }));
+    return map.edges.map((e) => {
+      const base = { id: e.id, source: e.source, target: e.target, label: e.label, interactionWidth: 32, className: 'concept-edge' };
+      const kind = sheet?.edges[e.id];
+      if (kind?.kind === 'bus') {
+        return { ...base, type: 'bus', sourceHandle: 's-bottom', targetHandle: 't-top', data: { points: kind.points, onEdit: onEdit(e.id) } };
+      }
+      if (kind?.kind === 'ladder') {
+        return { ...base, type: 'ladder', sourceHandle: 's-spine', targetHandle: 't-left', data: { onEdit: onEdit(e.id) } };
+      }
+      return {
+        ...base,
+        ...(sheet && { sourceHandle: 's-spine', targetHandle: 't-left' }), // a cross-link on a sheet
+        labelBgPadding: [8, 4] as [number, number],
+        labelBgBorderRadius: 6,
+      };
+    });
+  }, [map.edges, sheet, review.active]);
 
   const onNodesChange = useCallback((changes: NodeChange<ConceptFlowNode>[]) => {
     const s = useMapStore.getState();
@@ -174,8 +168,8 @@ function Editor({ onBack, onOpenSettings }: Props) {
   const parentForNew = () => selectedId ?? map.nodes[0]?.id ?? null;
 
   const tidy = async () => {
-    // A "scaletta" is always in order: just show all of it.
-    if (ladderMode) return void fitView({ padding: 0.2, duration: 400 });
+    // A "foglio" map is always in order: just show all of it.
+    if (sheetMode) return void fitView({ padding: 0.2, duration: 400 });
     setBusy(true);
     try {
       // Read fresh state: tidy() also runs right after adding concepts.
@@ -238,7 +232,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
     actions.select(null);
     // Full screen helps on the class whiteboard; not every WebView allows it.
     if (mode === 'interrogazione') document.documentElement.requestFullscreen?.().catch(() => {});
-    review.start(readingOrder(visiblePart(map), { depthFirst: ladderMode }), mode);
+    review.start(readingOrder(visiblePart(map), { depthFirst: sheetMode }), mode);
   };
 
   const exitReview = () => {
@@ -370,7 +364,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
           )}
           <BigButton icon="📷" label="Dal libro" onClick={() => setDialog({ kind: 'photo' })} />
           <BigButton icon="🖼️" label="Immagine" onClick={() => setDialog({ kind: 'style' })} disabled={!selectedNode} />
-          {!ladderMode && <BigButton icon="✨" label="Riordina" onClick={tidy} disabled={busy} />}
+          {!sheetMode && <BigButton icon="✨" label="Riordina" onClick={tidy} disabled={busy} />}
           <BigButton icon="🧠" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
           <BigButton icon="🗑️" label="Elimina" variant="danger" onClick={() => selectedId && actions.removeNodes([selectedId])} disabled={!selectedId} />
           <BigButton icon="💾" label="Salva" onClick={() => setDialog({ kind: 'export' })} />

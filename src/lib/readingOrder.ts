@@ -15,7 +15,7 @@ const step = (node: MapNode, linkWords?: string): ReadingStep => ({
 /**
  * Reading order starting from root nodes (nodes with no incoming edge), so a
  * map is read "from the general to the particular". "Albero" maps are read
- * level by level (breadth first); "scaletta" maps from top to bottom, as
+ * level by level (breadth first); "foglio" maps branch by branch, top to bottom, as
  * they appear on screen (depth first). Nodes in cycles or disconnected
  * islands are read at the end.
  */

@@ -5,6 +5,7 @@ import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { pickMapFile } from '../../services/openFile';
 import { MapFileError, parseMapFile } from '../../lib/mapFile';
+import { ExamplesDialog } from './ExamplesDialog';
 
 interface Props {
   onOpen(id: string): void;
@@ -15,6 +16,7 @@ interface Props {
 export function HomeScreen({ onOpen, onCreate, onOpenSettings }: Props) {
   const [maps, setMaps] = useState<MapSummary[] | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [examplesOpen, setExamplesOpen] = useState(false);
   const { readText } = useReadAloud();
 
   const refresh = () => void storage().list().then(setMaps);
@@ -49,6 +51,7 @@ export function HomeScreen({ onOpen, onCreate, onOpenSettings }: Props) {
       <div className="home-actions">
         <BigButton icon="➕" label="Nuova mappa" variant="primary" className="home-new" onClick={onCreate} />
         <BigButton icon="📂" label="Apri file" className="home-new" onClick={() => void importFile()} />
+        <BigButton icon="📚" label="Esempi" className="home-new" onClick={() => setExamplesOpen(true)} />
       </div>
       {importError && (
         <p className="field-error" role="alert">
@@ -56,7 +59,16 @@ export function HomeScreen({ onOpen, onCreate, onOpenSettings }: Props) {
         </p>
       )}
 
-      {maps && maps.length === 0 && <p className="empty">Non hai ancora mappe. Creane una!</p>}
+      {maps && maps.length === 0 && (
+        <p className="empty">
+          Non hai ancora mappe. Creane una, oppure apri un{' '}
+          <button type="button" className="link-button" onClick={() => setExamplesOpen(true)}>
+            esempio
+          </button>
+          .
+        </p>
+      )}
+      {examplesOpen && <ExamplesDialog onOpen={onOpen} onClose={() => setExamplesOpen(false)} />}
 
       <ul className="map-list">
         {maps?.map((m) => (

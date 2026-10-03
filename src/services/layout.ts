@@ -12,7 +12,7 @@ export type NodeSizes = Record<string, { width: number; height: number } | undef
 /**
  * "Riordina" for "albero" maps: a top-down layout so children never have
  * to place and align nodes by hand. Returns new positions only.
- * ("Scaletta" maps use lib/ladder.ts and stay in order by themselves.)
+ * ("Foglio" maps use lib/sheetLayout.ts and stay in order by themselves.)
  */
 export async function autoLayout(
   nodes: MapNode[],

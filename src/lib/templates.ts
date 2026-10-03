@@ -9,18 +9,19 @@ export interface TemplateInfo {
   /** Read aloud in the template picker, so keep it short and concrete. */
   description: string;
   /**
-   * How the map grows. "scaletta": vertical tree, kept in order
-   * automatically (lib/ladder.ts). "albero": top-down layout for maps whose
-   * shape matters (causes above, effects below; two columns to compare).
+   * How the map is arranged. "foglio": branches side by side, arranged to
+   * fill a portrait A4 sheet and kept in order automatically
+   * (lib/sheetLayout.ts). "albero": top-down layout for maps whose shape
+   * matters (causes above, effects below; two columns to compare; a timeline).
    */
   layout: MapLayout;
 }
 
-export type MapLayout = 'scaletta' | 'albero';
+export type MapLayout = 'foglio' | 'albero';
 
 export const TEMPLATES: TemplateInfo[] = [
-  { id: 'libera', icon: '✏️', name: 'Libera', description: 'Una mappa vuota: parti da un concetto e aggiungi quello che vuoi.', layout: 'scaletta' },
-  { id: '5w', icon: '❓', name: 'Le 5 W', description: 'Chi, che cosa, quando, dove, perché. Per storia, geografia e per riassumere un racconto.', layout: 'scaletta' },
+  { id: 'libera', icon: '✏️', name: 'Libera', description: 'Una mappa vuota: parti da un concetto e aggiungi quello che vuoi.', layout: 'foglio' },
+  { id: '5w', icon: '❓', name: 'Le 5 W', description: 'Chi, che cosa, quando, dove, perché. Per storia, geografia e per riassumere un racconto.', layout: 'foglio' },
   { id: 'causa-effetto', icon: '➡️', name: 'Causa ed effetto', description: 'Che cosa succede e perché: le cause sopra, le conseguenze sotto.', layout: 'albero' },
   { id: 'timeline', icon: '📅', name: 'Linea del tempo', description: 'Fatti in ordine, dall’alto in basso: prima, poi, dopo, alla fine.', layout: 'albero' },
   { id: 'confronto', icon: '⚖️', name: 'Confronto', description: 'Due cose a confronto: le differenze e che cosa hanno in comune.', layout: 'albero' },
@@ -44,13 +45,13 @@ function specs(template: MapTemplate, title: string): { nodes: Spec[]; edges: [s
     case '5w':
       return {
         nodes: [
-          // A "scaletta": positions are refined once the concepts are measured.
+          // Arranged on the sheet once the concepts are measured; this is the order.
           { key: 'r', label: title, x: 0, y: 0, depth: 0, shape: 'ellisse' },
-          { key: 'chi', label: 'Chi?', x: 56, y: 100, depth: 1, emoji: '👤' },
-          { key: 'cosa', label: 'Che cosa?', x: 56, y: 200, depth: 1, emoji: '💬' },
-          { key: 'quando', label: 'Quando?', x: 56, y: 300, depth: 1, emoji: '📅' },
-          { key: 'dove', label: 'Dove?', x: 56, y: 400, depth: 1, emoji: '📍' },
-          { key: 'perche', label: 'Perché?', x: 56, y: 500, depth: 1, emoji: '💡' },
+          { key: 'chi', label: 'Chi?', x: 0, y: 180, depth: 1, emoji: '👤' },
+          { key: 'cosa', label: 'Che cosa?', x: 200, y: 180, depth: 1, emoji: '💬' },
+          { key: 'quando', label: 'Quando?', x: 400, y: 180, depth: 1, emoji: '📅' },
+          { key: 'dove', label: 'Dove?', x: 0, y: 360, depth: 1, emoji: '📍' },
+          { key: 'perche', label: 'Perché?', x: 200, y: 360, depth: 1, emoji: '💡' },
         ],
         edges: [['r', 'chi'], ['r', 'cosa'], ['r', 'quando'], ['r', 'dove'], ['r', 'perche']],
       };

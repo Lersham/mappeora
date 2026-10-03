@@ -34,7 +34,7 @@ export function useReadAloud() {
 
   const readMap = useCallback(() => {
     const map = useMapStore.getState().map;
-    if (map) void readSteps(readingOrder(visiblePart(map), { depthFirst: templateInfo(map.template).layout === 'scaletta' }));
+    if (map) void readSteps(readingOrder(visiblePart(map), { depthFirst: templateInfo(map.template).layout === 'foglio' }));
   }, [readSteps]);
 
   const readNode = useCallback(
