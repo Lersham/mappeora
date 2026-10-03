@@ -10,20 +10,20 @@ export const DEFAULT_NODE_SIZE = { width: 180, height: 72 };
 export type NodeSizes = Record<string, { width: number; height: number } | undefined>;
 
 /**
- * "Riordina": computes a top-down tree layout so children never have to
- * place and align nodes by hand. Returns new positions only.
+ * "Riordina" for "albero" maps: a top-down layout so children never have
+ * to place and align nodes by hand. Returns new positions only.
+ * ("Scaletta" maps use lib/ladder.ts and stay in order by themselves.)
  */
 export async function autoLayout(
   nodes: MapNode[],
   edges: MapEdge[],
   sizes: NodeSizes = {},
-  direction: 'DOWN' | 'RIGHT' = 'DOWN',
 ): Promise<Record<string, { x: number; y: number }>> {
   const graph = await (await getElk()).layout({
     id: 'root',
     layoutOptions: {
       'elk.algorithm': 'layered',
-      'elk.direction': direction,
+      'elk.direction': 'DOWN',
       'elk.spacing.nodeNode': '48',
       'elk.layered.spacing.nodeNodeBetweenLayers': '80',
       'elk.edgeLabels.inline': 'true',

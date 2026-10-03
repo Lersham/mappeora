@@ -35,7 +35,6 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' && Number
  * make the app load something from an arbitrary web address.
  */
 const PHOTO_URL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
-const AUDIO_URL = /^data:audio\/[a-z0-9.+-]+(;codecs=[a-z0-9.,"-]+)?;base64,[A-Za-z0-9+/=]+$/i;
 
 /** Fluent Emoji asset path, e.g. "Droplet/3D/droplet_3d". */
 const ILLUSTRATION_PATH = /^[\p{L}\p{N} _.,'’&!()#*:-]+(\/[\p{L}\p{N} _.,'’&!()#*:-]+){2,3}$/u;
@@ -56,14 +55,6 @@ function readImage(v: unknown): MapNode['image'] {
   return undefined;
 }
 
-function readAudio(v: unknown): MapNode['audio'] {
-  if (!isObj(v)) return undefined;
-  const dataUrl = str(v.dataUrl, 20_000_000);
-  const durationMs = num(v.durationMs);
-  if (!dataUrl || durationMs === undefined || !AUDIO_URL.test(dataUrl)) return undefined;
-  return { dataUrl, durationMs };
-}
-
 function readNode(v: unknown): MapNode | undefined {
   if (!isObj(v) || !isObj(v.position)) return undefined;
   const id = str(v.id, 100);
@@ -79,8 +70,6 @@ function readNode(v: unknown): MapNode | undefined {
   if (image) node.image = image;
   const note = str(v.note);
   if (note) node.note = note;
-  const audio = readAudio(v.audio);
-  if (audio) node.audio = audio;
   if (v.collapsed === true) node.collapsed = true;
   return node;
 }

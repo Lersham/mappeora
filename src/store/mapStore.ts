@@ -70,8 +70,10 @@ export const useMapStore = create<MapState>()(
           edit(s, (map) => {
             const parent = map.nodes.find((n) => n.id === parentId);
             const siblings = parent ? map.edges.filter((e) => e.source === parent.id).length : 0;
+            // Below every existing sibling, so a "scaletta" lists it last.
+            const siblingYs = parent ? map.edges.filter((e) => e.source === parent.id).map((e) => map.nodes.find((n) => n.id === e.target)?.position.y ?? 0) : [];
             const position = parent
-              ? { x: parent.position.x + siblings * 200 - 100, y: parent.position.y + CHILD_OFFSET_Y }
+              ? { x: parent.position.x + siblings * 200 - 100, y: Math.max(parent.position.y + CHILD_OFFSET_Y, ...siblingYs.map((y) => y + 1)) }
               : { x: 0, y: Math.max(0, ...map.nodes.map((n) => n.position.y)) + CHILD_OFFSET_Y };
             const depth = parent ? depthOf(map, parent.id) + 1 : 0;
             const node: MapNode = { id, label, position, color: colorForDepth(depth), shape: 'rettangolo' };

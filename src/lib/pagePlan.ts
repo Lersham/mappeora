@@ -24,10 +24,11 @@ const OVERLAP = 0.05;
 /** Never blow a small map up beyond this (≈ 18 pt for an 18 px label). */
 const MAX_SCALE = 0.35;
 
+/** Sheets are always portrait and the map is cut from top to bottom. */
 const GRIDS: Record<PageCount, [cols: number, rows: number][]> = {
   1: [[1, 1]],
-  2: [[2, 1], [1, 2]],
-  4: [[2, 2], [4, 1], [1, 4]],
+  2: [[1, 2]],
+  4: [[1, 4], [2, 2]],
 };
 
 function tiles(size: number, count: number): { start: number; length: number }[] {
@@ -41,8 +42,9 @@ function tiles(size: number, count: number): { start: number; length: number }[]
 }
 
 /**
- * Chooses the grid (e.g. 2×1 vs 1×2) and the orientation that print the
- * map largest on the given number of sheets.
+ * Plans portrait sheets: maps grow downwards ("scaletta"), so they are cut
+ * into horizontal strips, one under the other. With 4 sheets a wide map
+ * may use a 2×2 grid if that prints it larger.
  */
 export function planPages(
   width: number,
@@ -51,26 +53,22 @@ export function planPages(
   pages: PageCount,
   layout: { margin: number; header: number; footer: number },
 ): PagePlan {
+  const { w: pageW, h: pageH } = PAPER_MM[paper];
+  const boxW = pageW - layout.margin * 2;
+  const boxH = pageH - layout.margin * 2 - layout.header - layout.footer;
   let best: PagePlan | null = null;
-  for (const orientation of ['landscape', 'portrait'] as const) {
-    const { w, h } = PAPER_MM[paper];
-    const pageW = orientation === 'landscape' ? h : w;
-    const pageH = orientation === 'landscape' ? w : h;
-    const boxW = pageW - layout.margin * 2;
-    const boxH = pageH - layout.margin * 2 - layout.header - layout.footer;
-    for (const [cols, rows] of GRIDS[pages]) {
-      const xs = tiles(width, cols);
-      const ys = tiles(height, rows);
-      const tileW = Math.max(...xs.map((t) => t.length));
-      const tileH = Math.max(...ys.map((t) => t.length));
-      const scale = Math.min(boxW / tileW, boxH / tileH, MAX_SCALE);
-      if (!best || scale > best.scale + 1e-9) {
-        best = {
-          orientation,
-          scale,
-          tiles: ys.flatMap((y) => xs.map((x) => ({ x: x.start, y: y.start, w: x.length, h: y.length }))),
-        };
-      }
+  for (const [cols, rows] of GRIDS[pages]) {
+    const xs = tiles(width, cols);
+    const ys = tiles(height, rows);
+    const tileW = Math.max(...xs.map((t) => t.length));
+    const tileH = Math.max(...ys.map((t) => t.length));
+    const scale = Math.min(boxW / tileW, boxH / tileH, MAX_SCALE);
+    if (!best || scale > best.scale + 1e-9) {
+      best = {
+        orientation: 'portrait',
+        scale,
+        tiles: ys.flatMap((y) => xs.map((x) => ({ x: x.start, y: y.start, w: x.length, h: y.length }))),
+      };
     }
   }
   return best!;

@@ -1,17 +1,17 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import type { MapNode } from '../../types/map';
+import type { MapLayout } from '../../lib/templates';
+import { LADDER } from '../../lib/ladder';
 import { useMapStore } from '../../store/mapStore';
 import { useReading } from '../../store/readingStore';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { reviewVisibility, useReview } from '../../store/reviewStore';
 import { pictogramUrl } from '../../services/pictograms';
 import { illustrationUrl } from '../../services/illustrations';
-import { formatDuration, playNote, stopPlayback } from '../../services/audioNote';
 
-export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'audio' | 'collapsed'> & {
-  /** Timelines flow left → right, everything else top → bottom. */
-  horizontal?: boolean;
+export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'collapsed'> & {
+  layout: MapLayout;
   hasChildren?: boolean;
   /** How many concepts this one hides while collapsed. */
   hiddenBelow?: number;
@@ -53,25 +53,6 @@ function NodeImageView({ image }: { image: NonNullable<ConceptNodeData['image']>
   return <img className="concept-photo" src={image.ref} alt="" draggable={false} />;
 }
 
-function AudioNoteButton({ audio }: { audio: NonNullable<ConceptNodeData['audio']> }) {
-  const [playing, setPlaying] = useState(false);
-  return (
-    <button
-      type="button"
-      className="concept-audio nodrag"
-      aria-label={playing ? 'Ferma la spiegazione a voce' : 'Ascolta la spiegazione a voce'}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (playing) return stopPlayback();
-        setPlaying(true);
-        playNote(audio.dataUrl, () => setPlaying(false)).catch(() => setPlaying(false));
-      }}
-    >
-      {playing ? '⏹️' : '🎧'} {formatDuration(audio.durationMs)}
-    </button>
-  );
-}
-
 function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const updateNode = useMapStore((s) => s.updateNode);
   const toggleCollapsed = useMapStore((s) => s.toggleCollapsed);
@@ -103,7 +84,8 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
         setEditing(true);
       }}
     >
-      <Handle type="target" position={data.horizontal ? Position.Left : Position.Top} />
+      {/* "Scaletta": lines arrive from the left and leave from the bottom-left. */}
+      <Handle type="target" position={data.layout === 'scaletta' ? Position.Left : Position.Top} />
       {visibility === 'mystery' ? (
         <span className="concept-mystery" aria-label="Concetto nascosto">
           ?
@@ -144,7 +126,6 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
           >
             🔊
           </button>
-          {data.audio && <AudioNoteButton audio={data.audio} />}
         </>
       )}
       {data.hasChildren && !reviewing && (
@@ -161,7 +142,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
           {data.collapsed ? `+${data.hiddenBelow}` : '−'}
         </button>
       )}
-      <Handle type="source" position={data.horizontal ? Position.Right : Position.Bottom} />
+      <Handle type="source" position={Position.Bottom} style={data.layout === 'scaletta' ? { left: LADDER.spine } : undefined} />
     </div>
   );
 }

@@ -26,7 +26,7 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 | 🔊 Lettura ad alta voce di un nodo o di tutta la mappa, con **evidenziazione parola per parola** | `src/hooks/useReadAloud.ts` |
 | 🎤 Dettatura: si parla e nasce un nuovo concetto | `src/hooks/useDictation.ts` |
 | 🎨 Profili di leggibilità: font (Lexend, Atkinson Hyperlegible), sfondi crema/azzurro/scuro, stampatello maiuscolo, spaziatura ampia, grandezza testo, velocità e voce | `src/features/accessibility` |
-| ✨ Riordina: disposizione automatica ad albero (elkjs, caricato solo al primo utilizzo) | `src/services/layout.ts` |
+| ⬇️ **Mappe verticali**. Le mappe Libera e 5 W sono a **scaletta**: i figli scendono uno sotto l'altro, rientrati, con le parole di collegamento sopra il figlio. La scaletta si mette in ordine da sola dopo ogni modifica; per cambiare l'ordine si trascina un concetto più su o più giù. Lettura e ripasso vanno dall'alto in basso. Causa ed effetto, Confronto e Linea del tempo (ora verticale) usano ✨ Riordina, un albero dall'alto in basso (elkjs, caricato al primo utilizzo) | `src/lib/ladder.ts`, `src/features/editor/LadderEdge.tsx`, `src/services/layout.ts` |
 | ↩️ Annulla/Ripeti illimitati (uno spostamento = un solo passo) | `src/store/mapStore.ts` |
 | 💾 Salvataggio automatico, nessun account, funziona offline | `src/services/storage` |
 | 📤 Esporta PNG: download sul web, menu "Condividi" nativo su Android/iOS | `src/services/export.ts` |
@@ -36,7 +36,7 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 | Funzione | Dove |
 |---|---|
 | 🖼️ Immagini nei nodi, con colore e forma. Tre schede: **✨ Illustrazioni** (Fluent Emoji di Microsoft, licenza MIT: circa 1.600 immagini cercabili in italiano **sul dispositivo** grazie ai nomi e alle parole chiave Unicode CLDR, es. «Vesuvio» → 🌋), **🧩 Simboli CAA** (ARASAAC, per chi li usa già a scuola) e **📷 Foto**. La ricerca ignora articoli e preposizioni, cerca la frase e poi le singole parole e mette prima i risultati esatti. L'immagine scelta viene **salvata dentro la mappa**, quindi funziona offline e nel file `.mappeora`; le mappe vecchie la salvano alla prima apertura con internet | `src/features/editor/NodeStyleDialog.tsx`, `src/services/illustrations.ts`, `src/services/pictograms.ts`, `src/lib/searchText.ts`, `src/services/embed.ts` |
-| 🧩 Modelli pronti: Libera, 5 W, Causa ed effetto, Linea del tempo (orizzontale), Confronto | `src/lib/templates.ts`, `src/features/home/NewMapDialog.tsx` |
+| 🧩 Modelli pronti: Libera, 5 W, Causa ed effetto, Linea del tempo (verticale), Confronto | `src/lib/templates.ts`, `src/features/home/NewMapDialog.tsx` |
 | 🧠 Ripasso "Un passo alla volta" e "Indovina" (concetto nascosto, poi «Scopri») | `src/store/reviewStore.ts`, `src/features/editor/ReviewBar.tsx` |
 | 📤 Esporta PDF A4/A3 o PNG, con **versione per la verifica** (bianco e nero, senza decorazioni) | `src/services/export.ts`, `src/features/editor/ExportDialog.tsx` |
 | 🔗 Parole di collegamento: si tocca la freccia e si sceglie tra i suggerimenti, si scrive o si detta | `src/features/editor/LinkWordDialog.tsx` |
@@ -65,12 +65,11 @@ Limite: l'OCR sul dispositivo legge bene il testo stampato, male la scrittura a 
 
 | Funzione | Dove |
 |---|---|
-| ✏️ **File modificabile `.mappeora`**: «Salva» → «File modificabile» (download sul web, «Condividi» su Android/iOS); «Apri file» nella schermata iniziale. Si apre sempre come copia nuova; foto e spiegazioni a voce viaggiano dentro il file. Il file viene controllato all'apertura: si accettano solo immagini e audio incorporati, mai indirizzi web | `src/lib/mapFile.ts`, `src/services/openFile.ts` |
+| ✏️ **File modificabile `.mappeora`**: «Salva» → «File modificabile» (download sul web, «Condividi» su Android/iOS); «Apri file» nella schermata iniziale. Si apre sempre come copia nuova; foto e immagini viaggiano dentro il file. Il file viene controllato all'apertura: si accettano solo immagini incorporate, mai indirizzi web | `src/lib/mapFile.ts`, `src/services/openFile.ts` |
 | 🙋 **Interrogazione**: tutta la mappa a schermo intero, un concetto alla volta in evidenza (gli altri sbiaditi), testo grande in basso. Si va avanti con frecce, barra spaziatrice o PagSu/PagGiù (telecomandi per presentazioni sulla LIM), oppure toccando un concetto. L'app legge solo se si preme «Leggi»: a parlare è lo studente | `src/store/reviewStore.ts`, `src/features/editor/MapEditor.tsx` |
-| 📷 **Foto nei nodi**: scattata o presa dalla galleria, ridotta a 480 px e salvata dentro la mappa | `src/features/editor/NodeStyleDialog.tsx`, `src/services/photo.ts` |
-| 🎙️ **Spiega a voce**: si registra la spiegazione di un concetto con parole proprie (max 2 minuti) e si riascolta dal nodo (🎧) | `src/features/editor/AudioNoteDialog.tsx`, `src/services/audioNote.ts` |
+| 📷 **Foto e Google**: foto scattata o presa dalla galleria, oppure **«Cerca su Google»**, che apre Google Immagini (con SafeSearch) sul concetto: si copia l'immagine e si preme «Incolla immagine» (o Ctrl+V). Se l'app non può leggere gli appunti, compare un riquadro dove incollare a mano. Le immagini vengono ridotte a 480 px e salvate dentro la mappa. L'API di ricerca di Google non è più disponibile per i nuovi progetti, per questo la ricerca si fa nel browser | `src/features/editor/NodeStyleDialog.tsx`, `src/services/photo.ts`, `src/services/webImage.ts` |
 | ➖ **Nodi comprimibili**: il pulsante sotto un concetto nasconde i concetti che dipendono da lui (resta il numero, es. «+3»). Lettura, ripasso, «Riordina» ed esportazione lavorano su ciò che si vede | `src/lib/collapse.ts` |
-| 🖨️ **Stampa A4/A3 su più fogli**: 1, 2 o 4 fogli con orientamento scelto in automatico, titolo, data e «pagina 1 di 2», una striscia ripetuta tra un foglio e l'altro per unirli. Sul web c'è anche «Stampa» diretta | `src/lib/pagePlan.ts`, `src/services/export.ts` |
+| 🖨️ **Stampa A4/A3 su più fogli**: sempre in **verticale**, su 1, 2 o 4 fogli: la mappa si divide in strisce dall'alto in basso (con 4 fogli anche 2×2, se viene più grande), titolo, data e «pagina 1 di 2», una striscia ripetuta tra un foglio e l'altro per unirli. Sul web c'è anche «Stampa» diretta | `src/lib/pagePlan.ts`, `src/services/export.ts` |
 
 ### Indice delle illustrazioni
 
@@ -148,7 +147,7 @@ Dopo ogni modifica al codice web: `npm run cap:sync`.
 
 ### Permessi già configurati
 
-- **Android** (`android/app/src/main/AndroidManifest.xml`): `RECORD_AUDIO` e `MODIFY_AUDIO_SETTINGS` (la WebView li chiede entrambi per registrare le spiegazioni a voce) e `<queries>` per i servizi di riconoscimento e sintesi vocale (Android 11+). La fotocamera non richiede permessi (usa il selettore di sistema).
+- **Android** (`android/app/src/main/AndroidManifest.xml`): `RECORD_AUDIO` e `<queries>` per i servizi di riconoscimento e sintesi vocale (Android 11+). La fotocamera non richiede permessi (usa il selettore di sistema).
 - **iOS** (`ios/App/App/Info.plist`): microfono, riconoscimento vocale, fotocamera e libreria foto, con testi in italiano; lingua di sviluppo `it`.
 
 ## Skill per l'agente di sviluppo (Claude Code)

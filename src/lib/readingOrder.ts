@@ -1,4 +1,5 @@
 import type { ConceptMap, MapNode } from '../types/map';
+import { ladderLayout } from './ladder';
 
 export interface ReadingStep {
   nodeId: string;
@@ -6,12 +7,26 @@ export interface ReadingStep {
   text: string;
 }
 
+const step = (node: MapNode, linkWords?: string): ReadingStep => ({
+  nodeId: node.id,
+  text: `${linkWords ? `${linkWords}: ` : ''}${node.label}`,
+});
+
 /**
- * Breadth-first reading order starting from root nodes (nodes with no
- * incoming edge), so a map is read "from the general to the particular".
- * Nodes in cycles or disconnected islands are appended at the end.
+ * Reading order starting from root nodes (nodes with no incoming edge), so a
+ * map is read "from the general to the particular". "Albero" maps are read
+ * level by level (breadth first); "scaletta" maps from top to bottom, as
+ * they appear on screen (depth first). Nodes in cycles or disconnected
+ * islands are read at the end.
  */
-export function readingOrder(map: Pick<ConceptMap, 'nodes' | 'edges'>): ReadingStep[] {
+export function readingOrder(map: Pick<ConceptMap, 'nodes' | 'edges'>, opts: { depthFirst?: boolean } = {}): ReadingStep[] {
+  if (opts.depthFirst) {
+    const { order, treeEdges } = ladderLayout(map.nodes, map.edges);
+    const byId = new Map(map.nodes.map((n) => [n.id, n]));
+    const incoming = new Map(map.edges.filter((e) => treeEdges.has(e.id)).map((e) => [e.target, e.label]));
+    return order.map((id) => step(byId.get(id)!, incoming.get(id)));
+  }
+
   const byId = new Map(map.nodes.map((n) => [n.id, n]));
   const hasParent = new Set(map.edges.map((e) => e.target));
   const roots = map.nodes.filter((n) => !hasParent.has(n.id));
@@ -26,8 +41,7 @@ export function readingOrder(map: Pick<ConceptMap, 'nodes' | 'edges'>): ReadingS
       if (visited.has(node.id)) continue;
       visited.add(node.id);
       const incoming = map.edges.find((e) => e.target === node.id && visited.has(e.source));
-      const prefix = incoming?.label ? `${incoming.label}: ` : '';
-      steps.push({ nodeId: node.id, text: `${prefix}${node.label}` });
+      steps.push(step(node, incoming?.label));
       for (const edge of map.edges) {
         if (edge.source !== node.id) continue;
         const child = byId.get(edge.target);

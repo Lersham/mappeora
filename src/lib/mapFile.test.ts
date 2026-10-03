@@ -6,7 +6,6 @@ describe('mapFile', () => {
   it('round-trips a map as a new copy', () => {
     const map = createMap('L’acqua', 'causa-effetto');
     map.nodes[0].image = { kind: 'foto', ref: 'data:image/jpeg;base64,AAAA' };
-    map.nodes[0].audio = { dataUrl: 'data:audio/webm;codecs=opus;base64,AAAA', durationMs: 1200 };
     map.nodes[0].collapsed = true;
     const copy = parseMapFile(serializeMap(map));
     expect(copy.id).not.toBe(map.id);
@@ -42,7 +41,7 @@ describe('mapFile', () => {
         template: 'boh',
         nodes: [
           { id: 'a', label: 'A', position: { x: 0, y: 0 }, image: { kind: 'foto', ref: 'https://evil.example/x.jpg' }, extra: 1 },
-          { id: 'b', label: 'B', position: { x: 0, y: 100 }, audio: { dataUrl: 'https://evil.example/a.mp3', durationMs: 1 } },
+          { id: 'b', label: 'B', position: { x: 0, y: 100 }, audio: { dataUrl: 'data:audio/webm;base64,AAAA', durationMs: 1 } },
           { id: 'c', label: 'senza posizione' },
         ],
         edges: [

@@ -15,6 +15,7 @@ import { toDataUrl } from '../../services/embed';
 import { NODE_COLORS } from '../../lib/palette';
 import { useMapStore } from '../../store/mapStore';
 import { photoToDataUrl, pickPhoto, type PhotoSource } from '../../services/photo';
+import { PasteError, fromPasteEvent, openGoogleImages, pastedToDataUrl, readClipboardImage } from '../../services/webImage';
 import type { MapNode, NodeShape } from '../../types/map';
 
 /** Shown when the search finds nothing: common subjects at school. */
@@ -37,7 +38,7 @@ type Tab = 'illustrazioni' | 'simboli' | 'foto';
 const TABS: { value: Tab; label: string }[] = [
   { value: 'illustrazioni', label: '✨ Illustrazioni' },
   { value: 'simboli', label: '🧩 Simboli CAA' },
-  { value: 'foto', label: '📷 Foto' },
+  { value: 'foto', label: '📷 Foto e Google' },
 ];
 
 /** Children who use ARASAAC symbols at school keep finding them first. */
@@ -52,7 +53,8 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
   const [suggested, setSuggested] = useState<Illustration[]>([]);
   const [offline, setOffline] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [photoState, setPhotoState] = useState<'idle' | 'error'>('idle');
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [showPasteBox, setShowPasteBox] = useState(false);
 
   // Illustrations are searched on the device: no delay needed.
   useEffect(() => {
@@ -105,9 +107,41 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
       choose({ kind: 'foto', ref: await photoToDataUrl(photo.webPath) });
     } catch {
       setBusy(false);
-      setPhotoState('error');
+      setPhotoError('Non riesco a usare questa foto. Prova con un’altra.');
     }
   };
+
+  const usePasted = async (pasted: Blob | string) => {
+    setBusy(true);
+    setPhotoError(null);
+    try {
+      choose({ kind: 'foto', ref: await pastedToDataUrl(pasted) });
+    } catch (e) {
+      setBusy(false);
+      setPhotoError(e instanceof PasteError ? e.message : 'Non riesco a usare questa immagine. Prova con un’altra.');
+    }
+  };
+
+  const pasteFromClipboard = async () => {
+    const pasted = await readClipboardImage();
+    // Not allowed here (e.g. inside the Android app): paste by hand instead.
+    if (pasted === null) return setShowPasteBox(true);
+    await usePasted(pasted);
+  };
+
+  // Ctrl+V / Cmd+V anywhere while the "Foto e Google" tab is open.
+  useEffect(() => {
+    if (tab !== 'foto') return;
+    const onPaste = (e: ClipboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return; // the search field
+      const pasted = fromPasteEvent(e);
+      if (!pasted) return;
+      e.preventDefault();
+      void usePasted(pasted);
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [tab]);
 
   const searchRow = (
     <div className="search-row">
@@ -185,12 +219,49 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
       )}
 
       {tab === 'foto' && (
-        <div className="photo-sources">
-          <BigButton icon="📸" label="Scatta una foto" disabled={busy} onClick={() => void addPhoto('camera')} />
-          <BigButton icon="🖼️" label="Dalla galleria" disabled={busy} onClick={() => void addPhoto('gallery')} />
-          {photoState === 'error' && <p className="field-error">Non riesco a usare questa foto. Prova con un’altra.</p>}
+        <>
+          <div className="photo-sources">
+            <BigButton icon="📸" label="Scatta una foto" disabled={busy} onClick={() => void addPhoto('camera')} />
+            <BigButton icon="🖼️" label="Dalla galleria" disabled={busy} onClick={() => void addPhoto('gallery')} />
+          </div>
           <p className="muted small">Una figura del libro, un esperimento, un disegno fatto da te.</p>
-        </div>
+
+          <h3 className="photo-web-title">Da Google Immagini</h3>
+          {searchRow}
+          <div className="photo-sources">
+            <BigButton icon="🔎" label="Cerca su Google" disabled={busy || !query.trim()} onClick={() => openGoogleImages(query)} />
+            <BigButton icon="📋" label="Incolla immagine" disabled={busy} onClick={() => void pasteFromClipboard()} />
+          </div>
+          <ol className="photo-web-steps muted small">
+            <li>Premi «Cerca su Google»: si apre Google Immagini con il filtro per ragazzi.</li>
+            <li>Tieni premuta l’immagine che ti piace e scegli «Copia immagine».</li>
+            <li>Torna qui e premi «Incolla immagine».</li>
+          </ol>
+          {showPasteBox && (
+            <textarea
+              className="text-field paste-box"
+              rows={2}
+              aria-label="Riquadro dove incollare l’immagine"
+              placeholder="Tieni premuto qui e scegli «Incolla»"
+              autoFocus
+              value=""
+              onChange={() => {}}
+              onPaste={(e) => {
+                const pasted = fromPasteEvent(e);
+                e.preventDefault();
+                e.stopPropagation();
+                if (pasted) void usePasted(pasted);
+                else setPhotoError('Negli appunti non c’è un’immagine.');
+              }}
+            />
+          )}
+          {photoError && (
+            <p className="field-error" role="alert">
+              {photoError}
+            </p>
+          )}
+          <p className="credit">Le immagini trovate su Google appartengono ai loro autori: usale solo per studiare.</p>
+        </>
       )}
 
       <fieldset>

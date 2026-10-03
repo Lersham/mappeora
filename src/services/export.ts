@@ -38,19 +38,22 @@ interface RenderedMap {
 /** Interactive bits that must never end up on paper. */
 function keepInExport(node: HTMLElement): boolean {
   const cls = node.classList;
-  return !cls || !['concept-speak', 'concept-audio', 'concept-toggle', 'react-flow__handle'].some((c) => cls.contains(c));
+  return !cls || !['concept-speak', 'concept-toggle', 'react-flow__handle'].some((c) => cls.contains(c));
 }
 
 /** Renders the whole map (not just the visible area) to a PNG. */
 async function renderMap(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
   const bounds = getNodesBounds(nodes.filter((n) => !n.hidden));
-  const width = Math.max(800, Math.ceil(bounds.width * (1 + PADDING * 2)));
-  const height = Math.max(600, Math.ceil(bounds.height * (1 + PADDING * 2)));
+  // Small minimums only: a narrow "scaletta" must stay narrow to fill a
+  // portrait sheet instead of floating in a wide empty image.
+  const width = Math.max(320, Math.ceil(bounds.width * (1 + PADDING * 2)));
+  const height = Math.max(240, Math.ceil(bounds.height * (1 + PADDING * 2)));
   const viewport = getViewportForBounds(bounds, width, height, 0.2, 2, PADDING);
   const flow = document.querySelector<HTMLElement>('.react-flow');
   const el = flow?.querySelector<HTMLElement>('.react-flow__viewport');
   if (!flow || !el) throw new Error('viewport-not-found');
   flow.classList.toggle('export-simple', simple);
+  flow.classList.add('exporting');
   try {
     const dataUrl = await toPng(el, {
       backgroundColor: simple ? '#ffffff' : background,
@@ -66,7 +69,7 @@ async function renderMap(nodes: Node[], background: string, simple: boolean): Pr
     });
     return { dataUrl, width, height };
   } finally {
-    flow.classList.remove('export-simple');
+    flow.classList.remove('export-simple', 'exporting');
   }
 }
 
@@ -99,7 +102,6 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const boxW = pageW - margin * 2;
-  const boxH = pageH - margin * 2 - header - footer;
   const full = plan.tiles.length > 1 ? await loadImage(img.dataUrl) : null;
   const date = new Date().toLocaleDateString('it-IT');
 
@@ -117,7 +119,7 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
     const w = tile.w * plan.scale;
     const h = tile.h * plan.scale;
     const x = margin + (boxW - w) / 2;
-    const y = margin + header + (boxH - h) / 2;
+    const y = margin + header; // top-aligned: strips line up when the sheets are joined
     doc.addImage(full ? crop(full, img.width, tile) : img.dataUrl, 'PNG', x, y, w, h);
     if (plan.tiles.length > 1) {
       doc.setDrawColor(180);

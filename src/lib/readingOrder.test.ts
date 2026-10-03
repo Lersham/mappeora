@@ -18,6 +18,18 @@ describe('readingOrder', () => {
     ]);
   });
 
+  it('reads a "scaletta" from top to bottom, depth first', () => {
+    const at = (id: string, label: string, y: number): MapNode => ({ id, label, position: { x: 0, y } });
+    const steps = readingOrder(
+      {
+        nodes: [at('a', 'acqua', 0), at('b', 'idrogeno', 10), at('c', 'ossigeno', 30), at('d', 'atomo', 20)],
+        edges: [edge('a', 'b', 'è formata da'), edge('a', 'c'), edge('b', 'd')],
+      },
+      { depthFirst: true },
+    );
+    expect(steps.map((s) => s.text)).toEqual(['acqua', 'è formata da: idrogeno', 'atomo', 'ossigeno']);
+  });
+
   it('includes disconnected nodes and survives cycles', () => {
     const steps = readingOrder({
       nodes: [node('a'), node('b'), node('x')],

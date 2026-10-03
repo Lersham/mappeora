@@ -61,8 +61,10 @@ export default function App() {
   const { stop } = useReadAloud();
 
   const open = async (id: string) => {
-    const map = await storage().get(id);
-    if (!map) return;
+    const stored = await storage().get(id);
+    if (!stored) return;
+    // Voice notes ("Spiega") were removed: drop any left in older maps.
+    const map = { ...stored, nodes: stored.nodes.map(({ audio: _audio, ...n }: typeof stored.nodes[number] & { audio?: unknown }) => n) };
     useMapStore.getState().load(map);
     mapHistory().clear();
     void embedOldImages(map);

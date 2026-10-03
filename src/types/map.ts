@@ -14,12 +14,6 @@ export interface NodeImage {
   src?: string;
 }
 
-/** A short voice note recorded on a concept ("spiegalo con la tua voce"). */
-export interface NodeAudio {
-  /** Self-contained data URL, so the note travels with the map file. */
-  dataUrl: string;
-  durationMs: number;
-}
 
 export interface MapNode {
   id: string;
@@ -29,7 +23,6 @@ export interface MapNode {
   shape?: NodeShape;
   image?: NodeImage;
   note?: string;
-  audio?: NodeAudio;
   /** Hides the concepts below this one (see lib/collapse.ts). */
   collapsed?: boolean;
 }

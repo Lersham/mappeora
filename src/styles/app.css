@@ -220,6 +220,26 @@ textarea {
   font-size: 1rem;
   font-weight: 600;
 }
+/* Linking words of a "scaletta", just above the child concept. */
+.ladder-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: all;
+  cursor: pointer;
+}
+.ladder-label:disabled {
+  cursor: default;
+}
 .react-flow__handle {
   width: 16px;
   height: 16px;
@@ -663,18 +683,6 @@ textarea {
   border-radius: 10px;
   pointer-events: none;
 }
-.concept-audio {
-  min-height: 32px;
-  padding: 2px 10px;
-  border: 2px solid rgba(0, 0, 0, 0.2);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.75);
-  color: #1f2430;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
 /* Collapse / expand: a round tab on the bottom-right corner, clear of the
    handle used to drag new links. */
 .concept-toggle {
@@ -698,41 +706,6 @@ textarea {
   background: var(--primary);
   border-color: var(--primary);
   color: #ffffff;
-}
-
-/* ---------- Spiega a voce ---------- */
-
-.audio-note-concept {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin: 0 0 4px;
-}
-.audio-note-recording,
-.audio-note-saved {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  font-size: 1.3rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.rec-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #d62828;
-  animation: rec-blink 1s infinite;
-}
-@keyframes rec-blink {
-  50% {
-    opacity: 0.2;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .rec-dot {
-    animation: none;
-  }
 }
 
 /* ---------- Review mode ---------- */
@@ -783,6 +756,12 @@ textarea {
   color: var(--primary);
 }
 
+/* The selected concept must not look different on paper. */
+.exporting .concept-node.is-selected {
+  border-color: rgba(0, 0, 0, 0.25);
+  box-shadow: none;
+}
+
 /* ---------- Export: "versione per la verifica" ---------- */
 
 .export-simple .concept-node {
@@ -795,6 +774,10 @@ textarea {
 }
 .export-simple .react-flow__edge-textbg {
   fill: #ffffff;
+}
+.export-simple .ladder-label {
+  background: #ffffff;
+  color: #1f2430;
 }
 
 /* ---------- Dal libro (OCR) ---------- */
@@ -811,6 +794,18 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
   margin: 12px 0;
+}
+.photo-web-title {
+  margin: 16px 0 8px;
+  font-size: 1.05rem;
+}
+.photo-web-steps {
+  margin: 4px 0 8px;
+  padding-left: 1.4em;
+}
+.paste-box {
+  width: 100%;
+  resize: none;
 }
 .photo-sources .big-button {
   flex: 1 1 200px;

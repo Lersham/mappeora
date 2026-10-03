@@ -4,17 +4,18 @@ import { planPages } from './pagePlan';
 const layout = { margin: 12, header: 12, footer: 4 };
 
 describe('planPages', () => {
-  it('prints a wide map on one landscape sheet', () => {
+  it('always prints on portrait sheets', () => {
     const plan = planPages(2000, 1000, 'a4', 1, layout);
-    expect(plan.orientation).toBe('landscape');
+    expect(plan.orientation).toBe('portrait');
     expect(plan.tiles).toEqual([{ x: 0, y: 0, w: 2000, h: 1000 }]);
   });
 
-  it('splits a wide map side by side on two sheets, larger than on one', () => {
-    const one = planPages(4000, 1000, 'a4', 1, layout);
-    const two = planPages(4000, 1000, 'a4', 2, layout);
+  it('cuts a tall map into strips, one under the other, larger than on one sheet', () => {
+    const one = planPages(800, 4000, 'a4', 1, layout);
+    const two = planPages(800, 4000, 'a4', 2, layout);
     expect(two.tiles).toHaveLength(2);
-    expect(two.tiles[0].y).toBe(two.tiles[1].y); // same row
+    expect(two.tiles[0].x).toBe(two.tiles[1].x); // same column
+    expect(two.tiles[1].y).toBeGreaterThan(two.tiles[0].y);
     expect(two.scale).toBeGreaterThan(one.scale * 1.5);
   });
 
