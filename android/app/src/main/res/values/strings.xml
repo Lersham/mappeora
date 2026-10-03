@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mappeora</string>
+    <string name="title_activity_main">Mappeora</string>
+    <string name="package_name">it.mappeora.app</string>
+    <string name="custom_url_scheme">it.mappeora.app</string>
+</resources>

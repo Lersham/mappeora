@@ -1,0 +1,69 @@
+/*
+ * Accessibility settings are applied as data-* attributes on <html>
+ * (see useApplySettings in App.tsx) and mapped to CSS variables here.
+ */
+:root {
+  --text-scale: 1.15;
+  --font-body: 'Lexend', system-ui, sans-serif;
+  --letter-spacing: 0.04em;
+  --word-spacing: 0.12em;
+  --line-height: 1.6;
+
+  --bg: #fdf8ec;
+  --surface: #fffdf7;
+  --text: #1f2430;
+  --muted: #5b6270;
+  --border: #d9d1bd;
+  --primary: #3b6ea5;
+  --primary-text: #ffffff;
+  --danger: #b3412f;
+  --focus: #e07a00;
+  --highlight: #ffe066;
+  --edge: #556070;
+
+  font-size: calc(16px * var(--text-scale));
+  color-scheme: light;
+}
+
+[data-font='atkinson'] { --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif; }
+[data-font='sistema'] { --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+
+[data-spacing='normal'] {
+  --letter-spacing: normal;
+  --word-spacing: normal;
+  --line-height: 1.4;
+}
+
+[data-uppercase='true'] .concept-label,
+[data-uppercase='true'] .concept-input,
+[data-uppercase='true'] .title-input,
+[data-uppercase='true'] .map-title,
+[data-uppercase='true'] .sample,
+[data-uppercase='true'] .dictation-text,
+[data-uppercase='true'] .react-flow__edge-text {
+  text-transform: uppercase;
+}
+
+/* Avoid pure white: cream and pastel backgrounds reduce visual stress. */
+[data-theme='bianco'] {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --border: #d0d4da;
+}
+[data-theme='azzurro'] {
+  --bg: #eaf3fb;
+  --surface: #f6fafe;
+  --border: #c3d5e6;
+}
+[data-theme='scuro'] {
+  --bg: #1d2129;
+  --surface: #282d38;
+  --text: #f1ede4;
+  --muted: #b5b9c2;
+  --border: #444b59;
+  --primary: #7fb0e6;
+  --primary-text: #10161f;
+  --danger: #ef8f7d;
+  --edge: #aab2bf;
+  color-scheme: dark;
+}
