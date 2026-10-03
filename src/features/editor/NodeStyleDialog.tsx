@@ -163,7 +163,7 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     <Dialog title="Immagine e colore" onClose={onClose} className="style-dialog">
       <div className="choice-row" role="tablist">
         {TABS.map((t) => (
-          <button key={t.value} type="button" role="tab" className="choice" aria-selected={tab === t.value} aria-pressed={tab === t.value} onClick={() => setTab(t.value)}>
+          <button key={t.value} type="button" role="tab" className="choice" aria-selected={tab === t.value} onClick={() => setTab(t.value)}>
             {t.label}
           </button>
         ))}

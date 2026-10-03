@@ -18,6 +18,8 @@ export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image
   hasChildren?: boolean;
   /** How many concepts this one hides while collapsed. */
   hiddenBelow?: number;
+  /** Collapses/expands, keeping the concept where it is on screen. */
+  onToggle?: () => void;
 };
 export type ConceptFlowNode = Node<ConceptNodeData, 'concept'>;
 
@@ -79,7 +81,6 @@ function SheetHandles({ role, kind }: { role: NodeRole; kind: 'source' | 'target
 
 function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const updateNode = useMapStore((s) => s.updateNode);
-  const toggleCollapsed = useMapStore((s) => s.toggleCollapsed);
   const isReading = useReading((s) => s.nodeId === id);
   const visibility = useReview((s) => reviewVisibility(s, id));
   const reviewing = useReview((s) => s.active);
@@ -159,7 +160,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
           aria-label={data.collapsed ? `Mostra ${data.hiddenBelow} concetti nascosti` : 'Nascondi i concetti sotto'}
           onClick={(e) => {
             e.stopPropagation();
-            toggleCollapsed(id);
+            data.onToggle?.();
           }}
         >
           {data.collapsed ? `+${data.hiddenBelow}` : '−'}

@@ -23,3 +23,7 @@ ios/App/App/capacitor.config.json
 ios/App/App/config.xml
 ios/DerivedData
 xcuserdata
+
+# Playwright (npm run test:e2e)
+e2e/report
+e2e/results

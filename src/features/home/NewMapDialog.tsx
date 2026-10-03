@@ -35,7 +35,7 @@ export function NewMapDialog({ onCreate, onClose }: Props) {
       <p className="setting-label">Scegli come iniziare</p>
       <div className="template-grid">
         {TEMPLATES.map((t) => (
-          <div key={t.id} className="template-card" aria-pressed={template === t.id}>
+          <div key={t.id} className={`template-card${template === t.id ? ' is-selected' : ''}`}>
             <button type="button" className="template-pick" onClick={() => setTemplate(t.id)} aria-pressed={template === t.id}>
               <span className="template-icon" aria-hidden>
                 {t.icon}

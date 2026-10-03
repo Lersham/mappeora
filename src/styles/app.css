@@ -202,6 +202,16 @@ textarea {
 .canvas {
   min-height: 0;
 }
+/* Focusing a concept outside the visible area made the browser scroll these
+   boxes on its own (overflow: hidden still allows that). The next tap
+   scrolled them back, so every concept jumped under the finger and a double
+   tap could rename the wrong one. "clip" forbids any scrolling here: moving
+   around the map is done by React Flow's own panning. */
+.canvas,
+.react-flow,
+.react-flow__renderer {
+  overflow: clip;
+}
 .toolbar {
   display: flex;
   gap: 8px;
@@ -421,7 +431,8 @@ textarea {
   background: var(--surface);
   cursor: pointer;
 }
-.choice[aria-pressed='true'] {
+.choice[aria-pressed='true'],
+.choice[aria-selected='true'] {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
 }
@@ -619,7 +630,7 @@ textarea {
   border-radius: 16px;
   background: var(--surface);
 }
-.template-card[aria-pressed='true'] {
+.template-card.is-selected {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
 }

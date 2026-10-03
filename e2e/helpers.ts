@@ -1,0 +1,115 @@
+import { expect, type Locator, type Page } from '@playwright/test';
+
+export type TemplateName = 'Libera' | 'Le 5 W' | 'Causa ed effetto' | 'Linea del tempo' | 'Confronto';
+
+/** Creates a map from the home screen and waits for the editor. */
+export async function newMap(page: Page, title: string, template: TemplateName = 'Libera') {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Nuova mappa' }).click();
+  await page.getByPlaceholder("es. Il ciclo dell'acqua").fill(title);
+  await page.locator('.template-pick', { hasText: template }).click();
+  await page.getByRole('button', { name: 'Crea' }).click();
+  await expect(page.locator('.title-input')).toHaveValue(title);
+}
+
+/** Like a person would: if the concept is off screen, look at the whole map. */
+export async function onScreen(page: Page, target: Locator): Promise<Locator> {
+  const [box, canvas] = [await target.boundingBox(), await page.locator('.react-flow').boundingBox()];
+  const inside = (b: typeof box) =>
+    !!b && !!canvas && b.x >= canvas.x && b.y >= canvas.y && b.x + b.width <= canvas.x + canvas.width && b.y + b.height <= canvas.y + canvas.height;
+  if (!inside(box)) await showAll(page);
+  return target;
+}
+
+export const node = (page: Page, text: string | RegExp): Locator =>
+  page.locator('.concept-node').filter({ has: page.locator('.concept-label', { hasText: text }) });
+
+export const nodes = (page: Page): Locator => page.locator('.concept-node');
+
+/** Adds a concept under `parent` and renames it. */
+export async function addConcept(page: Page, parent: string, label: string) {
+  await (await onScreen(page, node(page, parent))).click();
+  await page.getByRole('button', { name: 'Concetto', exact: true }).click();
+  await rename(page, 'Nuovo concetto', label);
+}
+
+export async function rename(page: Page, from: string, to: string) {
+  // A new concept slides into place right after being added: wait for it.
+  await settled(page);
+  // Human-speed taps: a 3 ms simulated tap ends while the app is still
+  // handling the selection made by the first one.
+  await (await onScreen(page, node(page, from).last())).dblclick({ delay: 60 });
+  const input = page.getByRole('textbox', { name: 'Testo del concetto' });
+  await input.fill(to);
+  await input.press('Enter');
+  await expect(node(page, to)).toBeVisible();
+}
+
+/**
+ * Taps the n-th link (in the order they were created). The click goes
+ * straight to that link's tap area, even where lines run close together.
+ */
+export async function tapLink(page: Page, index = 0) {
+  await page.locator('.react-flow__edge').nth(index).locator('.react-flow__edge-interaction').last().dispatchEvent('click');
+}
+
+/** Opens a dialog from the editor toolbar (it scrolls sideways on phones). */
+export async function toolbar(page: Page, name: string) {
+  await page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name, exact: true }).click();
+}
+
+/** On-screen boxes of the visible concepts. */
+export function boxes(page: Page) {
+  return nodes(page).evaluateAll((els) =>
+    els.map((e) => {
+      const r = e.getBoundingClientRect();
+      return { label: e.querySelector('.concept-label')?.textContent ?? '', x: r.x, y: r.y, w: r.width, h: r.height };
+    }),
+  );
+}
+
+export function overlapping(b: Awaited<ReturnType<typeof boxes>>): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < b.length; i++)
+    for (let j = i + 1; j < b.length; j++) {
+      const [p, q] = [b[i], b[j]];
+      if (p.x < q.x + q.w - 1 && q.x < p.x + p.w - 1 && p.y < q.y + q.h - 1 && q.y < p.y + p.h - 1) out.push(`${p.label} / ${q.label}`);
+    }
+  return out;
+}
+
+/** Waits until the automatic layout has stopped moving the concepts. */
+export async function settled(page: Page) {
+  let last = '';
+  await expect
+    .poll(async () => {
+      const now = JSON.stringify(await boxes(page));
+      const same = now === last;
+      last = now;
+      return same;
+    }, { intervals: [150, 150, 250, 400] })
+    .toBe(true);
+}
+
+/** A small "foglio" map: main concept, three branches, two concepts each. */
+export async function sampleMap(page: Page, title = 'Il ciclo dell’acqua') {
+  await newMap(page, title);
+  for (const [branch, items] of [
+    ['Evaporazione', ['Calore del sole', 'Vapore']],
+    ['Condensazione', ['Nuvole']],
+    ['Precipitazione', ['Pioggia', 'Neve']],
+  ] as const) {
+    await addConcept(page, title, branch);
+    for (const item of items) await addConcept(page, branch, item);
+  }
+  await showAll(page);
+}
+
+/**
+ * Shows the whole map ("fit view" control). Like a person, a test can only
+ * tap what is on screen: the map never scrolls by itself.
+ */
+export async function showAll(page: Page) {
+  await page.locator('.react-flow__controls-fitview').click();
+  await settled(page);
+}

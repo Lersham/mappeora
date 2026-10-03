@@ -20,9 +20,19 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
     points[points.length - 1].x = targetX;
   }
   const path = roundedPath([{ x: sourceX, y: sourceY }, ...points, { x: targetX, y: targetY }]);
+  // Several branches share the line along the top: only the last stretch,
+  // down into this branch, is a wide target for a tap (linking words).
+  const last = points[points.length - 1] ?? { x: sourceX, y: sourceY };
   return (
     <>
-      <BaseEdge id={id} path={path} interactionWidth={interactionWidth} />
+      <BaseEdge id={id} path={path} interactionWidth={0} />
+      <path
+        d={`M ${last.x},${last.y} L ${targetX},${targetY}`}
+        className="react-flow__edge-interaction"
+        fill="none"
+        stroke="transparent"
+        strokeWidth={interactionWidth ?? 32}
+      />
       {label && (
         <EdgeLabelRenderer>
           <button

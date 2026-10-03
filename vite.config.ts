@@ -77,5 +77,7 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // e2e/ is the Playwright suite (npm run test:e2e), not Vitest's.
+    exclude: ['**/node_modules/**', 'e2e/**'],
   },
 });

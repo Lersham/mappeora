@@ -123,10 +123,32 @@ Requisiti: Node 22+.
 ```bash
 npm install
 npm run dev          # sviluppo web su http://localhost:5173
-npm test             # test (Vitest)
+npm test             # test unitari (Vitest)
+npm run test:e2e     # test end-to-end nel browser (Playwright), computer e telefono
 npm run typecheck
 npm run build        # build web + PWA in dist/
 ```
+
+Prima di ogni push: `npm run typecheck && npm test && npm run test:e2e`.
+
+### Test end-to-end
+
+In `e2e/` ci sono 40 test che usano l'app come farebbe uno studente: su un **computer** (1280×860) e su un **telefono** (Pixel 7), quindi 80 esecuzioni. Ogni test riparte da un browser vuoto. Controllano:
+- creare mappe da ogni modello, salvataggio automatico, cancellazione, mappe di esempio;
+- aggiungere, rinominare, annullare ed eliminare concetti; parole di collegamento; rami comprimibili; disposizione a foglio A4 senza sovrapposizioni; trascinamento per riordinare;
+- immagini: ricerca delle illustrazioni e dei simboli CAA, Google Immagini, incolla, foto dalla galleria;
+- file `.mappeora`, PNG, PDF su 1, 2 o 4 fogli A4/A3, stampa;
+- lettura ad alta voce (ordine e parola evidenziata), ripasso, Indovina, Interrogazione, dettatura con i comandi vocali;
+- aspetto (carattere, sfondo, maiuscolo), «Dal libro» senza internet;
+- **accessibilità** con axe-core (WCAG 2.2 AA): nessun problema grave nelle schermate principali.
+
+Come funzionano:
+- **Rete simulata:** ARASAAC, le illustrazioni su jsDelivr e Google rispondono con dati finti (`e2e/fixtures.ts`). I test funzionano offline e danno sempre lo stesso risultato.
+- **Voce simulata:** quello che l'app legge finisce in un elenco controllabile; quello che lo studente «dice» si imposta con `say()`.
+- **Errori:** un errore JavaScript o in console fa fallire il test.
+- **Server:** i test avviano da soli build e server (`vite preview` sulla porta 4173), oppure riusano quello già acceso.
+- **Rapporto:** `npm run test:e2e:report` apre il rapporto HTML, con screenshot e tracce dei test falliti.
+- **Browser:** Playwright è fissato alla versione 1.56.1, la stessa del Chromium preinstallato nelle sessioni cloud. Su un altro computer, la prima volta: `npx playwright install chromium`.
 
 ### App Android
 
@@ -165,6 +187,8 @@ In `.claude/skills/` ci sono skill installate con `npx skills add … -a claude-
 | `capacitor-react` | capawesome-team/skills | Capacitor dentro React: hook, plugin, stato |
 | `capacitor-app-development` | capawesome-team/skills | Icone e splash screen, bordi dello schermo (safe area, edge-to-edge), SPM su iOS, risoluzione problemi Android/iOS |
 | `webapp-testing` | anthropics/skills | Test dell'app nel browser con Playwright (Python) |
+| `playwright-best-practices` | currents-dev/playwright-best-practices-skill | Come scrivere e mantenere la suite `e2e/`: struttura, attese, test instabili, accessibilità, mock |
+| `playwright-cli` | microsoft/playwright-cli | Comandare il browser da terminale per prove veloci a mano (richiede `npm i -g @playwright/cli`) |
 
 `webapp-testing` usa Playwright per Python, che nelle sessioni cloud va reinstallato: `npm run setup:webapp-testing` (Playwright 1.56, compatibile con il Chromium preinstallato).
 

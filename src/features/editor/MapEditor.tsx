@@ -59,7 +59,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
   const canUndo = useStore(useMapStore.temporal, (t) => t.pastStates.length > 0);
   const canRedo = useStore(useMapStore.temporal, (t) => t.futureStates.length > 0);
   const review = useReview();
-  const { fitView, getNodes, setCenter, getZoom } = useReactFlow();
+  const { fitView, getNodes, setCenter, getZoom, getInternalNode, getViewport, setViewport } = useReactFlow();
   const reader = useReadAloud();
   const dictation = useDictation();
   const [busy, setBusy] = useState(false);
@@ -122,6 +122,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
           hasChildren: parents.has(n.id),
           collapsed: n.collapsed,
           hiddenBelow: collapse.hiddenBelow[n.id] ?? 0,
+          onToggle: () => toggleInPlace(n.id),
         },
       })),
     [map.nodes, selectedId, sizes, review, layout, collapse, parents, sheet],
@@ -167,6 +168,42 @@ function Editor({ onBack, onOpenSettings }: Props) {
 
   const parentForNew = () => selectedId ?? map.nodes[0]?.id ?? null;
 
+  /**
+   * A new concept can land outside the visible part of the map: once the
+   * layout has placed it, move the view just enough to show it.
+   */
+  const reveal = (id: string) =>
+    setTimeout(() => {
+      const n = getInternalNode(id);
+      const box = document.querySelector('.react-flow')?.getBoundingClientRect();
+      if (!n || !box) return;
+      const { x, y, zoom } = getViewport();
+      const { width = 180, height = 72 } = n.measured;
+      const p = n.internals.positionAbsolute;
+      const [left, top] = [p.x * zoom + x, p.y * zoom + y];
+      const m = 24;
+      if (left >= m && top >= m && left + width * zoom <= box.width - m && top + height * zoom <= box.height - m) return;
+      void setCenter(p.x + width / 2, p.y + height / 2, { zoom, duration: 300 });
+    }, 150);
+
+  const addConcept = (label?: string) => reveal(actions.addChild(parentForNew(), label));
+
+  /**
+   * Opening or closing a branch rearranges the sheet: move the view so the
+   * tapped concept stays under the finger instead of jumping away.
+   */
+  const toggleInPlace = (id: string) => {
+    const before = getInternalNode(id)?.internals.positionAbsolute;
+    useMapStore.getState().toggleCollapsed(id);
+    if (!before) return;
+    setTimeout(() => {
+      const after = getInternalNode(id)?.internals.positionAbsolute;
+      if (!after) return;
+      const { x, y, zoom } = getViewport();
+      void setViewport({ x: x - (after.x - before.x) * zoom, y: y - (after.y - before.y) * zoom, zoom }, { duration: 200 });
+    }, 150);
+  };
+
   const tidy = async () => {
     // A "foglio" map is always in order: just show all of it.
     if (sheetMode) return void fitView({ padding: 0.2, duration: 400 });
@@ -188,7 +225,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
   const dictate = async () => {
     const command = parseVoiceCommand(await dictation.start());
     if (!command) return;
-    if (command.type === 'add') actions.addChild(parentForNew(), command.label);
+    if (command.type === 'add') addConcept(command.label);
     else if (command.type === 'read') reader.readMap();
     else if (command.type === 'tidy') await tidy();
     else if (command.type === 'undo') mapHistory().undo();
@@ -336,6 +373,10 @@ function Editor({ onBack, onOpenSettings }: Props) {
           elementsSelectable={editing}
           deleteKeyCode={editing ? ['Backspace', 'Delete'] : null}
           zoomOnDoubleClick={false}
+          // A tap focuses the concept, and React Flow would scroll it fully
+          // into view: the concept moved away from under the finger between
+          // the two taps of a double tap, so renaming it failed.
+          autoPanOnNodeFocus={false}
           fitView
           fitViewOptions={{ padding: 0.3, maxZoom: 1.2 }}
           minZoom={0.2}
@@ -355,7 +396,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
         <ReviewBar onRepeat={() => current && void reader.readSteps([current])} onOverview={overview} onExit={exitReview} />
       ) : (
         <nav className="toolbar" aria-label="Strumenti">
-          <BigButton icon="➕" label="Concetto" variant="primary" onClick={() => actions.addChild(parentForNew())} />
+          <BigButton icon="➕" label="Concetto" variant="primary" onClick={() => addConcept()} />
           <BigButton icon="🎤" label="Detta" onClick={dictate} disabled={dictation.listening} />
           {reader.active ? (
             <BigButton icon="⏹️" label="Stop" onClick={() => void reader.stop()} />
