@@ -9,7 +9,7 @@ type Step =
   | { kind: 'pick' }
   | { kind: 'reading'; progress: number | null; photo: string }
   | { kind: 'text' }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: string; detail?: string };
 
 interface Props {
   /** Adds the chosen concepts to the map. */
@@ -48,12 +48,14 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
       setSelected(new Set());
       setEditing(false);
       setStep({ kind: 'text' });
-    } catch {
+    } catch (e) {
       setStep({
         kind: 'error',
         message: navigator.onLine
           ? 'Non sono riuscito a leggere la foto. Riprova!'
           : 'La prima volta serve internet per scaricare il lettore di testo.',
+        // Shown small, so an adult can report what went wrong.
+        detail: e instanceof Error ? e.message : String(e),
       });
     }
   };
@@ -95,6 +97,7 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
         {step.kind === 'error' && (
           <>
             <p className="field-error" role="alert">{step.message}</p>
+            {step.detail && <p className="muted small">Dettagli tecnici: {step.detail}</p>}
             <div className="photo-sources">
               <BigButton icon="📷" label="Riprova" variant="primary" onClick={() => setStep({ kind: 'pick' })} />
             </div>
