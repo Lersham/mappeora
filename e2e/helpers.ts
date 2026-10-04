@@ -53,9 +53,13 @@ export async function tapLink(page: Page, index = 0) {
   await page.locator('.react-flow__edge').nth(index).locator('.react-flow__edge-interaction').last().dispatchEvent('click');
 }
 
-/** Opens a dialog from the editor toolbar (it scrolls sideways on phones). */
+/** Uses a tool of the editor toolbar; on a phone most of them are under «Altro». */
 export async function toolbar(page: Page, name: string) {
-  await page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name, exact: true }).click();
+  const bar = page.getByRole('navigation', { name: 'Strumenti' });
+  const tool = bar.getByRole('button', { name, exact: true });
+  if (await tool.isVisible()) return tool.click();
+  await bar.getByRole('button', { name: 'Altro', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Altro' }).getByRole('button', { name, exact: true }).click();
 }
 
 /** On-screen boxes of the visible concepts. */

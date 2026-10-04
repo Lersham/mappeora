@@ -3,10 +3,13 @@ import { getNodesBounds, type Node } from '@xyflow/react';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { isNative } from './platform';
-import { ARASAAC_CREDIT } from './pictograms';
 import { MAP_FILE_EXTENSION, serializeMap, textToDataUrl } from '../lib/mapFile';
 import { planPages, type PageCount, type Paper } from '../lib/pagePlan';
 import type { ConceptMap } from '../types/map';
+
+/** Required by the licence of the ARASAAC symbols that older maps may still contain. */
+const ARASAAC_CREDIT =
+  'Pittogrammi: Sergio Palao. Origine: ARASAAC (https://arasaac.org). Licenza: CC BY-NC-SA. Proprietà: Governo di Aragona (Spagna).';
 
 /** Margin around the map in the image, in CSS px (a fixed amount: a
  * percentage would leave huge empty bands around a long map). */

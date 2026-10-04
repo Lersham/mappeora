@@ -99,6 +99,18 @@ textarea {
   font-size: 1.8rem;
   margin: 16px 0;
 }
+.home-header-tools {
+  display: flex;
+  gap: 8px;
+}
+@media (max-width: 520px) {
+  .home-header h1 {
+    font-size: 1.4rem;
+  }
+  .home-header-tools .big-button {
+    padding: 6px 8px;
+  }
+}
 .home-actions {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
@@ -223,6 +235,47 @@ textarea {
 .toolbar .big-button {
   flex: 1 0 auto;
 }
+/* «Altro» only exists where the whole toolbar does not fit. */
+.toolbar .toolbar-more {
+  display: none;
+}
+.more-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+.more-grid .big-button {
+  min-height: 72px;
+}
+@media (max-width: 900px) {
+  .toolbar .toolbar-extra {
+    display: none;
+  }
+  .toolbar .toolbar-more {
+    display: inline-flex;
+  }
+  .toolbar .big-button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 4px;
+  }
+}
+/* Phones: the title gets a line of its own instead of being cut short. */
+@media (max-width: 560px) {
+  .topbar {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .topbar > .big-button:first-child {
+    margin-right: auto;
+  }
+  .title-input {
+    order: 1;
+    flex-basis: 100%;
+    padding: 4px 12px;
+    font-size: 1.1rem;
+  }
+}
 
 /* React Flow theming */
 .react-flow {
@@ -285,7 +338,7 @@ textarea {
   gap: 4px;
   min-width: 140px;
   max-width: 260px;
-  padding: 14px 40px 14px 18px;
+  padding: 14px 18px;
   border: 3px solid rgba(0, 0, 0, 0.25);
   border-radius: 14px;
   color: #1f2430; /* node colours are always light pastels */
@@ -294,7 +347,7 @@ textarea {
 .concept-node.shape-ellisse {
   border-radius: 999px;
   padding-left: 28px;
-  padding-right: 48px;
+  padding-right: 28px;
 }
 .concept-node.shape-nuvola {
   border-radius: 40px 32px 44px 28px;
@@ -328,17 +381,18 @@ textarea {
   text-align: center;
   resize: none;
 }
+/* On the corner of the concept in hand, outside it: showing it does not
+   change the concept's size (and so the layout of the map). */
 .concept-speak {
   position: absolute;
-  top: 50%;
-  right: 4px;
-  transform: translateY(-50%);
-  width: 36px;
-  height: 36px;
-  border: none;
+  top: -20px;
+  right: -20px;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--primary);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.6);
-  font-size: 1.05rem;
+  background: var(--surface);
+  font-size: 1.1rem;
   cursor: pointer;
 }
 .spoken-word {
@@ -925,4 +979,97 @@ textarea {
   cursor: default;
   background: var(--surface);
   border-color: var(--primary);
+}
+
+/* ---------- Scaletta (outline) ---------- */
+
+.outline-dialog {
+  width: min(640px, 100%);
+}
+.outline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+.outline-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.outline-bullet {
+  flex: none;
+  width: 16px;
+  color: var(--muted);
+  text-align: center;
+}
+.outline-input {
+  width: 0; /* grows with flex: a text box would otherwise push the buttons out */
+  min-height: 48px;
+  padding: 8px 10px;
+}
+.outline-tool {
+  flex: none;
+  width: 44px;
+  height: 48px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 1.1rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.outline-tool:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.outline-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+@media (max-width: 520px) {
+  .outline-tool {
+    width: 36px;
+  }
+}
+
+/* ---------- Benvenuto ---------- */
+
+.welcome {
+  max-width: 520px;
+}
+.welcome-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+.welcome-icon {
+  font-size: 4rem;
+  line-height: 1;
+}
+.welcome-title {
+  margin: 4px 0 0;
+  font-size: 1.3rem;
+}
+.welcome-text {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+.welcome-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  color: var(--border);
+}
+.welcome-dots .current {
+  color: var(--primary);
 }

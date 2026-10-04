@@ -6,6 +6,7 @@ import { useReadAloud } from '../../hooks/useReadAloud';
 import { pickMapFile } from '../../services/openFile';
 import { MapFileError, parseMapFile } from '../../lib/mapFile';
 import { ExamplesDialog } from './ExamplesDialog';
+import { WelcomeDialog, welcomeNeeded } from './WelcomeDialog';
 
 interface Props {
   onOpen(id: string): void;
@@ -17,6 +18,7 @@ export function HomeScreen({ onOpen, onCreate, onOpenSettings }: Props) {
   const [maps, setMaps] = useState<MapSummary[] | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [examplesOpen, setExamplesOpen] = useState(false);
+  const [welcomeOpen, setWelcomeOpen] = useState(welcomeNeeded);
   const { readText } = useReadAloud();
 
   const refresh = () => void storage().list().then(setMaps);
@@ -45,7 +47,10 @@ export function HomeScreen({ onOpen, onCreate, onOpenSettings }: Props) {
     <main className="home">
       <header className="home-header">
         <h1>Le mie mappe</h1>
-        <BigButton icon="🎨" label="Aspetto" onClick={onOpenSettings} />
+        <div className="home-header-tools">
+          <BigButton icon="❓" label="Come funziona" onClick={() => setWelcomeOpen(true)} />
+          <BigButton icon="🎨" label="Aspetto" onClick={onOpenSettings} />
+        </div>
       </header>
 
       <div className="home-actions">
@@ -68,6 +73,7 @@ export function HomeScreen({ onOpen, onCreate, onOpenSettings }: Props) {
           .
         </p>
       )}
+      {welcomeOpen && <WelcomeDialog onClose={() => setWelcomeOpen(false)} onExamples={() => setExamplesOpen(true)} />}
       {examplesOpen && <ExamplesDialog onOpen={onOpen} onClose={() => setExamplesOpen(false)} />}
 
       <ul className="map-list">

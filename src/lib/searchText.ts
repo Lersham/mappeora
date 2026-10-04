@@ -24,8 +24,7 @@ export function fold(text: string): string {
 }
 
 /**
- * Meaningful words of a query, lower case but with accents kept (the
- * ARASAAC search needs "perché", not "perche").
+ * Meaningful words of a query, lower case with accents kept.
  */
 export function searchTerms(query: string): string[] {
   const words = query

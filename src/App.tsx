@@ -11,15 +11,12 @@ import type { MapTemplate } from './types/map';
 import { useAutosave } from './hooks/useAutosave';
 import { useReadAloud } from './hooks/useReadAloud';
 import { embedMissingImages } from './services/embed';
-import { pictogramUrl } from './services/pictograms';
 import { illustrationUrl } from './services/illustrations';
 import type { ConceptMap } from './types/map';
 
-/** Saves into the map the symbols of older maps, so they work offline too. */
+/** Saves into the map the illustrations of older maps, so they work offline too. */
 async function embedOldImages(map: ConceptMap) {
-  const found = await embedMissingImages(map.nodes, (image) =>
-    image.kind === 'arasaac' ? pictogramUrl(image.ref) : image.kind === 'illustrazione' ? illustrationUrl(image.ref) : undefined,
-  );
+  const found = await embedMissingImages(map.nodes, (image) => (image.kind === 'illustrazione' ? illustrationUrl(image.ref) : undefined));
   if (found.size === 0) return;
   // Not an edit by the child: keep it out of the undo history.
   mapHistory().pause();

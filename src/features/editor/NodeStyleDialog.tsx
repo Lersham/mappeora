@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { MicButton } from '../../components/MicButton';
 import { BigButton } from '../../components/BigButton';
-import { ARASAAC_CREDIT, pictogramUrl, searchPictograms, type Pictogram } from '../../services/pictograms';
 import {
   ILLUSTRATIONS_CREDIT,
   illustrationThumbUrl,
@@ -33,25 +32,19 @@ const SHAPES: { value: NodeShape; label: string }[] = [
   { value: 'nuvola', label: 'Nuvola' },
 ];
 
-type Tab = 'illustrazioni' | 'simboli' | 'foto';
+type Tab = 'illustrazioni' | 'foto';
 
 const TABS: { value: Tab; label: string }[] = [
   { value: 'illustrazioni', label: '✨ Illustrazioni' },
-  { value: 'simboli', label: '🧩 Simboli CAA' },
   { value: 'foto', label: '📷 Foto e Google' },
 ];
 
-/** Children who use ARASAAC symbols at school keep finding them first. */
-const initialTab = (node: MapNode): Tab => (node.image?.kind === 'arasaac' ? 'simboli' : 'illustrazioni');
-
 export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): void }) {
   const updateNode = useMapStore((s) => s.updateNode);
-  const [tab, setTab] = useState<Tab>(() => initialTab(node));
+  const [tab, setTab] = useState<Tab>('illustrazioni');
   const [query, setQuery] = useState(node.label);
-  const [symbols, setSymbols] = useState<Pictogram[] | null>(null);
   const [illustrations, setIllustrations] = useState<Illustration[] | null>(null);
   const [suggested, setSuggested] = useState<Illustration[]>([]);
-  const [offline, setOffline] = useState(false);
   const [busy, setBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [showPasteBox, setShowPasteBox] = useState(false);
@@ -66,26 +59,6 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     };
   }, [query, tab]);
   useEffect(() => void illustrationsFor(SUGGESTED).then(setSuggested), []);
-
-  // ARASAAC: debounced web search; aborts the previous one while typing.
-  useEffect(() => {
-    if (tab !== 'simboli') return;
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => {
-      searchPictograms(query, ctrl.signal)
-        .then((r) => {
-          setSymbols(r);
-          setOffline(false);
-        })
-        .catch((e: unknown) => {
-          if ((e as Error).name !== 'AbortError') setOffline(true);
-        });
-    }, 350);
-    return () => {
-      clearTimeout(timer);
-      ctrl.abort();
-    };
-  }, [query, tab]);
 
   const choose = (image: MapNode['image']) => {
     updateNode(node.id, { image });
@@ -191,30 +164,6 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
             ))}
           </div>
           <p className="credit">{ILLUSTRATIONS_CREDIT}</p>
-        </>
-      )}
-
-      {tab === 'simboli' && (
-        <>
-          {searchRow}
-          {offline && <p className="field-error">Serve internet per cercare nuovi simboli.</p>}
-          {symbols && symbols.length === 0 && !offline && <p className="muted">Nessun simbolo. Prova con un'altra parola.</p>}
-          <div className="picto-grid" aria-busy={busy}>
-            {symbols?.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className="picto-tile"
-                aria-label={p.keyword}
-                title={p.keyword}
-                disabled={busy}
-                onClick={() => void chooseEmbedded({ kind: 'arasaac', ref: p.id }, pictogramUrl(p.id))}
-              >
-                <img src={pictogramUrl(p.id)} alt="" loading="lazy" crossOrigin="anonymous" />
-              </button>
-            ))}
-          </div>
-          <p className="credit">{ARASAAC_CREDIT}</p>
         </>
       )}
 

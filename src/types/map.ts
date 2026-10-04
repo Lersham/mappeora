@@ -3,7 +3,8 @@ export type NodeShape = 'rettangolo' | 'ellisse' | 'nuvola';
 export interface NodeImage {
   kind: 'emoji' | 'arasaac' | 'illustrazione' | 'foto';
   /**
-   * Emoji character, ARASAAC pictogram id, Fluent Emoji asset path
+   * Emoji character, ARASAAC pictogram id (older maps only: symbols are no
+   * longer offered, and they show only if `src` was saved), Fluent Emoji asset path
    * (see services/illustrations.ts) or, for photos, a JPEG data URL.
    */
   ref: string;

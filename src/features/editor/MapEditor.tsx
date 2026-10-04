@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import {
   Background,
   type EdgeTypes,
@@ -22,6 +22,7 @@ import { NodeStyleDialog } from './NodeStyleDialog';
 import { LinkWordDialog } from './LinkWordDialog';
 import { ExportDialog, type ExportChoice } from './ExportDialog';
 import { ReviewBar } from './ReviewBar';
+import { OutlineDialog } from './OutlineDialog';
 import { PhotoTextDialog } from '../ocr/PhotoTextDialog';
 import { BigButton } from '../../components/BigButton';
 import { Dialog } from '../../components/Dialog';
@@ -45,6 +46,8 @@ type DialogState =
   | { kind: 'export' }
   | { kind: 'review' }
   | { kind: 'photo' }
+  | { kind: 'outline' }
+  | { kind: 'more' }
   | null;
 
 interface Props {
@@ -337,6 +340,32 @@ function Editor({ onBack, onOpenSettings }: Props) {
 
   const editing = !review.active;
 
+  // On a phone only the main tools fit: these go in «Altro» (see .toolbar-more).
+  const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
+    { key: 'outline', icon: '📝', label: 'Scaletta', title: 'Scrivi la mappa come un elenco puntato', onClick: () => setDialog({ kind: 'outline' }) },
+    { key: 'photo', icon: '📷', label: 'Dal libro', onClick: () => setDialog({ kind: 'photo' }) },
+    { key: 'image', icon: '🖼️', label: 'Immagine', onClick: () => setDialog({ kind: 'style' }), disabled: !selectedNode },
+    sheetMode
+      ? {
+          key: 'layout',
+          icon: '✋',
+          label: 'Sposta',
+          title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
+          onClick: () => actions.setFreeLayout(true),
+        }
+      : {
+          key: 'layout',
+          icon: '✨',
+          label: 'Riordina',
+          title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4.' : undefined,
+          onClick: () => void tidy(),
+          disabled: busy,
+        },
+    { key: 'delete', icon: '🗑️', label: 'Elimina', variant: 'danger', onClick: () => selectedId && actions.removeNodes([selectedId]), disabled: !selectedId },
+    { key: 'save', icon: '💾', label: 'Salva', onClick: () => setDialog({ kind: 'export' }) },
+    { key: 'settings', icon: '🎨', label: 'Aspetto', onClick: onOpenSettings },
+  ];
+
   return (
     <div className={`editor${review.active ? ' is-reviewing' : ''}`}>
       <header className="topbar">
@@ -418,28 +447,11 @@ function Editor({ onBack, onOpenSettings }: Props) {
           ) : (
             <BigButton icon="🔊" label="Leggi" onClick={reader.readMap} />
           )}
-          <BigButton icon="📷" label="Dal libro" onClick={() => setDialog({ kind: 'photo' })} />
-          <BigButton icon="🖼️" label="Immagine" onClick={() => setDialog({ kind: 'style' })} disabled={!selectedNode} />
-          {sheetMode ? (
-            <BigButton
-              icon="✋"
-              label="Sposta"
-              title="Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4."
-              onClick={() => actions.setFreeLayout(true)}
-            />
-          ) : (
-            <BigButton
-              icon="✨"
-              label="Riordina"
-              title={sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4.' : undefined}
-              onClick={tidy}
-              disabled={busy}
-            />
-          )}
           <BigButton icon="🧠" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
-          <BigButton icon="🗑️" label="Elimina" variant="danger" onClick={() => selectedId && actions.removeNodes([selectedId])} disabled={!selectedId} />
-          <BigButton icon="💾" label="Salva" onClick={() => setDialog({ kind: 'export' })} />
-          <BigButton icon="🎨" label="Aspetto" onClick={onOpenSettings} />
+          {moreTools.map(({ key, ...t }) => (
+            <BigButton key={key} {...t} className="toolbar-extra" />
+          ))}
+          <BigButton icon="☰" label="Altro" className="toolbar-more" aria-haspopup="dialog" onClick={() => setDialog({ kind: 'more' })} />
         </nav>
       )}
 
@@ -460,6 +472,35 @@ function Editor({ onBack, onOpenSettings }: Props) {
       {dialog?.kind === 'export' && <ExportDialog busy={busy} onExport={doExport} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'outline' && (
+        <OutlineDialog
+          onClose={() => setDialog(null)}
+          onDone={() => {
+            setDialog(null);
+            // A sheet puts itself in order; any other map is laid out again.
+            setTimeout(() => void (sheetMode ? fitView({ padding: 0.2, duration: 400 }) : arrange()), 150);
+          }}
+        />
+      )}
+      {dialog?.kind === 'more' && (
+        <Dialog title="Altro" onClose={() => setDialog(null)} className="more-tools">
+          <div className="more-grid">
+            {moreTools.map(({ key, onClick, ...t }) => (
+              <BigButton
+                key={key}
+                {...t}
+                onClick={(e) => {
+                  setDialog(null); // a tool may open its own dialog right after
+                  onClick?.(e);
+                }}
+              />
+            ))}
+          </div>
+          <div className="dialog-actions">
+            <BigButton icon="✖️" label="Chiudi" onClick={() => setDialog(null)} />
+          </div>
+        </Dialog>
+      )}
     </div>
   );
 }

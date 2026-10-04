@@ -7,30 +7,10 @@ test.describe('Immagini nei concetti', () => {
     await node(page, 'Il vulcano').click();
     await toolbar(page, 'Immagine');
     await expect(page.getByRole('tab', { name: /Illustrazioni/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab')).toHaveCount(2); // illustrations, photos and Google: no CAA symbols
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('Vesuvio');
     await page.getByRole('button', { name: 'vulcano', exact: true }).click();
     await expect(node(page, 'Il vulcano').locator('.concept-illustration')).toHaveAttribute('src', /^data:image\/png;base64,/);
-  });
-
-  test('cerca i simboli CAA: frase pulita, risultati esatti prima, niente contenuti non adatti', async ({ page }) => {
-    await newMap(page, 'Le piante');
-    await node(page, 'Le piante').click();
-    await toolbar(page, 'Immagine');
-    await page.getByRole('tab', { name: /Simboli CAA/ }).click();
-    // "Le piante": the article is dropped, the flagged pictogram is hidden
-    const tiles = page.locator('.picto-tile');
-    await expect(tiles).toHaveCount(2);
-    await expect(tiles.first()).toHaveAttribute('aria-label', 'pianta');
-
-    await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill("l'acqua");
-    await expect(tiles).toHaveCount(2);
-    await expect(tiles.first()).toHaveAttribute('aria-label', 'acqua');
-    await expect(page.locator('.picto-tile[aria-label="battere i piedi in acqua"]')).toHaveCount(0);
-    await tiles.first().click();
-    await expect(node(page, 'Le piante').locator('.concept-picto')).toHaveAttribute('src', /^data:image\/png;base64,/);
-    // reopening the dialog on a CAA concept starts from the CAA tab
-    await toolbar(page, 'Immagine');
-    await expect(page.getByRole('tab', { name: /Simboli CAA/ })).toHaveAttribute('aria-selected', 'true');
   });
 
   test('«Cerca su Google» apre Google Immagini con il filtro per ragazzi', async ({ page }) => {

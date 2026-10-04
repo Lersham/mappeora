@@ -2,11 +2,12 @@ import { test as base, expect, type Page } from '@playwright/test';
 
 /**
  * Shared setup for every test:
- * - the network outside the app is mocked (ARASAAC, Fluent Emoji on
+ * - the network outside the app is mocked (Fluent Emoji on
  *   jsDelivr, Google), so tests are fast, offline and repeatable;
  * - speech synthesis and recognition are simulated: what the app says is
  *   collected in `window.__spoken`, what the child "says" is set with
  *   `say(page, text)` before pressing the microphone;
+ * - the welcome counts as already seen (see welcome.spec.ts);
  * - any JavaScript error or console error fails the test.
  */
 
@@ -15,17 +16,6 @@ export const PNG_1PX = Buffer.from(
   'base64',
 );
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#4a90d9"/></svg>';
-
-type Pictogram = { _id: number; sex?: boolean; violence?: boolean; keywords: { keyword: string }[] };
-const pic = (id: number, keyword: string, extra: Partial<Pictogram> = {}): Pictogram => ({ _id: id, keywords: [{ keyword }], ...extra });
-
-/** ARASAAC answers, by path after /pictograms/it/. Anything else: 404. */
-const ARASAAC: Record<string, Pictogram[]> = {
-  'bestsearch/acqua': [pic(2248, 'acqua')],
-  'search/acqua': [pic(2248, 'acqua'), pic(9001, 'battere i piedi in acqua'), pic(2249, 'acqua minerale')],
-  'bestsearch/piante': [pic(3000, 'pianta')],
-  'search/piante': [pic(3001, 'piante'), pic(3002, 'piante', { sex: true })],
-};
 
 const SPEECH_STUB = () => {
   const w = window as unknown as Record<string, unknown>;
@@ -98,16 +88,13 @@ const SPEECH_STUB = () => {
 export const test = base.extend<{ consoleErrors: string[] }>({
   context: async ({ context }, use) => {
     await context.addInitScript(SPEECH_STUB);
+    // The welcome is tested on its own (welcome.spec.ts): elsewhere it is already seen.
+    await context.addInitScript(() => {
+      if (!sessionStorage.getItem('e2e-fresh')) localStorage.setItem('mappeora-welcome', 'visto');
+    });
     await context.route(/^https?:\/\/(?!localhost[:/])/, async (route) => {
       const url = new URL(route.request().url());
-      if (url.hostname === 'api.arasaac.org') {
-        const key = decodeURIComponent(url.pathname.split('/it/')[1] ?? '');
-        const body = ARASAAC[key];
-        return body
-          ? route.fulfill({ json: body, headers: { 'access-control-allow-origin': '*' } })
-          : route.fulfill({ status: 404, json: [], headers: { 'access-control-allow-origin': '*' } });
-      }
-      if (url.hostname === 'static.arasaac.org' || (url.hostname === 'cdn.jsdelivr.net' && url.pathname.endsWith('.png'))) {
+      if (url.hostname === 'cdn.jsdelivr.net' && url.pathname.endsWith('.png')) {
         return route.fulfill({ body: PNG_1PX, contentType: 'image/png', headers: { 'access-control-allow-origin': '*' } });
       }
       if (url.hostname === 'cdn.jsdelivr.net' && url.pathname.endsWith('.svg')) {
@@ -151,4 +138,14 @@ export function slowVoice(page: Page, msPerWord = 400) {
 /** Everything the app has read aloud so far. */
 export function spoken(page: Page): Promise<string[]> {
   return page.evaluate(() => [...(window as unknown as { __spoken: string[] }).__spoken]);
+}
+
+/** Like a first launch on a new device: the welcome is not seen yet. */
+export async function freshInstall(page: Page) {
+  await page.goto('/');
+  await page.evaluate(() => {
+    sessionStorage.setItem('e2e-fresh', '1');
+    localStorage.removeItem('mappeora-welcome');
+  });
+  await page.reload();
 }

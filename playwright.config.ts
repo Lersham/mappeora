@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * End-to-end tests of the web app (npm run test:e2e). They run against the
- * production build, with the network to ARASAAC, jsDelivr and Google mocked
+ * production build, with the network to jsDelivr and Google mocked
  * (e2e/fixtures.ts): the suite works offline and gives the same results
  * every time. Voice (speech synthesis and recognition) is simulated too.
  */

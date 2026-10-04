@@ -8,7 +8,6 @@ import { useMapStore } from '../../store/mapStore';
 import { useReading } from '../../store/readingStore';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { reviewVisibility, useReview } from '../../store/reviewStore';
-import { pictogramUrl } from '../../services/pictograms';
 import { illustrationUrl } from '../../services/illustrations';
 
 export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'collapsed'> & {
@@ -48,7 +47,8 @@ function NodeImageView({ image }: { image: NonNullable<ConceptNodeData['image']>
     );
   }
   if (image.kind === 'arasaac') {
-    return <img className="concept-picto" src={image.src ?? pictogramUrl(image.ref)} alt="" crossOrigin="anonymous" draggable={false} />;
+    // Symbols are no longer offered: older maps show the copy saved inside them.
+    return image.src ? <img className="concept-picto" src={image.src} alt="" draggable={false} /> : null;
   }
   if (image.kind === 'illustrazione') {
     return (
@@ -84,6 +84,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const isReading = useReading((s) => s.nodeId === id);
   const visibility = useReview((s) => reviewVisibility(s, id));
   const reviewing = useReview((s) => s.active);
+  const isReviewStep = useReview((s) => s.active && s.steps[s.index]?.nodeId === id);
   const { readNode } = useReadAloud();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(data.label);
@@ -139,17 +140,20 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
               <HighlightedLabel id={id} label={data.label} />
             </span>
           )}
-          <button
-            type="button"
-            className="concept-speak nodrag"
-            aria-label={`Leggi: ${data.label}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              readNode(id);
-            }}
-          >
-            🔊
-          </button>
+          {/* Only on the concept in hand: on every one they cluttered the map. */}
+          {(selected || isReviewStep) && (
+            <button
+              type="button"
+              className="concept-speak nodrag"
+              aria-label={`Leggi: ${data.label}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                readNode(id);
+              }}
+            >
+              🔊
+            </button>
+          )}
         </>
       )}
       {data.hasChildren && !reviewing && (

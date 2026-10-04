@@ -47,7 +47,8 @@ function readImage(v: unknown): MapNode['image'] {
   const withSrc = <T extends NonNullable<MapNode['image']>>(image: T): T =>
     src && PHOTO_URL.test(src) ? { ...image, src } : image;
   if (v.kind === 'emoji' && ref.length <= 16) return { kind: 'emoji', ref };
-  if (v.kind === 'arasaac' && /^\d{1,7}$/.test(ref)) return withSrc({ kind: 'arasaac', ref });
+  // Older maps only: symbols are no longer offered, so without the picture saved inside there is nothing to show.
+  if (v.kind === 'arasaac' && /^\d{1,7}$/.test(ref) && src && PHOTO_URL.test(src)) return { kind: 'arasaac', ref, src };
   if (v.kind === 'illustrazione' && ref.length <= 200 && !ref.includes('..') && ILLUSTRATION_PATH.test(ref)) {
     return withSrc({ kind: 'illustrazione', ref });
   }

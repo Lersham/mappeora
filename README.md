@@ -35,7 +35,7 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 
 | Funzione | Dove |
 |---|---|
-| 🖼️ Immagini nei nodi, con colore e forma. Tre schede: **✨ Illustrazioni** (Fluent Emoji di Microsoft, licenza MIT: circa 1.600 immagini cercabili in italiano **sul dispositivo** grazie ai nomi e alle parole chiave Unicode CLDR, es. «Vesuvio» → 🌋), **🧩 Simboli CAA** (ARASAAC, per chi li usa già a scuola) e **📷 Foto**. La ricerca ignora articoli e preposizioni, cerca la frase e poi le singole parole e mette prima i risultati esatti. L'immagine scelta viene **salvata dentro la mappa**, quindi funziona offline e nel file `.mappeora`; le mappe vecchie la salvano alla prima apertura con internet | `src/features/editor/NodeStyleDialog.tsx`, `src/services/illustrations.ts`, `src/services/pictograms.ts`, `src/lib/searchText.ts`, `src/services/embed.ts` |
+| 🖼️ Immagini nei nodi, con colore e forma. Due schede: **✨ Illustrazioni** (Fluent Emoji di Microsoft, licenza MIT: circa 1.600 immagini cercabili in italiano **sul dispositivo** grazie ai nomi e alle parole chiave Unicode CLDR, es. «Vesuvio» → 🌋) e **📷 Foto**. La ricerca ignora articoli e preposizioni, cerca la frase e poi le singole parole e mette prima i risultati esatti. L'immagine scelta viene **salvata dentro la mappa**, quindi funziona offline e nel file `.mappeora`; le mappe vecchie la salvano alla prima apertura con internet | `src/features/editor/NodeStyleDialog.tsx`, `src/services/illustrations.ts`, `src/lib/searchText.ts`, `src/services/embed.ts` |
 | 🧩 Modelli pronti: Libera, 5 W, Causa ed effetto, Linea del tempo (verticale), Confronto | `src/lib/templates.ts`, `src/features/home/NewMapDialog.tsx` |
 | 🧠 Ripasso "Un passo alla volta" e "Indovina" (concetto nascosto, poi «Scopri») | `src/store/reviewStore.ts`, `src/features/editor/ReviewBar.tsx` |
 | 📤 Esporta PDF A4/A3 o PNG, con **versione per la verifica** (bianco e nero, senza decorazioni) | `src/services/export.ts`, `src/features/editor/ExportDialog.tsx` |
@@ -76,6 +76,15 @@ Limite: l'OCR sul dispositivo legge bene il testo stampato, male la scrittura a 
 
 `src/data/illustrations.json` è generato da `node scripts/build-illustrations.mjs`, che scarica i metadati di Fluent Emoji (versione fissata da un commit) e le parole chiave italiane di Unicode CLDR. Il file generato è nel repo: la build dell'app non ha bisogno di rete. Se si cambia versione di Fluent, va aggiornato anche `FLUENT_COMMIT` in `src/services/illustrations.ts` (un test controlla che coincidano).
 
+## Fase 5: più semplice da usare
+
+| Funzione | Dove |
+|---|---|
+| 📝 **Scaletta**: la mappa come elenco puntato, un concetto per riga. Invio crea una riga, Tab (o ➡️) la mette sotto quella di sopra, ⬅️ la riporta indietro; si può anche dettare. «Fatto» ricostruisce la mappa tenendo colori, immagini e parole di collegamento, e si può annullare in un solo passo | `src/features/editor/OutlineDialog.tsx`, `src/lib/outline.ts` |
+| 📱 **Barra del telefono**: in basso restano Concetto, Detta, Leggi, Ripassa e **«Altro»**, che apre gli altri strumenti (Scaletta, Dal libro, Immagine, Sposta/Riordina, Elimina, Salva, Aspetto). Il titolo della mappa usa tutta la larghezza | `src/features/editor/MapEditor.tsx` |
+| 🔊 Il pulsante per ascoltare un concetto compare **solo sul concetto selezionato** (e nel ripasso), così la mappa resta pulita | `src/features/editor/ConceptNode.tsx` |
+| 👋 **Benvenuto** al primo avvio: cinque pagine brevi, ognuna da ascoltare, con «Guarda un esempio» alla fine. Si riapre con «❓ Come funziona» nella schermata iniziale | `src/features/home/WelcomeDialog.tsx` |
+
 ## Architettura
 
 ```
@@ -111,7 +120,7 @@ Scelte importanti:
 - **Il riconoscimento vocale nativo è obbligatorio nelle app**: le WebView di Android e iOS non supportano la Web Speech API per la dettatura.
 - **Si usa SQLite su mobile** perché iOS può cancellare i dati IndexedDB di una WebView quando lo spazio scarseggia.
 - **La voce resta sul dispositivo, se possibile**: gli utenti sono spesso minorenni, quindi si usa `useOnDeviceRecognition` quando il sistema riconosce l'italiano offline.
-- **ARASAAC**: licenza CC BY-NC-SA, quindi i crediti compaiono nella finestra di ricerca e in fondo ai PDF, e l'app deve restare non commerciale. I pittogrammi segnati come violenti o sessuali sono esclusi. Sul web il service worker li mette in cache, così restano visibili anche offline.
+- **Niente simboli ARASAAC**: la loro licenza (CC BY-NC-SA) vieta l'uso commerciale, quindi sono stati tolti. Le illustrazioni sono Fluent Emoji (MIT). Nelle mappe vecchie un simbolo già salvato dentro la mappa resta visibile; gli altri non compaiono più.
 - **`html-to-image` è bloccato alla 1.11.11**: le versioni successive perdono gli stili delle frecce (SVG) nell'esportazione.
 - **Le impostazioni di accessibilità appartengono all'utente, non alla mappa**: una mappa condivisa da un docente si vede con il font e i colori del bambino.
 - Si usa `@capgo/capacitor-speech-recognition` al posto di `@capacitor-community/speech-recognition`, che non supporta ancora Swift Package Manager (richiesto da Capacitor 8 su iOS).
@@ -133,17 +142,18 @@ Prima di ogni push: `npm run typecheck && npm test && npm run test:e2e`.
 
 ### Test end-to-end
 
-In `e2e/` ci sono 40 test che usano l'app come farebbe uno studente: su un **computer** (1280×860) e su un **telefono** (Pixel 7), quindi 80 esecuzioni. Ogni test riparte da un browser vuoto. Controllano:
+In `e2e/` ci sono 42 test che usano l'app come farebbe uno studente: su un **computer** (1280×860) e su un **telefono** (Pixel 7), quindi più di 80 esecuzioni (alcuni test valgono solo per il telefono). Ogni test riparte da un browser vuoto. Controllano:
 - creare mappe da ogni modello, salvataggio automatico, cancellazione, mappe di esempio;
 - aggiungere, rinominare, annullare ed eliminare concetti; parole di collegamento; rami comprimibili; disposizione a foglio A4 senza sovrapposizioni; trascinamento per riordinare;
-- immagini: ricerca delle illustrazioni e dei simboli CAA, Google Immagini, incolla, foto dalla galleria;
+- immagini: ricerca delle illustrazioni, Google Immagini, incolla, foto dalla galleria;
+- Scaletta, menu «Altro» sul telefono, 🔊 sul concetto scelto, benvenuto al primo avvio;
 - file `.mappeora`, PNG, PDF su 1, 2 o 4 fogli A4/A3, stampa;
 - lettura ad alta voce (ordine e parola evidenziata), ripasso, Indovina, Interrogazione, dettatura con i comandi vocali;
 - aspetto (carattere, sfondo, maiuscolo), «Dal libro» senza internet;
 - **accessibilità** con axe-core (WCAG 2.2 AA): nessun problema grave nelle schermate principali.
 
 Come funzionano:
-- **Rete simulata:** ARASAAC, le illustrazioni su jsDelivr e Google rispondono con dati finti (`e2e/fixtures.ts`). I test funzionano offline e danno sempre lo stesso risultato.
+- **Rete simulata:** le illustrazioni su jsDelivr e Google rispondono con dati finti (`e2e/fixtures.ts`). I test funzionano offline e danno sempre lo stesso risultato.
 - **Voce simulata:** quello che l'app legge finisce in un elenco controllabile; quello che lo studente «dice» si imposta con `say()`.
 - **Errori:** un errore JavaScript o in console fa fallire il test.
 - **Server:** i test avviano da soli build e server (`vite preview` sulla porta 4173), oppure riusano quello già acceso.
