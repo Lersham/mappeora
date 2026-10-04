@@ -27,3 +27,8 @@ xcuserdata
 # Playwright (npm run test:e2e)
 e2e/report
 e2e/results
+
+# Android signing keys: they go in GitHub secrets, never in the repo
+*.jks
+*.keystore
+keystore.properties

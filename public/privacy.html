@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" type="image/svg+xml" href="icon.svg" />
+    <title>Privacy – Mappeora</title>
+    <meta name="description" content="Informativa sulla privacy di Mappeora: le mappe restano sul tuo dispositivo, niente account, pubblicità o statistiche." />
+    <style>
+      :root {
+        --bg: #fdf8ec;
+        --card: #ffffff;
+        --text: #1f2a36;
+        --muted: #4b5866;
+        --accent: #3b6ea5;
+        --line: #e4dccb;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #1b2129;
+          --card: #252d37;
+          --text: #eef1f4;
+          --muted: #b9c2cc;
+          --accent: #8db8e8;
+          --line: #3a4553;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 1.125rem/1.65 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        letter-spacing: 0.01em;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 1.5rem 16px 4rem;
+      }
+      h1 {
+        font-size: 2rem;
+        line-height: 1.2;
+        margin: 1rem 0 0.25rem;
+      }
+      h2 {
+        font-size: 1.35rem;
+        margin: 2.25rem 0 0.5rem;
+      }
+      p,
+      li {
+        max-width: 65ch;
+      }
+      li + li {
+        margin-top: 0.5rem;
+      }
+      a {
+        color: var(--accent);
+      }
+      .back {
+        display: inline-block;
+        padding: 0.6rem 1rem;
+        border-radius: 0.75rem;
+        background: var(--card);
+        border: 2px solid var(--line);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .updated {
+        color: var(--muted);
+        margin-top: 0;
+      }
+      .short {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 1rem;
+        padding: 0.5rem 1.25rem 1rem;
+      }
+      .short ul {
+        padding-left: 1.25rem;
+      }
+      .todo {
+        background: #fff1b8;
+        color: #3d3200;
+        padding: 0 0.25rem;
+        border-radius: 0.25rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="back" href="./">← Torna a Mappeora</a>
+
+      <h1>Privacy</h1>
+      <p class="updated">Ultimo aggiornamento: 4 ottobre 2026</p>
+
+      <section class="short" aria-labelledby="in-breve">
+        <h2 id="in-breve">In breve</h2>
+        <ul>
+          <li>Le tue mappe restano <strong>sul tuo telefono, tablet o computer</strong>. Noi non le vediamo.</li>
+          <li>Non serve un account. Non chiediamo il tuo nome, la tua email o la tua età.</li>
+          <li>Non c’è pubblicità e non ci sono acquisti dentro l’app.</li>
+          <li>Non usiamo statistiche né strumenti che seguono quello che fai.</li>
+          <li>Alcune funzioni usano internet: le trovi spiegate qui sotto. Se hai dubbi, chiedi a un adulto.</li>
+        </ul>
+      </section>
+
+      <h2>Chi è il titolare</h2>
+      <p>
+        Mappeora è un progetto di <span class="todo">[nome del titolare: da completare]</span>. Per qualsiasi domanda sulla privacy puoi scrivere a
+        <span class="todo">[indirizzo email: da completare]</span>.
+      </p>
+
+      <h2>Quali dati raccoglie Mappeora</h2>
+      <p>
+        Nessuno. Mappeora non ha un server che riceve le tue mappe, le tue foto, la tua voce o le tue impostazioni. Non usa cookie di profilazione,
+        pubblicità o statistiche di utilizzo.
+      </p>
+
+      <h2>Dove restano le tue mappe</h2>
+      <ul>
+        <li>
+          Le mappe, le immagini che metti nei concetti e le impostazioni (carattere, colori, voce) sono salvate solo sul dispositivo: nella memoria
+          dell’app su Android, nella memoria del browser sul web.
+        </li>
+        <li>
+          Per cancellarle basta cancellare la mappa dall’app. Disinstallando l’app (o cancellando i dati del sito nel browser) si cancella tutto.
+        </li>
+        <li>
+          Se esporti o condividi una mappa (PDF, immagine, file .mappeora), il file va dove scegli tu: in una cartella, in una chat, per email.
+        </li>
+        <li>
+          Su Android, se nel telefono è attivo il backup di Google, il sistema può copiare i dati dell’app nell’account Google del telefono, per
+          ritrovarli su un nuovo dispositivo. Questo backup lo gestisce Google e si può spegnere nelle impostazioni del telefono.
+        </li>
+      </ul>
+
+      <h2>Le funzioni che usano internet</h2>
+      <ul>
+        <li>
+          <strong>Dal libro (foto di una pagina).</strong> Il testo viene letto sul dispositivo: la foto non viene inviata a nessuno. Sul web, la prima
+          volta l’app scarica il programma di lettura e il vocabolario italiano da jsDelivr, un servizio che distribuisce file.
+        </li>
+        <li>
+          <strong>Illustrazioni.</strong> Le immagini arrivano da jsDelivr. Come ogni sito, jsDelivr riceve l’indirizzo IP del dispositivo, ma non sa
+          chi sei né cosa scrivi.
+        </li>
+        <li>
+          <strong>Cerca su Google Immagini.</strong> Apre il sito di Google nel browser, con il filtro SafeSearch attivo. Lì vale
+          <a href="https://policies.google.com/privacy?hl=it" rel="noopener">l’informativa di Google</a>. Per i più piccoli consigliamo di usarlo
+          insieme a un adulto.
+        </li>
+        <li>
+          <strong>Incolla immagine.</strong> Se incolli l’indirizzo di un’immagine, l’app la scarica da quel sito e la salva dentro la mappa.
+        </li>
+        <li>
+          <strong>Dettatura (🎤).</strong> Su Android, quando il telefono sa riconoscere l’italiano senza internet, la voce resta sul telefono.
+          Altrimenti la voce passa al servizio di riconoscimento vocale del telefono (di solito Google). Sul web la dettatura è quella del browser: in
+          Chrome, per esempio, la voce viene inviata a Google. Mappeora non registra e non conserva la tua voce.
+        </li>
+        <li>
+          <strong>Lettura ad alta voce (🔊).</strong> Usa le voci del dispositivo. Sul web, alcune voci del browser sono «online» (in Chrome, quelle
+          che si chiamano «Google»): in quel caso il testo da leggere viene inviato a Google. Puoi scegliere un’altra voce in «Aspetto».
+        </li>
+        <li><strong>Esempi.</strong> Nell’app Android le mappe di esempio sono già dentro l’app. Sul web si scaricano dal sito di Mappeora.</li>
+      </ul>
+
+      <h2>Il sito mappeora.vercel.app</h2>
+      <p>
+        La versione web è ospitata da Vercel. Come ogni servizio che pubblica siti, Vercel registra per poco tempo dati tecnici delle visite
+        (indirizzo IP, tipo di browser, pagina richiesta) per far funzionare il sito e proteggerlo da abusi. Non li usiamo per altro. Dopo la prima
+        visita l’app funziona anche senza internet.
+      </p>
+
+      <h2>Permessi dell’app Android</h2>
+      <ul>
+        <li><strong>Fotocamera e galleria:</strong> solo quando tocchi «Scatta una foto», «Scegli una foto» o «Dalla galleria».</li>
+        <li><strong>Microfono:</strong> solo per la dettatura, quando tocchi 🎤 o «Detta».</li>
+        <li><strong>Internet:</strong> per le funzioni descritte sopra.</li>
+      </ul>
+
+      <h2>Bambini e ragazzi</h2>
+      <p>
+        Mappeora è pensata anche per bambini e ragazzi, con e senza DSA. Non chiede dati personali, non ha pubblicità, chat o profili, e non ha
+        acquisti. Per questo non chiediamo il consenso dei genitori: non trattiamo dati dei minori. Le funzioni che portano fuori dall’app (Google
+        Immagini) o che usano servizi esterni (dettatura) sono indicate qui sopra, così un adulto può decidere come usarle.
+      </p>
+
+      <h2>I tuoi diritti</h2>
+      <p>
+        Visto che non abbiamo dati tuoi, non c’è nulla da chiederci di vedere o cancellare: tutto è già nelle tue mani. Per i servizi esterni (Google,
+        jsDelivr, Vercel) valgono le loro informative. Se pensi che i tuoi dati siano trattati in modo scorretto puoi rivolgerti al
+        <a href="https://www.garanteprivacy.it" rel="noopener">Garante per la protezione dei dati personali</a>.
+      </p>
+
+      <h2>Modifiche</h2>
+      <p>Se questa informativa cambia, aggiorniamo la data in alto. Se un giorno l’app dovesse raccogliere dati, lo diremo prima, qui e nell’app.</p>
+
+      <p><a class="back" href="./">← Torna a Mappeora</a></p>
+    </main>
+  </body>
+</html>

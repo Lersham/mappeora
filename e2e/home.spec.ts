@@ -44,4 +44,13 @@ test.describe('Schermata iniziale', () => {
     await page.getByRole('button', { name: 'Mappe' }).click();
     await expect(page.locator('.map-title')).toHaveText(['La Rivoluzione francese']);
   });
+
+  test('l’informativa privacy si apre dalla schermata iniziale e riporta all’app', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('link', { name: 'Privacy' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Privacy' })).toBeVisible();
+    await expect(page.getByText('Le tue mappe restano')).toBeVisible();
+    await page.getByRole('link', { name: 'Torna a Mappeora' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Le mie mappe' })).toBeVisible();
+  });
 });

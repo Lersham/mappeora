@@ -16,6 +16,11 @@ test.describe('Accessibilità (axe-core)', () => {
     expect(await seriousProblems(page)).toEqual([]);
   });
 
+  test('informativa privacy', async ({ page }) => {
+    await page.goto('/privacy.html');
+    expect(await seriousProblems(page)).toEqual([]);
+  });
+
   test('nuova mappa', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Nuova mappa' }).click();

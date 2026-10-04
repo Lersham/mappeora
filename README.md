@@ -16,6 +16,7 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
   npm run setup:android  # una volta per macchina/sessione: SDK in /opt/android-sdk (~650 MB)
   npm run android:apk    # → android/app/build/outputs/apk/debug/app-debug.apk
   ```
+  Oppure, senza installare nulla: su GitHub, scheda **Actions** → ultima esecuzione di **Controlli** → *Artifacts* → `mappeora-android-…` (vedi [Controlli automatici](#controlli-automatici-github-actions)).
 - **iOS**: serve un Mac con Xcode (`npm run ios`).
 
 ## Fase 1: MVP
@@ -139,11 +140,22 @@ npm run typecheck
 npm run build        # build web + PWA in dist/
 ```
 
-Prima di ogni push: `npm run typecheck && npm test && npm run test:e2e`.
+Prima di ogni push: `npm run typecheck && npm test && npm run test:e2e`. Dopo il push GitHub Actions rifà gli stessi controlli (vedi sotto).
+
+### Controlli automatici (GitHub Actions)
+
+`.github/workflows/ci.yml` (**Controlli**, nella scheda Actions) parte a ogni push e a ogni pull request:
+
+1. **Test**: controllo dei tipi, test unitari, test E2E su computer e telefono. Se un test E2E fallisce, il rapporto con screenshot e tracce si scarica dagli *Artifacts* (`rapporto-e2e`).
+2. **Android** (solo sui push, e solo se i test passano): costruisce l'app.
+   - Con le chiavi di firma nei secret del repository produce la **versione firmata**: `app-release.aab` per Google Play e `app-release.apk` da installare.
+   - Senza chiavi produce l'APK di debug, come `npm run android:apk`.
+
+La chiave di firma non è mai nel repository (che è pubblico): si crea con `bash scripts/create-release-key.sh` e va nei secret di GitHub. I passi sono in [docs/google-play.md](docs/google-play.md).
 
 ### Test end-to-end
 
-In `e2e/` ci sono 49 test che usano l'app come farebbe uno studente: su un **computer** (1280×860) e su un **telefono** (Pixel 7), quindi quasi 100 esecuzioni (alcuni test valgono solo per il telefono). Ogni test riparte da un browser vuoto. Controllano:
+In `e2e/` ci sono 51 test che usano l'app come farebbe uno studente: su un **computer** (1280×860) e su un **telefono** (Pixel 7), quindi poco più di 100 esecuzioni (alcuni test valgono solo per il telefono). Ogni test riparte da un browser vuoto. Controllano:
 - creare mappe da ogni modello, salvataggio automatico, cancellazione, mappe di esempio;
 - aggiungere, rinominare, annullare ed eliminare concetti; parole di collegamento; rami comprimibili; disposizione a foglio A4 senza sovrapposizioni; trascinamento per riordinare;
 - immagini: ricerca delle illustrazioni, Google Immagini, incolla, foto dalla galleria;
@@ -151,7 +163,8 @@ In `e2e/` ci sono 49 test che usano l'app come farebbe uno studente: su un **com
 - file `.mappeora`, PNG, PDF su 1, 2 o 4 fogli A4/A3, stampa;
 - lettura ad alta voce (ordine e parola evidenziata), ripasso, Indovina, Interrogazione, dettatura con i comandi vocali;
 - aspetto (carattere, sfondo, maiuscolo), «Dal libro» senza internet, e la scelta delle parole (a tocchi e con l'evidenziatore) su un testo letto da un finto motore OCR;
-- **accessibilità** con axe-core (WCAG 2.2 AA): nessun problema grave nelle schermate principali.
+- l'informativa privacy, raggiungibile dalla schermata iniziale;
+- **accessibilità** con axe-core (WCAG 2.2 AA): nessun problema grave nelle schermate principali e nell'informativa privacy.
 
 Come funzionano:
 - **Rete simulata:** le illustrazioni su jsDelivr e Google rispondono con dati finti (`e2e/fixtures.ts`). I test funzionano offline e danno sempre lo stesso risultato.
@@ -206,6 +219,12 @@ In `.claude/skills/` ci sono skill installate con `npx skills add … -a claude-
 ### Sessioni cloud di Claude Code
 
 `.claude/hooks/session-start.sh` (registrato in `.claude/settings.json`) esegue `npm install` all'avvio di ogni sessione cloud, così typecheck, test e server di sviluppo funzionano subito. Su un computer locale non fa nulla. L'Android SDK e Playwright per Python **non** vengono installati in automatico (sono pesanti): si installano solo quando servono con `npm run setup:android` e `npm run setup:webapp-testing`. Per aggiornare le skill: `npx skills update`.
+
+## Privacy
+
+Mappeora non raccoglie dati: le mappe restano sul dispositivo, non ci sono account, pubblicità o statistiche. L'informativa, scritta in modo semplice anche per i ragazzi, è in `public/privacy.html`: si apre dalla schermata iniziale («🔒 Privacy») ed è online su https://mappeora.vercel.app/privacy.html, l'indirizzo da dare a Google Play. Spiega anche le funzioni che usano servizi esterni: jsDelivr (illustrazioni e motore OCR sul web), Google Immagini, dettatura e alcune voci online del browser.
+
+Chi aggiunge una funzione che usa internet o un nuovo permesso deve aggiornare l'informativa e la data in alto. Le risposte proposte per i moduli di Google Play (Sicurezza dei dati, Famiglie, classificazione) sono in [docs/google-play.md](docs/google-play.md).
 
 ## Sviluppi da fare
 

@@ -94,6 +94,10 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onOpenSettings }
           </li>
         ))}
       </ul>
+
+      <footer className="home-footer">
+        <a href={`${import.meta.env.BASE_URL}privacy.html`}>🔒 Privacy</a>
+      </footer>
     </main>
   );
 }

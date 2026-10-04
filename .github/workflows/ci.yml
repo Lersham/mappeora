@@ -1,0 +1,106 @@
+# Controlli automatici: a ogni push i test dell'app web, poi l'app Android.
+# Con le chiavi di firma nei secret del repository (vedi README, «Versione
+# per Google Play») produce anche il file .aab da caricare su Google Play.
+name: Controlli
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Controllo dei tipi
+        run: npm run typecheck
+      - name: Test unitari
+        run: npm test
+      - name: Browser per i test E2E
+        run: npx playwright install --with-deps chromium
+      - name: Test E2E (computer e telefono)
+        run: npm run test:e2e
+      - name: Rapporto dei test E2E
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapporto-e2e
+          path: |
+            e2e/report
+            e2e/results
+          retention-days: 14
+
+  android:
+    name: Android
+    needs: test
+    # Not on pull requests: they don't get the signing secrets.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HAS_KEY: ${{ secrets.MAPPEORA_KEYSTORE_BASE64 != '' }}
+      MAPPEORA_VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - name: Versione
+        run: echo "MAPPEORA_VERSION_NAME=$(node -p "require('./package.json').version").${{ github.run_number }}" >> "$GITHUB_ENV"
+      - name: App web dentro il progetto Android
+        run: npm run cap:sync
+
+      - name: Chiave di firma (dai secret)
+        if: env.HAS_KEY == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.MAPPEORA_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/mappeora.jks"
+          echo "MAPPEORA_KEYSTORE_FILE=$RUNNER_TEMP/mappeora.jks" >> "$GITHUB_ENV"
+      - name: Versione firmata (.aab per Google Play e .apk)
+        if: env.HAS_KEY == 'true'
+        working-directory: android
+        env:
+          MAPPEORA_KEYSTORE_PASSWORD: ${{ secrets.MAPPEORA_KEYSTORE_PASSWORD }}
+          MAPPEORA_KEY_ALIAS: ${{ secrets.MAPPEORA_KEY_ALIAS }}
+          MAPPEORA_KEY_PASSWORD: ${{ secrets.MAPPEORA_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon bundleRelease assembleRelease
+      - name: Versione di prova (senza chiave di firma)
+        if: env.HAS_KEY != 'true'
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug
+      - name: Togli la chiave dal disco
+        if: always()
+        run: rm -f "$RUNNER_TEMP/mappeora.jks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mappeora-android-${{ env.MAPPEORA_VERSION_NAME }}
+          path: |
+            android/app/build/outputs/bundle/release/*.aab
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
