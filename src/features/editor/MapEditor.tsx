@@ -14,6 +14,7 @@ import { useStore } from 'zustand';
 import { beginDrag, endDrag, mapHistory, useMapStore } from '../../store/mapStore';
 import { reviewVisibility, useReview, type ReviewMode } from '../../store/reviewStore';
 import { ConceptNode, type ConceptFlowNode } from './ConceptNode';
+import { FreeEdge } from './FreeEdge';
 import { LadderEdge } from './LadderEdge';
 import { BusEdge } from './BusEdge';
 import { sheetLayout } from '../../lib/sheetLayout';
@@ -31,12 +32,12 @@ import { autoLayout } from '../../services/layout';
 import { exportMap, saveMapFile } from '../../services/export';
 import { readingOrder } from '../../lib/readingOrder';
 import { collapseInfo, visiblePart } from '../../lib/collapse';
-import { templateInfo } from '../../lib/templates';
+import { layoutOf, templateInfo } from '../../lib/templates';
 import type { MapNode } from '../../types/map';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 
 const nodeTypes = { concept: ConceptNode };
-const edgeTypes: EdgeTypes = { ladder: LadderEdge, bus: BusEdge };
+const edgeTypes: EdgeTypes = { ladder: LadderEdge, bus: BusEdge, free: FreeEdge };
 
 type DialogState =
   | { kind: 'style' }
@@ -64,7 +65,10 @@ function Editor({ onBack, onOpenSettings }: Props) {
   const dictation = useDictation();
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<DialogState>(null);
-  const layout = templateInfo(map.template).layout;
+  // Libera and 5 W fill an A4 sheet by themselves, unless the child chose
+  // to place the concepts by hand.
+  const sheetTemplate = templateInfo(map.template).layout === 'foglio';
+  const layout = layoutOf(map);
   const sheetMode = layout === 'foglio';
   const selectedNode = map.nodes.find((n) => n.id === selectedId);
 
@@ -138,6 +142,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
       if (kind?.kind === 'ladder') {
         return { ...base, type: 'ladder', sourceHandle: 's-spine', targetHandle: 't-left', data: { onEdit: onEdit(e.id) } };
       }
+      if (sheetTemplate && !sheet) return { ...base, type: 'free', data: { onEdit: onEdit(e.id) } }; // placed by hand
       return {
         ...base,
         ...(sheet && { sourceHandle: 's-spine', targetHandle: 't-left' }), // a cross-link on a sheet
@@ -145,7 +150,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
         labelBgBorderRadius: 6,
       };
     });
-  }, [map.edges, sheet, review.active]);
+  }, [map.edges, sheet, sheetTemplate, review.active]);
 
   const onNodesChange = useCallback((changes: NodeChange<ConceptFlowNode>[]) => {
     const s = useMapStore.getState();
@@ -205,11 +210,20 @@ function Editor({ onBack, onOpenSettings }: Props) {
   };
 
   const tidy = async () => {
-    // A "foglio" map is always in order: just show all of it.
-    if (sheetMode) return void fitView({ padding: 0.2, duration: 400 });
+    // A "foglio" map is always in order: just show all of it. One placed by
+    // hand goes back on the sheet.
+    if (sheetTemplate) {
+      if (!sheetMode) actions.setFreeLayout(false);
+      return void setTimeout(() => void fitView({ padding: 0.2, duration: 400 }), 150);
+    }
+    await arrange();
+  };
+
+  /** Top-down layout (elkjs) of the concepts on screen. */
+  const arrange = async () => {
     setBusy(true);
     try {
-      // Read fresh state: tidy() also runs right after adding concepts.
+      // Read fresh state: this also runs right after adding concepts.
       const { map: current, sizes: measured } = useMapStore.getState();
       if (!current) return;
       // Collapsed branches keep their place and are laid out when reopened.
@@ -237,8 +251,9 @@ function Editor({ onBack, onOpenSettings }: Props) {
     for (const label of concepts) actions.addChild(parent, label);
     actions.select(parent);
     setDialog(null);
-    // Let React Flow measure the new nodes, then lay the map out again.
-    setTimeout(() => void tidy(), 150);
+    // Let React Flow measure the new nodes, then lay the map out again
+    // (a map placed by hand stays so: the new concepts are just put in order).
+    setTimeout(() => void (sheetMode ? tidy() : arrange()), 150);
   };
 
   const doExport = async ({ kind, paper, pages, simple, print }: ExportChoice) => {
@@ -269,7 +284,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
     actions.select(null);
     // Full screen helps on the class whiteboard; not every WebView allows it.
     if (mode === 'interrogazione') document.documentElement.requestFullscreen?.().catch(() => {});
-    review.start(readingOrder(visiblePart(map), { depthFirst: sheetMode }), mode);
+    review.start(readingOrder(visiblePart(map), { depthFirst: sheetTemplate }), mode);
   };
 
   const exitReview = () => {
@@ -405,7 +420,22 @@ function Editor({ onBack, onOpenSettings }: Props) {
           )}
           <BigButton icon="📷" label="Dal libro" onClick={() => setDialog({ kind: 'photo' })} />
           <BigButton icon="🖼️" label="Immagine" onClick={() => setDialog({ kind: 'style' })} disabled={!selectedNode} />
-          {!sheetMode && <BigButton icon="✨" label="Riordina" onClick={tidy} disabled={busy} />}
+          {sheetMode ? (
+            <BigButton
+              icon="✋"
+              label="Sposta"
+              title="Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4."
+              onClick={() => actions.setFreeLayout(true)}
+            />
+          ) : (
+            <BigButton
+              icon="✨"
+              label="Riordina"
+              title={sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4.' : undefined}
+              onClick={tidy}
+              disabled={busy}
+            />
+          )}
           <BigButton icon="🧠" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
           <BigButton icon="🗑️" label="Elimina" variant="danger" onClick={() => selectedId && actions.removeNodes([selectedId])} disabled={!selectedId} />
           <BigButton icon="💾" label="Salva" onClick={() => setDialog({ kind: 'export' })} />

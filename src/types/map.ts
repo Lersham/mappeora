@@ -43,6 +43,12 @@ export interface ConceptMap {
   createdAt: number;
   updatedAt: number;
   template: MapTemplate;
+  /**
+   * Maps that fill an A4 sheet by themselves (Libera, 5 W): true when the
+   * child chose to place the concepts by hand instead. "Riordina" puts the
+   * map back on the sheet.
+   */
+  freeLayout?: boolean;
   nodes: MapNode[];
   edges: MapEdge[];
 }

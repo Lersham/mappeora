@@ -123,6 +123,7 @@ export function parseMapFile(text: string): ConceptMap {
     createdAt: num(m.createdAt) ?? now,
     updatedAt: now,
     template: TEMPLATES.includes(m.template as MapTemplate) ? (m.template as MapTemplate) : 'libera',
+    ...(m.freeLayout === true && { freeLayout: true }),
     nodes,
     edges,
   };

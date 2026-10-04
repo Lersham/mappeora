@@ -72,6 +72,35 @@ test.describe('Editor', () => {
     expect((await node(page, 'Vapore').boundingBox())!.y).toBeGreaterThan((await node(page, 'Calore del sole').boundingBox())!.y);
   });
 
+  test('«Sposta» lascia i concetti dove li metti, «Riordina» rimette la mappa sul foglio A4', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'il trascinamento con il mouse si prova sul computer');
+    await sampleMap(page);
+    const onSheet = await boxes(page);
+    await toolbar(page, 'Sposta');
+    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toHaveCount(0);
+
+    // far to the right of its branch: on the sheet it would snap back
+    const neve = (await node(page, 'Neve').boundingBox())!;
+    await page.mouse.move(neve.x + 20, neve.y + 8);
+    await page.mouse.down();
+    await page.mouse.move(neve.x + 140, neve.y + 30, { steps: 10 });
+    await page.mouse.up();
+    await settled(page);
+    const moved = (await node(page, 'Neve').boundingBox())!;
+    expect(moved.x - neve.x).toBeGreaterThan(80);
+
+    await toolbar(page, 'Riordina');
+    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toBeVisible();
+    await settled(page);
+    const tidy = await boxes(page);
+    expect(overlapping(tidy)).toEqual([]);
+    // back in its place on the sheet, below "Pioggia" in the same column
+    const at = (b: typeof tidy, label: string) => b.find((x) => x.label === label)!;
+    expect(at(tidy, 'Neve').x).toBeCloseTo(at(tidy, 'Pioggia').x, 0);
+    expect(at(tidy, 'Neve').y).toBeGreaterThan(at(tidy, 'Pioggia').y);
+    expect(tidy.length).toBe(onSheet.length);
+  });
+
   test('«Riordina» mette in colonna la linea del tempo', async ({ page }) => {
     await newMap(page, 'Il Novecento', 'Linea del tempo');
     await toolbar(page, 'Riordina');

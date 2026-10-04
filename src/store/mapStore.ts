@@ -15,6 +15,8 @@ interface MapState {
 
   load(map: ConceptMap | null): void;
   setTitle(title: string): void;
+  /** Concepts placed by hand (true) or kept in order on an A4 sheet. */
+  setFreeLayout(free: boolean): void;
   select(id: string | null): void;
   /** Adds a node linked under `parentId` (or unlinked if null). Returns its id. */
   addChild(parentId: string | null, label?: string): string;
@@ -61,6 +63,8 @@ export const useMapStore = create<MapState>()(
       load: (map) => set({ map, selectedId: null, sizes: {} }),
 
       setTitle: (title) => set((s) => edit(s, () => ({ title }))),
+
+      setFreeLayout: (free) => set((s) => edit(s, () => ({ freeLayout: free || undefined }))),
 
       select: (selectedId) => set({ selectedId }),
 

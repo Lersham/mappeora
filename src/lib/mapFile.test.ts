@@ -13,6 +13,12 @@ describe('mapFile', () => {
     expect(copy.template).toBe('causa-effetto');
     expect(copy.nodes).toEqual(map.nodes);
     expect(copy.edges).toEqual(map.edges);
+    expect(copy.freeLayout).toBeUndefined();
+  });
+
+  it('keeps a map placed by hand as it is', () => {
+    const map = { ...createMap('Le stagioni'), freeLayout: true };
+    expect(parseMapFile(serializeMap(map)).freeLayout).toBe(true);
   });
 
   it('rejects files that are not maps', () => {

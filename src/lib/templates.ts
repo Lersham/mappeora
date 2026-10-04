@@ -1,4 +1,4 @@
-import type { MapEdge, MapNode, MapTemplate, NodeImage } from '../types/map';
+import type { ConceptMap, MapEdge, MapNode, MapTemplate, NodeImage } from '../types/map';
 import { newId } from './id';
 import { colorForDepth } from './palette';
 
@@ -28,6 +28,10 @@ export const TEMPLATES: TemplateInfo[] = [
 ];
 
 export const templateInfo = (id: MapTemplate): TemplateInfo => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
+
+/** How the map is arranged right now: a "foglio" map placed by hand is free, like an "albero". */
+export const layoutOf = (map: Pick<ConceptMap, 'template' | 'freeLayout'>): MapLayout =>
+  map.freeLayout ? 'albero' : templateInfo(map.template).layout;
 
 interface Spec {
   key: string;
