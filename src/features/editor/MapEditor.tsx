@@ -34,6 +34,7 @@ import { exportMap, saveMapFile } from '../../services/export';
 import { readingOrder } from '../../lib/readingOrder';
 import { collapseInfo, visiblePart } from '../../lib/collapse';
 import { layoutOf, templateInfo } from '../../lib/templates';
+import { NEW_MAP_TITLE } from '../../lib/mapFactory';
 import type { MapNode } from '../../types/map';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 
@@ -53,9 +54,11 @@ type DialogState =
 interface Props {
   onBack(): void;
   onOpenSettings(): void;
+  /** Opens straight on a tool, e.g. «Dal libro» from the welcome. */
+  initialDialog?: 'photo';
 }
 
-function Editor({ onBack, onOpenSettings }: Props) {
+function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
   const map = useMapStore((s) => s.map)!;
   const selectedId = useMapStore((s) => s.selectedId);
   const sizes = useMapStore((s) => s.sizes);
@@ -67,7 +70,7 @@ function Editor({ onBack, onOpenSettings }: Props) {
   const reader = useReadAloud();
   const dictation = useDictation();
   const [busy, setBusy] = useState(false);
-  const [dialog, setDialog] = useState<DialogState>(null);
+  const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
   // Libera and 5 W fill an A4 sheet by themselves, unless the child chose
   // to place the concepts by hand.
   const sheetTemplate = templateInfo(map.template).layout === 'foglio';
@@ -251,7 +254,16 @@ function Editor({ onBack, onOpenSettings }: Props) {
 
   const addFromPhoto = (concepts: string[]) => {
     const parent = parentForNew();
-    for (const label of concepts) actions.addChild(parent, label);
+    let rest = concepts;
+    // A map just made and still empty: the first word chosen is its main
+    // concept and its title, the others hang from it.
+    const [root] = map.nodes;
+    if (map.nodes.length === 1 && map.title === NEW_MAP_TITLE && root.label === NEW_MAP_TITLE && concepts.length > 0) {
+      actions.updateNode(root.id, { label: concepts[0] });
+      actions.setTitle(concepts[0]);
+      rest = concepts.slice(1);
+    }
+    for (const label of rest) actions.addChild(parent, label);
     actions.select(parent);
     setDialog(null);
     // Let React Flow measure the new nodes, then lay the map out again

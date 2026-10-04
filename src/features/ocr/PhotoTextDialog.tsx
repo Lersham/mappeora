@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BigButton } from '../../components/BigButton';
 import { pickPhoto, type PhotoSource } from '../../services/photo';
 import { ocr } from '../../services/ocr';
@@ -19,7 +19,8 @@ interface Props {
 
 /**
  * "Dal libro": photo of a page → text (OCR on the device) → read it aloud
- * → tap the important words → they become concepts of the map.
+ * → tap the important words, or drag across them like a highlighter → they
+ * become concepts of the map.
  */
 export function PhotoTextDialog({ onAdd, onClose }: Props) {
   const [step, setStep] = useState<Step>({ kind: 'pick' });
@@ -67,6 +68,37 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
       else next.add(word);
       return next;
     });
+
+  // The highlighter: a finger (or the mouse) dragged across the words marks
+  // all of them, as on the book; starting on a marked word unmarks instead.
+  const drag = useRef<{ anchor: number; mark: boolean; before: ReadonlySet<number> } | null>(null);
+  // A tap is handled on pointerdown: the click that follows must not undo it.
+  const fromPointer = useRef(false);
+  const paint = (to: number) => {
+    const d = drag.current;
+    if (!d) return;
+    const [from, end] = d.anchor < to ? [d.anchor, to] : [to, d.anchor];
+    const next = new Set(d.before);
+    for (let w = from; w <= end; w++) {
+      if (d.mark) next.add(w);
+      else next.delete(w);
+    }
+    setSelected(next);
+  };
+  useEffect(() => {
+    const end = (e: PointerEvent) => {
+      // The browser took the gesture to scroll the text: it was not a highlight.
+      if (e.type === 'pointercancel' && drag.current) setSelected(drag.current.before);
+      drag.current = null;
+      setTimeout(() => void (fromPointer.current = false));
+    };
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    return () => {
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+    };
+  }, []);
 
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Dal libro">
@@ -128,8 +160,15 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
               <textarea className="ocr-text ocr-editor" value={text} aria-label="Testo letto dalla foto" onChange={(e) => setText(e.target.value)} />
             ) : (
               <>
-                <p className="muted small">👆 Tocca le parole importanti: diventeranno concetti della mappa.</p>
-                <div className="ocr-text">
+                <p className="muted small">👆 Tocca le parole importanti, oppure passaci sopra il dito come un evidenziatore: diventeranno concetti della mappa.</p>
+                <div
+                  className="ocr-text ocr-pick"
+                  onPointerMove={(e) => {
+                    if (!drag.current) return;
+                    const el = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('[data-word]');
+                    if (el) paint(Number(el.dataset.word));
+                  }}
+                >
                   {tokens.map((t, i) => {
                     const spoken = reader.word && t.start < reader.word.end && t.end > reader.word.start;
                     if (t.word < 0) return <span key={i}>{t.text}</span>;
@@ -139,7 +178,18 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
                         type="button"
                         className={`ocr-word${selected.has(t.word) ? ' is-selected' : ''}${spoken ? ' is-spoken' : ''}`}
                         aria-pressed={selected.has(t.word)}
-                        onClick={() => toggle(t.word)}
+                        data-word={t.word}
+                        onPointerDown={(e) => {
+                          if (e.button !== 0) return;
+                          fromPointer.current = true;
+                          drag.current = { anchor: t.word, mark: !selected.has(t.word), before: selected };
+                          paint(t.word);
+                        }}
+                        onClick={() => {
+                          // Keyboard and screen readers: Enter or Space toggles.
+                          if (!fromPointer.current) toggle(t.word);
+                          fromPointer.current = false;
+                        }}
                       >
                         {t.text}
                       </button>

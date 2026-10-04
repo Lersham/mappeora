@@ -26,6 +26,8 @@ interface Page {
   icon: string;
   title: string;
   text: string;
+  /** Shows «Provalo adesso», which opens «Dal libro» on a new map. */
+  tryBook?: boolean;
 }
 
 const PAGES: Page[] = [
@@ -33,6 +35,12 @@ const PAGES: Page[] = [
     icon: '🗺️',
     title: 'Benvenuto in Mappeora',
     text: 'Qui costruisci da solo le tue mappe per studiare. Scrivi o detta i concetti, collegali tra loro, e la mappa si mette in ordine su un foglio.',
+  },
+  {
+    icon: '📷',
+    title: 'Dal libro alla mappa',
+    text: 'Fotografa una pagina del libro: Mappeora legge il testo per te. Poi passi il dito sulle parole importanti, come un evidenziatore, e diventano la tua mappa.',
+    tryBook: true,
   },
   {
     icon: '🎤',
@@ -45,11 +53,6 @@ const PAGES: Page[] = [
     text: 'Con «Leggi» Mappeora legge la mappa ad alta voce e colora la parola che sta dicendo. Tocca un concetto e premi 🔊 per sentire solo quello.',
   },
   {
-    icon: '📷',
-    title: 'Dal libro alla mappa',
-    text: 'Con «Dal libro» fotografi una pagina: Mappeora legge il testo e tu scegli le parole importanti da mettere nella mappa.',
-  },
-  {
     icon: '🧠',
     title: 'Ripassa e personalizza',
     text: 'Con «Ripassa» la mappa appare un concetto alla volta, oppure si nasconde e tu provi a ricordare. Con «Aspetto» scegli il carattere, i colori e la voce che ti piacciono.',
@@ -59,10 +62,12 @@ const PAGES: Page[] = [
 interface Props {
   onClose(): void;
   onExamples(): void;
+  /** Makes a new map and opens «Dal libro» on it. */
+  onTryBook(): void;
 }
 
 /** A few pages that show what the app does: on first launch and from «Come funziona». */
-export function WelcomeDialog({ onClose, onExamples }: Props) {
+export function WelcomeDialog({ onClose, onExamples, onTryBook }: Props) {
   const [index, setIndex] = useState(0);
   const { readText, stop } = useReadAloud();
   const page = PAGES[index];
@@ -87,7 +92,10 @@ export function WelcomeDialog({ onClose, onExamples }: Props) {
         </div>
         <h3 className="welcome-title">{page.title}</h3>
         <p className="welcome-text">{page.text}</p>
-        <BigButton icon="🔊" label="Ascolta" onClick={() => void readText(`${page.title}. ${page.text}`)} />
+        <div className="welcome-tools">
+          <BigButton icon="🔊" label="Ascolta" onClick={() => void readText(`${page.title}. ${page.text}`)} />
+          {page.tryBook && <BigButton icon="📷" label="Provalo adesso" variant="primary" onClick={() => close(onTryBook)} />}
+        </div>
       </div>
       <p className="welcome-dots" aria-label={`Pagina ${index + 1} di ${PAGES.length}`}>
         {PAGES.map((p, i) => (

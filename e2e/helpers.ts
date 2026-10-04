@@ -117,3 +117,58 @@ export async function showAll(page: Page) {
   await page.locator('.react-flow__controls-fitview').click();
   await settled(page);
 }
+
+/**
+ * Stands in for Tesseract's worker (downloaded from jsDelivr in the app):
+ * every page photographed "reads" as `text`. Speaks the worker's protocol:
+ * each job is answered with the same action and job id.
+ */
+export async function fakeOcr(page: Page, text: string) {
+  const script = `self.onmessage = ({ data }) => postMessage({
+    workerId: data.workerId, jobId: data.jobId, action: data.action, status: 'resolve',
+    data: data.action === 'recognize' ? { text: ${JSON.stringify(text)} } : {},
+  });`;
+  await page.context().route(/cdn\.jsdelivr\.net\/npm\/tesseract\.js@[^/]+\/dist\/worker\.min\.js/, (route) =>
+    route.fulfill({ body: script, contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' } }),
+  );
+}
+
+/** In «Dal libro»: picks a photo from the gallery and waits for its text. */
+export async function photographPage(page: Page) {
+  const dialog = page.getByRole('dialog', { name: 'Dal libro' });
+  const chooser = page.waitForEvent('filechooser');
+  await dialog.getByRole('button', { name: 'Scegli una foto' }).click();
+  await (await chooser).setFiles({ name: 'pagina.png', mimeType: 'image/png', buffer: PNG_PAGE });
+  await expect(dialog.locator('.ocr-pick')).toBeVisible({ timeout: 20_000 });
+  return dialog;
+}
+
+const PNG_PAGE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+/**
+ * Drags from one word to another, like a highlighter: with a finger on a
+ * touch screen (the phone project), with the mouse elsewhere.
+ */
+export async function highlight(page: Page, from: Locator, to: Locator) {
+  const [a, b] = [await from.boundingBox(), await to.boundingBox()];
+  if (!a || !b) throw new Error('parola non visibile');
+  const start = { x: a.x + a.width / 2, y: a.y + a.height / 2 };
+  const end = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  if (!(await page.evaluate(() => navigator.maxTouchPoints > 0))) {
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y, { steps: 8 });
+    await page.mouse.up();
+    return;
+  }
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x: number, y: number) =>
+    cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+  await touch('touchStart', start.x, start.y);
+  for (let i = 1; i <= 8; i++) await touch('touchMove', start.x + ((end.x - start.x) * i) / 8, start.y + ((end.y - start.y) * i) / 8);
+  await touch('touchEnd', end.x, end.y);
+  await cdp.detach();
+}

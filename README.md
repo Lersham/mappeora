@@ -83,7 +83,8 @@ Limite: l'OCR sul dispositivo legge bene il testo stampato, male la scrittura a 
 | 📝 **Scaletta**: la mappa come elenco puntato, un concetto per riga. Invio crea una riga, Tab (o ➡️) la mette sotto quella di sopra, ⬅️ la riporta indietro; si può anche dettare. «Fatto» ricostruisce la mappa tenendo colori, immagini e parole di collegamento, e si può annullare in un solo passo | `src/features/editor/OutlineDialog.tsx`, `src/lib/outline.ts` |
 | 📱 **Barra del telefono**: in basso restano Concetto, Detta, Leggi, Ripassa e **«Altro»**, che apre gli altri strumenti (Scaletta, Dal libro, Immagine, Sposta/Riordina, Elimina, Salva, Aspetto). Il titolo della mappa usa tutta la larghezza | `src/features/editor/MapEditor.tsx` |
 | 🔊 Il pulsante per ascoltare un concetto compare **solo sul concetto selezionato** (e nel ripasso), così la mappa resta pulita | `src/features/editor/ConceptNode.tsx` |
-| 👋 **Benvenuto** al primo avvio: cinque pagine brevi, ognuna da ascoltare, con «Guarda un esempio» alla fine. Si riapre con «❓ Come funziona» nella schermata iniziale | `src/features/home/WelcomeDialog.tsx` |
+| 👋 **Benvenuto** al primo avvio: cinque pagine brevi, ognuna da ascoltare, con «Guarda un esempio» alla fine. Già la seconda pagina ha **«📷 Provalo adesso»**: crea una mappa nuova e apre subito «Dal libro». Le prime parole scelte diventano il concetto principale e il titolo. Si riapre con «❓ Come funziona» nella schermata iniziale | `src/features/home/WelcomeDialog.tsx`, `src/App.tsx` |
+| 🖍️ **Evidenziatore in «Dal libro»**: invece di toccare le parole una per una, ci si passa sopra il dito come sul libro. Parole vicine diventano un solo concetto; passare su parole già scelte le toglie. Su e giù il testo scorre come sempre. Senza AI: le parole le sceglie lo studente | `src/features/ocr/PhotoTextDialog.tsx` |
 
 ## Architettura
 
@@ -142,14 +143,14 @@ Prima di ogni push: `npm run typecheck && npm test && npm run test:e2e`.
 
 ### Test end-to-end
 
-In `e2e/` ci sono 42 test che usano l'app come farebbe uno studente: su un **computer** (1280×860) e su un **telefono** (Pixel 7), quindi più di 80 esecuzioni (alcuni test valgono solo per il telefono). Ogni test riparte da un browser vuoto. Controllano:
+In `e2e/` ci sono 49 test che usano l'app come farebbe uno studente: su un **computer** (1280×860) e su un **telefono** (Pixel 7), quindi quasi 100 esecuzioni (alcuni test valgono solo per il telefono). Ogni test riparte da un browser vuoto. Controllano:
 - creare mappe da ogni modello, salvataggio automatico, cancellazione, mappe di esempio;
 - aggiungere, rinominare, annullare ed eliminare concetti; parole di collegamento; rami comprimibili; disposizione a foglio A4 senza sovrapposizioni; trascinamento per riordinare;
 - immagini: ricerca delle illustrazioni, Google Immagini, incolla, foto dalla galleria;
 - Scaletta, menu «Altro» sul telefono, 🔊 sul concetto scelto, benvenuto al primo avvio;
 - file `.mappeora`, PNG, PDF su 1, 2 o 4 fogli A4/A3, stampa;
 - lettura ad alta voce (ordine e parola evidenziata), ripasso, Indovina, Interrogazione, dettatura con i comandi vocali;
-- aspetto (carattere, sfondo, maiuscolo), «Dal libro» senza internet;
+- aspetto (carattere, sfondo, maiuscolo), «Dal libro» senza internet, e la scelta delle parole (a tocchi e con l'evidenziatore) su un testo letto da un finto motore OCR;
 - **accessibilità** con axe-core (WCAG 2.2 AA): nessun problema grave nelle schermate principali.
 
 Come funzionano:

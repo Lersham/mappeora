@@ -5,7 +5,7 @@ import { SettingsPanel } from './features/accessibility/SettingsPanel';
 import { useMapStore, mapHistory } from './store/mapStore';
 import { useSettings } from './store/settingsStore';
 import { storage } from './services/storage';
-import { createMap } from './lib/mapFactory';
+import { createMap, NEW_MAP_TITLE } from './lib/mapFactory';
 import { NewMapDialog } from './features/home/NewMapDialog';
 import type { MapTemplate } from './types/map';
 import { useAutosave } from './hooks/useAutosave';
@@ -55,11 +55,14 @@ export default function App() {
   const hasMap = useMapStore((s) => s.map !== null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newMapOpen, setNewMapOpen] = useState(false);
+  // The welcome's «Provalo adesso» opens the new map straight on «Dal libro».
+  const [startDialog, setStartDialog] = useState<'photo' | undefined>();
   const { stop } = useReadAloud();
 
   const open = async (id: string) => {
     const stored = await storage().get(id);
     if (!stored) return;
+    setStartDialog(undefined);
     // Voice notes ("Spiega") were removed: drop any left in older maps.
     const map = { ...stored, nodes: stored.nodes.map(({ audio: _audio, ...n }: typeof stored.nodes[number] & { audio?: unknown }) => n) };
     useMapStore.getState().load(map);
@@ -67,8 +70,9 @@ export default function App() {
     void embedOldImages(map);
   };
 
-  const create = async (title: string, template: MapTemplate) => {
+  const create = async (title: string, template: MapTemplate, dialog?: 'photo') => {
     setNewMapOpen(false);
+    setStartDialog(dialog);
     const map = createMap(title, template);
     await storage().save(map);
     useMapStore.getState().load(map);
@@ -87,9 +91,13 @@ export default function App() {
   return (
     <>
       {hasMap ? (
-        <MapEditor onBack={back} onOpenSettings={() => setSettingsOpen(true)} />
+        <MapEditor onBack={back} onOpenSettings={() => setSettingsOpen(true)} initialDialog={startDialog} />
       ) : (
-        <HomeScreen onOpen={open} onCreate={() => setNewMapOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
+        <HomeScreen
+          onOpen={open}
+          onCreate={() => setNewMapOpen(true)}
+          onStartFromBook={() => void create(NEW_MAP_TITLE, 'libera', 'photo')}
+          onOpenSettings={() => setSettingsOpen(true)} />
       )}
       {newMapOpen && <NewMapDialog onCreate={create} onClose={() => setNewMapOpen(false)} />}
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}

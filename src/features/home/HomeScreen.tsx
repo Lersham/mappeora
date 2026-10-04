@@ -11,10 +11,12 @@ import { WelcomeDialog, welcomeNeeded } from './WelcomeDialog';
 interface Props {
   onOpen(id: string): void;
   onCreate(): void;
+  /** A new map that opens on «Dal libro», from the welcome. */
+  onStartFromBook(): void;
   onOpenSettings(): void;
 }
 
-export function HomeScreen({ onOpen, onCreate, onOpenSettings }: Props) {
+export function HomeScreen({ onOpen, onCreate, onStartFromBook, onOpenSettings }: Props) {
   const [maps, setMaps] = useState<MapSummary[] | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [examplesOpen, setExamplesOpen] = useState(false);
@@ -73,7 +75,7 @@ export function HomeScreen({ onOpen, onCreate, onOpenSettings }: Props) {
           .
         </p>
       )}
-      {welcomeOpen && <WelcomeDialog onClose={() => setWelcomeOpen(false)} onExamples={() => setExamplesOpen(true)} />}
+      {welcomeOpen && <WelcomeDialog onClose={() => setWelcomeOpen(false)} onExamples={() => setExamplesOpen(true)} onTryBook={onStartFromBook} />}
       {examplesOpen && <ExamplesDialog onOpen={onOpen} onClose={() => setExamplesOpen(false)} />}
 
       <ul className="map-list">

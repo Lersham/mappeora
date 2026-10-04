@@ -3,6 +3,7 @@ import { Dialog } from '../../components/Dialog';
 import { MicButton } from '../../components/MicButton';
 import { BigButton } from '../../components/BigButton';
 import { TEMPLATES } from '../../lib/templates';
+import { NEW_MAP_TITLE } from '../../lib/mapFactory';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import type { MapTemplate } from '../../types/map';
 
@@ -52,7 +53,7 @@ export function NewMapDialog({ onCreate, onClose }: Props) {
 
       <div className="dialog-actions">
         <BigButton icon="✖️" label="Annulla" onClick={onClose} />
-        <BigButton icon="✅" label="Crea" variant="primary" onClick={() => onCreate(title.trim() || 'Nuova mappa', template)} />
+        <BigButton icon="✅" label="Crea" variant="primary" onClick={() => onCreate(title.trim() || NEW_MAP_TITLE, template)} />
       </div>
     </Dialog>
   );
