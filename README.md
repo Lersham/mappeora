@@ -192,6 +192,12 @@ npm run ios          # build web, cap sync, apre Xcode
 
 Dopo ogni modifica al codice web: `npm run cap:sync`.
 
+### Logo, icone e splash screen
+
+Il logo (una piccola mappa: il concetto principale in giallo, collegato a tre concetti) è disegnato una volta sola in `scripts/make-icons.mjs`. `npm run icons` rigenera tutto con il Chromium di Playwright:
+- web e PWA: `public/icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`;
+- Android: icone del launcher (`mipmap-*`, anche adattive e rotonde, sfondo blu in `values/ic_launcher_background.xml`) e splash screen chiaro e scuro (`drawable-*` e `drawable-*-night-*`). Da Android 12 lo splash è l'icona sul colore di `values/splash.xml` (crema, o scuro con il telefono in modalità scura).
+
 ### Permessi già configurati
 
 - **Android** (`android/app/src/main/AndroidManifest.xml`): `RECORD_AUDIO` e `<queries>` per i servizi di riconoscimento e sintesi vocale (Android 11+). La fotocamera non richiede permessi (usa il selettore di sistema).

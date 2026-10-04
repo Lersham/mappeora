@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash screen background with the phone in dark mode. -->
+    <color name="splash_background">#1D2129</color>
+</resources>

@@ -48,12 +48,16 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onOpenSettings }
   return (
     <main className="home">
       <header className="home-header">
-        <h1>Le mie mappe</h1>
+        <div className="home-brand">
+          <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width="44" height="44" />
+          <span>Mappeora</span>
+        </div>
         <div className="home-header-tools">
           <BigButton icon="❓" label="Come funziona" onClick={() => setWelcomeOpen(true)} />
           <BigButton icon="🎨" label="Aspetto" onClick={onOpenSettings} />
         </div>
       </header>
+      <h1 className="home-title">Le mie mappe</h1>
 
       <div className="home-actions">
         <BigButton icon="➕" label="Nuova mappa" variant="primary" className="home-new" onClick={onCreate} />

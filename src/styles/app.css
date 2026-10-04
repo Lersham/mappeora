@@ -95,16 +95,35 @@ textarea {
   justify-content: space-between;
   gap: 12px;
 }
-.home-header h1 {
+.home-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.home-brand img {
+  flex: none;
+}
+.home-title {
   font-size: 1.8rem;
-  margin: 16px 0;
+  margin: 8px 0 16px;
 }
 .home-header-tools {
   display: flex;
   gap: 8px;
 }
 @media (max-width: 520px) {
-  .home-header h1 {
+  .home-brand {
+    font-size: 1.2rem;
+  }
+  .home-brand img {
+    width: 36px;
+    height: 36px;
+  }
+  .home-title {
     font-size: 1.4rem;
   }
   .home-header-tools .big-button {

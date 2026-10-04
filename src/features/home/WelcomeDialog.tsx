@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
@@ -23,7 +23,7 @@ function markSeen() {
 }
 
 interface Page {
-  icon: string;
+  icon: ReactNode;
   title: string;
   text: string;
   /** Shows «Provalo adesso», which opens «Dal libro» on a new map. */
@@ -32,7 +32,7 @@ interface Page {
 
 const PAGES: Page[] = [
   {
-    icon: '🗺️',
+    icon: <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width="72" height="72" />,
     title: 'Benvenuto in Mappeora',
     text: 'Qui costruisci da solo le tue mappe per studiare. Scrivi o detta i concetti, collegali tra loro, e la mappa si mette in ordine su un foglio.',
   },
