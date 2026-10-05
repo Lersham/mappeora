@@ -17,6 +17,7 @@ import { reloadIfSafe } from './services/pwaUpdate';
 import { isNative } from './services/platform';
 import { handleBack } from './lib/backButton';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { SpeechProblemNotice } from './components/SpeechProblemNotice';
 import { illustrationUrl } from './services/illustrations';
 import type { ConceptMap } from './types/map';
 
@@ -169,6 +170,7 @@ export default function App() {
       )}
       {newMapOpen && <NewMapDialog onCreate={create} onClose={() => setNewMapOpen(false)} />}
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+      <SpeechProblemNotice />
     </ErrorBoundary>
   );
 }

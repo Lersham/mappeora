@@ -39,6 +39,8 @@ export class WebSpeechService implements SpeechService {
   readonly ttsSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
   readonly sttSupported = typeof window !== 'undefined' && recognitionCtor() !== undefined;
   private recognition: Recognition | null = null;
+  /** Bumped by every speak and stop: a speak still waiting for the voices is dropped. */
+  private generation = 0;
 
   async getVoices(lang = DEFAULT_LANG): Promise<Voice[]> {
     if (!this.ttsSupported) return [];
@@ -52,12 +54,14 @@ export class WebSpeechService implements SpeechService {
     if (!this.ttsSupported) return;
     const synth = window.speechSynthesis;
     synth.cancel();
+    const mine = ++this.generation;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = options.lang ?? DEFAULT_LANG;
     utterance.rate = options.rate ?? 1;
     if (options.voiceId) {
       const voice = (await loadVoices()).find((v) => v.voiceURI === options.voiceId);
       if (voice) utterance.voice = voice;
+      if (mine !== this.generation) return;
     }
     return new Promise((resolve) => {
       utterance.onboundary = (e) => {
@@ -73,6 +77,7 @@ export class WebSpeechService implements SpeechService {
   }
 
   async stopSpeaking(): Promise<void> {
+    this.generation++;
     if (this.ttsSupported) window.speechSynthesis.cancel();
   }
 
@@ -102,7 +107,8 @@ export class WebSpeechService implements SpeechService {
         reject(new Error(e.error));
       };
       recognition.onend = () => {
-        this.recognition = null;
+        // An older session ends late, after a new one has started.
+        if (this.recognition === recognition) this.recognition = null;
         resolve(finalText.trim());
       };
       recognition.start();

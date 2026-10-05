@@ -256,6 +256,14 @@ textarea {
 .editor-notice span {
   flex: 1;
 }
+.speech-notice {
+  position: fixed;
+  z-index: 110;
+  bottom: calc(max(8px, env(safe-area-inset-bottom)) + 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 32px));
+}
 .save-problem {
   flex-wrap: wrap;
 }

@@ -6,30 +6,33 @@ import { useMapStore } from '../store/mapStore';
 import { readingOrder, type ReadingStep } from '../lib/readingOrder';
 import { visiblePart } from '../lib/collapse';
 import { templateInfo } from '../lib/templates';
-
-/** Incremented on every new read/stop so an older loop knows it was cancelled. */
-let runId = 0;
+import { ownsSpeech, reportSpeakError, stopAllSpeech, takeSpeechTurn } from './speechTurn';
 
 export function useReadAloud() {
   const active = useReading((s) => s.active);
 
   const readSteps = useCallback(async (steps: ReadingStep[]) => {
-    const myRun = ++runId;
+    const myTurn = takeSpeechTurn();
     const { speechRate, voiceId, highlightWords } = useSettings.getState();
     const reading = useReading.getState();
-    await speech().stopSpeaking();
-    reading.set({ active: true });
-    for (const step of steps) {
-      if (myRun !== runId) return;
-      const label = useMapStore.getState().map?.nodes.find((n) => n.id === step.nodeId)?.label ?? '';
-      reading.set({ nodeId: step.nodeId, word: null, offset: step.text.length - label.length });
-      await speech().speak(step.text, {
-        rate: speechRate,
-        voiceId,
-        onWord: highlightWords && myRun === runId ? (start, end) => reading.set({ word: { start, end } }) : undefined,
-      });
+    try {
+      await speech().stopSpeaking();
+      reading.set({ active: true });
+      for (const step of steps) {
+        if (!ownsSpeech(myTurn)) return;
+        const label = useMapStore.getState().map?.nodes.find((n) => n.id === step.nodeId)?.label ?? '';
+        reading.set({ nodeId: step.nodeId, word: null, offset: step.text.length - label.length });
+        await speech().speak(step.text, {
+          rate: speechRate,
+          voiceId,
+          onWord: highlightWords ? (start, end) => ownsSpeech(myTurn) && reading.set({ word: { start, end } }) : undefined,
+        });
+      }
+    } catch (e) {
+      if (ownsSpeech(myTurn)) reportSpeakError(e);
+    } finally {
+      if (ownsSpeech(myTurn)) reading.set({ active: false, nodeId: null, word: null });
     }
-    if (myRun === runId) reading.set({ active: false, nodeId: null, word: null });
   }, []);
 
   const readMap = useCallback(() => {
@@ -47,17 +50,16 @@ export function useReadAloud() {
 
   /** Reads arbitrary UI text (titles, buttons) without highlighting nodes. */
   const readText = useCallback(async (text: string) => {
-    runId++;
-    useReading.getState().set({ active: false, nodeId: null, word: null });
+    const myTurn = takeSpeechTurn();
     const { speechRate, voiceId } = useSettings.getState();
-    await speech().speak(text, { rate: speechRate, voiceId });
+    try {
+      await speech().speak(text, { rate: speechRate, voiceId });
+    } catch (e) {
+      if (ownsSpeech(myTurn)) reportSpeakError(e);
+    }
   }, []);
 
-  const stop = useCallback(async () => {
-    runId++;
-    useReading.getState().set({ active: false, nodeId: null, word: null });
-    await speech().stopSpeaking();
-  }, []);
+  const stop = stopAllSpeech;
 
   return { active, readMap, readNode, readSteps, readText, stop };
 }

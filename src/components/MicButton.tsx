@@ -3,11 +3,13 @@ import { useDictation, DICTATION_ERRORS } from '../hooks/useDictation';
 interface Props {
   /** Receives the live transcript while the child is speaking, then the final one. */
   onText(text: string): void;
+  /** Called when a new dictation starts (not when it is stopped). */
+  onStart?(): void;
   label?: string;
 }
 
 /** Small inline microphone for text fields: talk instead of typing. */
-export function MicButton({ onText, label = 'Detta' }: Props) {
+export function MicButton({ onText, onStart, label = 'Detta' }: Props) {
   const d = useDictation();
   if (!d.supported) return null;
   return (
@@ -18,6 +20,7 @@ export function MicButton({ onText, label = 'Detta' }: Props) {
         aria-label={d.listening ? 'Smetti di ascoltare' : label}
         onClick={async () => {
           if (d.listening) return void d.stop();
+          onStart?.();
           const text = await d.start(onText);
           if (text) onText(text);
         }}

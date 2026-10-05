@@ -63,6 +63,9 @@ const SPEECH_STUB = () => {
   };
   Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
 
+  // `__holdMic`: the microphone keeps listening until stop(), like a child
+  // still talking. `__micError`: the next session fails with that code.
+  w.__micsOpen = 0;
   class FakeRecognition {
     onresult: ((e: unknown) => void) | null = null;
     onerror: ((e: unknown) => void) | null = null;
@@ -70,15 +73,37 @@ const SPEECH_STUB = () => {
     lang = 'it-IT';
     interimResults = true;
     continuous = false;
+    private open = false;
+    private end(final: boolean) {
+      if (!this.open) return;
+      this.open = false;
+      (w.__micsOpen as number)--;
+      const text = w.__nextTranscript as string;
+      if (final && text) this.onresult?.({ resultIndex: 0, results: [Object.assign([{ transcript: text }], { isFinal: true })] });
+      this.onend?.();
+    }
     start() {
-      setTimeout(() => {
+      this.open = true;
+      (w.__micsOpen as number)++;
+      const error = w.__micError as string | undefined;
+      if (error) {
+        w.__micError = undefined;
+        setTimeout(() => {
+          this.onerror?.({ error });
+          this.end(false);
+        }, 50);
+        return;
+      }
+      if (w.__holdMic) {
         const text = w.__nextTranscript as string;
-        if (text) this.onresult?.({ resultIndex: 0, results: [Object.assign([{ transcript: text }], { isFinal: true })] });
-        this.onend?.();
-      }, 150);
+        setTimeout(() => this.open && this.onresult?.({ resultIndex: 0, results: [Object.assign([{ transcript: text }], { isFinal: false })] }), 50);
+        return;
+      }
+      setTimeout(() => this.end(true), 150);
     }
     stop() {
-      this.onend?.();
+      // The engine ends a moment later, as in Chrome.
+      setTimeout(() => this.end(true), 30);
     }
   }
   w.SpeechRecognition = FakeRecognition;
@@ -128,6 +153,21 @@ export { expect };
 /** Next thing the child "says" into the microphone. */
 export function say(page: Page, text: string) {
   return page.evaluate((t) => ((window as unknown as { __nextTranscript: string }).__nextTranscript = t), text);
+}
+
+/** The microphone keeps listening until it is stopped. */
+export function holdMic(page: Page) {
+  return page.evaluate(() => ((window as unknown as { __holdMic: boolean }).__holdMic = true));
+}
+
+/** The next dictation fails with this Web Speech error code. */
+export function micError(page: Page, code: string) {
+  return page.evaluate((c) => ((window as unknown as { __micError: string }).__micError = c), code);
+}
+
+/** Microphone sessions still running. */
+export function micsOpen(page: Page): Promise<number> {
+  return page.evaluate(() => (window as unknown as { __micsOpen: number }).__micsOpen);
 }
 
 /** Slows the simulated voice down, to see the highlighted word. */

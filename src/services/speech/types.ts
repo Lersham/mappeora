@@ -1,5 +1,5 @@
 export interface Voice {
-  /** Stable identifier: voiceURI on web, list index on native. */
+  /** Stable identifier: the voiceURI. */
   id: string;
   name: string;
   lang: string;
@@ -30,6 +30,19 @@ export interface SpeechService {
   /** Resolves with the final transcript ('' if nothing was heard). */
   listen(options?: ListenOptions): Promise<string>;
   stopListening(): Promise<void>;
+  /** Android only: opens the screen that downloads the missing voices. */
+  installVoice?(): Promise<void>;
+}
+
+/** Speaking failed; `missingVoice` when the device has no voice for the language. */
+export class SpeakError extends Error {
+  name = 'SpeakError';
+  constructor(
+    message: string,
+    readonly missingVoice: boolean,
+  ) {
+    super(message);
+  }
 }
 
 export const DEFAULT_LANG = 'it-IT';

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSettings, type FontChoice, type ThemeChoice } from '../../store/settingsStore';
 import { speech, type Voice } from '../../services/speech';
 import { BigButton } from '../../components/BigButton';
+import { useReadAloud } from '../../hooks/useReadAloud';
 import { useBackHandler } from '../../lib/backButton';
 
 const FONTS: { value: FontChoice; label: string }[] = [
@@ -22,9 +23,10 @@ const SAMPLE = 'La fotosintesi trasforma la luce in energia.';
 export function SettingsPanel({ onClose }: { onClose(): void }) {
   const s = useSettings();
   const [voices, setVoices] = useState<Voice[]>([]);
+  const { readText } = useReadAloud();
 
   useEffect(() => {
-    void speech().getVoices().then(setVoices);
+    void speech().getVoices().then(setVoices, () => setVoices([]));
   }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -135,7 +137,7 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
           <BigButton
             icon="🔊"
             label="Prova la voce"
-            onClick={() => void speech().speak(SAMPLE, { rate: s.speechRate, voiceId: s.voiceId })}
+            onClick={() => void readText(SAMPLE)}
           />
           <BigButton icon="↺" label="Ripristina" onClick={s.reset} />
           <BigButton icon="✅" label="Chiudi" variant="primary" onClick={onClose} />

@@ -129,8 +129,8 @@ export function OutlineDialog({ onDone, onClose }: { onDone(): void; onClose(): 
       </ol>
       <div className="outline-add">
         <BigButton icon="➕" label="Nuova riga" onClick={() => setFocusId(add())} />
-        <span className="outline-mic" onClickCapture={() => void (dictated.current = null)}>
-          <MicButton onText={onDictation} label="Detta una nuova riga" />
+        <span className="outline-mic">
+          <MicButton onText={onDictation} onStart={() => void (dictated.current = null)} label="Detta una nuova riga" />
         </span>
       </div>
       <div className="dialog-actions">
