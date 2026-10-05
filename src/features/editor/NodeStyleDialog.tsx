@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { MicButton } from '../../components/MicButton';
 import { BigButton } from '../../components/BigButton';
+import { Listenable } from '../../components/OptionCard';
 import {
   ILLUSTRATIONS_CREDIT,
   illustrationThumbUrl,
@@ -16,6 +17,12 @@ import { useMapStore } from '../../store/mapStore';
 import { photoToDataUrl, pickPhoto, type PhotoSource } from '../../services/photo';
 import { PasteError, fromPasteEvent, openGoogleImages, pastedToDataUrl, readClipboardImage } from '../../services/webImage';
 import type { MapNode, NodeShape } from '../../types/map';
+
+const GOOGLE_STEPS = [
+  'Premi «Cerca su Google»: si apre Google Immagini con il filtro per ragazzi.',
+  'Tieni premuta l’immagine che ti piace e scegli «Copia immagine».',
+  'Torna qui e premi «Incolla immagine».',
+];
 
 /** Shown when the search finds nothing: common subjects at school. */
 const SUGGESTED = [
@@ -205,11 +212,13 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
             <BigButton icon="🔎" label="Cerca su Google" disabled={busy || !query.trim()} onClick={() => openGoogleImages(query)} />
             <BigButton icon="📋" label="Incolla immagine" disabled={busy} onClick={() => void pasteFromClipboard()} />
           </div>
-          <ol className="photo-web-steps muted small">
-            <li>Premi «Cerca su Google»: si apre Google Immagini con il filtro per ragazzi.</li>
-            <li>Tieni premuta l’immagine che ti piace e scegli «Copia immagine».</li>
-            <li>Torna qui e premi «Incolla immagine».</li>
-          </ol>
+          <Listenable text={GOOGLE_STEPS.join(' ')} label="Ascolta come fare">
+            <ol className="photo-web-steps muted small">
+              {GOOGLE_STEPS.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          </Listenable>
           {showPasteBox && (
             <textarea
               className="text-field paste-box"

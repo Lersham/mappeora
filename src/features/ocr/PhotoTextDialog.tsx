@@ -5,6 +5,10 @@ import { ocr, OcrDownloadError, PhotoDecodeError } from '../../services/ocr';
 import { cleanOcrText, selectionToConcepts, tokenize } from '../../lib/ocrText';
 import { useReadLongText } from '../../hooks/useReadLongText';
 import { useModal } from '../../components/Dialog';
+import { Listenable } from '../../components/OptionCard';
+
+const INTRO = 'Fotografa una pagina: leggerò il testo per te e potrai scegliere le parole importanti.';
+const PICK_HINT = 'Tocca le parole importanti, oppure passaci sopra il dito come un evidenziatore: diventeranno concetti della mappa.';
 
 type Step =
   | { kind: 'pick' }
@@ -149,7 +153,9 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
 
         {step.kind === 'pick' && (
           <>
-            <p>Fotografa una pagina: leggerò il testo per te e potrai scegliere le parole importanti.</p>
+            <Listenable text={INTRO}>
+              <p>{INTRO}</p>
+            </Listenable>
             <div className="photo-sources">
               <BigButton icon="📷" label="Scatta una foto" variant="primary" onClick={() => void takePhoto('camera')} />
               <BigButton icon="🖼️" label="Scegli una foto" onClick={() => void takePhoto('gallery')} />
@@ -217,7 +223,9 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
               <textarea className="ocr-text ocr-editor" value={text} aria-label="Testo letto dalla foto" onChange={(e) => setText(e.target.value)} />
             ) : (
               <>
-                <p className="muted small">👆 Tocca le parole importanti, oppure passaci sopra il dito come un evidenziatore: diventeranno concetti della mappa.</p>
+                <Listenable text={PICK_HINT} label="Ascolta come fare">
+                  <p className="muted small">👆 {PICK_HINT}</p>
+                </Listenable>
                 <div
                   className="ocr-text ocr-pick"
                   onPointerMove={(e) => {

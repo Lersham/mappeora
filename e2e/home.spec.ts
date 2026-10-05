@@ -59,7 +59,7 @@ test.describe('Schermata iniziale', () => {
   test('apre la mappa di esempio sulla Rivoluzione francese', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'esempio' }).click();
-    await page.getByRole('button', { name: /La Rivoluzione francese/ }).click();
+    await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
     await expect(nodes(page)).toHaveCount(37);
     await expect(page.locator('.concept-illustration').first()).toHaveAttribute('src', /^data:image\/png/);
     await page.getByRole('button', { name: 'Mappe' }).click();

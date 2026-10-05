@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
+import { OptionCard } from '../../components/OptionCard';
 import { EXAMPLES, loadExample, type Example } from '../../services/examples';
 import { storage } from '../../services/storage';
 
@@ -30,15 +31,15 @@ export function ExamplesDialog({ onOpen, onClose }: Props) {
     <Dialog title="Mappe di esempio" onClose={onClose}>
       <p className="muted">Guarda come è fatta una mappa, oppure usala come punto di partenza: si apre una copia tutta tua.</p>
       {EXAMPLES.map((e) => (
-        <button key={e.file} type="button" className="review-option" disabled={loading !== null} onClick={() => void open(e)}>
-          <span className="template-icon" aria-hidden>
-            {e.icon}
-          </span>
-          <span className="template-name">
-            {e.title} <span className="muted">· {e.subject}</span>
-          </span>
-          <span className="template-desc">{loading === e.file ? 'Apro la mappa…' : e.description}</span>
-        </button>
+        <OptionCard
+          key={e.file}
+          icon={e.icon}
+          name={e.title}
+          extra={<span className="muted"> · {e.subject}</span>}
+          description={loading === e.file ? 'Apro la mappa…' : e.description}
+          disabled={loading !== null}
+          onClick={() => void open(e)}
+        />
       ))}
       {error && (
         <p className="field-error" role="alert">

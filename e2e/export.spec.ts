@@ -14,7 +14,7 @@ test.describe('Stampa e PDF', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Esempi', exact: true }).click();
-    await page.getByRole('button', { name: /La Rivoluzione francese/ }).click();
+    await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
     await expect(page.locator('.concept-node')).toHaveCount(37);
   });
 
@@ -25,7 +25,7 @@ test.describe('Stampa e PDF', () => {
   ] as const) {
     test(`PDF A4 verticale su ${sheets}, leggero`, async ({ page }) => {
       await toolbar(page, 'Salva');
-      await page.getByRole('button', { name: /PDF da stampare/ }).click();
+      await page.getByRole('button', { name: /^PDF da stampare/ }).click();
       await page.getByRole('button', { name: sheets }).click();
       const download = page.waitForEvent('download');
       await page.locator('.dialog-actions').getByRole('button', { name: 'Salva' }).click();

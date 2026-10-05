@@ -12,7 +12,7 @@ test.describe('File .mappeora', () => {
     await page.locator('.illustration-tile').first().click();
 
     await toolbar(page, 'Salva');
-    await page.getByRole('button', { name: /File modificabile/ }).click();
+    await page.getByRole('button', { name: /^File modificabile/ }).click();
     const download = page.waitForEvent('download');
     await page.locator('.dialog-actions').getByRole('button', { name: 'Salva' }).click();
     const file = info.outputPath('mappa.mappeora');

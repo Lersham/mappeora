@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
+import { OptionCard } from '../../components/OptionCard';
 import { isNative } from '../../services/platform';
 import type { PageCount, Paper } from '../../lib/pagePlan';
 
@@ -45,13 +46,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
     <Dialog title="Salva, esporta o stampa" onClose={onClose} className="export-dialog">
       <div className="export-kinds">
         {KINDS.map((k) => (
-          <button key={k.value} type="button" className="review-option" aria-pressed={kind === k.value} onClick={() => setKind(k.value)}>
-            <span className="template-icon" aria-hidden>
-              {k.icon}
-            </span>
-            <span className="template-name">{k.label}</span>
-            <span className="template-desc">{k.desc}</span>
-          </button>
+          <OptionCard key={k.value} icon={k.icon} name={k.label} description={k.desc} pressed={kind === k.value} onClick={() => setKind(k.value)} />
         ))}
       </div>
 

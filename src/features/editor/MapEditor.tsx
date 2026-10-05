@@ -45,6 +45,7 @@ import { useBackHandler } from '../../lib/backButton';
 import { motion } from '../../lib/motion';
 import { MAP_ARIA_LABELS, edgeAriaLabel, spokenLabel } from './a11yLabels';
 import { SaveProblemNotice } from './SaveProblemNotice';
+import { OptionCard } from '../../components/OptionCard';
 
 const nodeTypes = { concept: ConceptNode };
 
@@ -673,29 +674,14 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
 function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): void; onClose(): void }) {
   return (
     <Dialog title="Ripassa" onClose={onClose} className="review-start">
-      <button type="button" className="review-option" onClick={() => onStart('passo')}>
-        <span className="template-icon" aria-hidden>
-          👣
-        </span>
-        <span className="template-name">Un passo alla volta</span>
-        <span className="template-desc">La mappa appare un concetto alla volta, letto ad alta voce.</span>
-      </button>
-      <button type="button" className="review-option" onClick={() => onStart('quiz')}>
-        <span className="template-icon" aria-hidden>
-          🙈
-        </span>
-        <span className="template-name">Indovina</span>
-        <span className="template-desc">Il concetto è nascosto: prova a ricordarlo, poi premi «Scopri».</span>
-      </button>
-      <button type="button" className="review-option" onClick={() => onStart('interrogazione')}>
-        <span className="template-icon" aria-hidden>
-          🙋
-        </span>
-        <span className="template-name">Interrogazione</span>
-        <span className="template-desc">
-          Tutta la mappa davanti a te, a schermo intero: spiega un concetto alla volta e vai avanti con le frecce.
-        </span>
-      </button>
+      <OptionCard icon="👣" name="Un passo alla volta" description="La mappa appare un concetto alla volta, letto ad alta voce." onClick={() => onStart('passo')} />
+      <OptionCard icon="🙈" name="Indovina" description="Il concetto è nascosto: prova a ricordarlo, poi premi «Scopri»." onClick={() => onStart('quiz')} />
+      <OptionCard
+        icon="🙋"
+        name="Interrogazione"
+        description="Tutta la mappa davanti a te, a schermo intero: spiega un concetto alla volta e vai avanti con le frecce."
+        onClick={() => onStart('interrogazione')}
+      />
       <div className="dialog-actions">
         <BigButton icon="✖️" label="Annulla" onClick={onClose} />
       </div>

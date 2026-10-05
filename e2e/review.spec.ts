@@ -20,7 +20,7 @@ test.describe('Lettura, ripasso e voce', () => {
   test('ripasso «Un passo alla volta»: i concetti compaiono uno per volta', async ({ page }) => {
     await sampleMap(page);
     await toolbar(page, 'Ripassa');
-    await page.getByRole('button', { name: /Un passo alla volta/ }).click();
+    await page.getByRole('button', { name: /^Un passo alla volta/ }).click();
     await expect(nodes(page)).toHaveCount(1);
     await page.getByRole('button', { name: 'Avanti' }).click();
     await expect(nodes(page)).toHaveCount(2);
@@ -31,7 +31,7 @@ test.describe('Lettura, ripasso e voce', () => {
   test('ripasso «Indovina»: il concetto è nascosto finché non si preme «Scopri»', async ({ page }) => {
     await sampleMap(page);
     await toolbar(page, 'Ripassa');
-    await page.getByRole('button', { name: /Indovina/ }).click();
+    await page.getByRole('button', { name: /^Indovina/ }).click();
     await expect(page.locator('.concept-mystery')).toBeVisible();
     // its words are nowhere, not even for a screen reader
     await expect(node(page, 'Il ciclo dell’acqua')).toHaveCount(0);
@@ -43,10 +43,19 @@ test.describe('Lettura, ripasso e voce', () => {
     await expect.poll(() => spoken(page)).toContain('Il ciclo dell’acqua');
   });
 
+  test('ogni modo di ripassare si può ascoltare prima di sceglierlo', async ({ page }) => {
+    await newMap(page, 'Le stagioni');
+    await toolbar(page, 'Ripassa');
+    await page.getByRole('button', { name: 'Leggi: Interrogazione' }).click();
+    await expect
+      .poll(() => spoken(page))
+      .toEqual(['Interrogazione. Tutta la mappa davanti a te, a schermo intero: spiega un concetto alla volta e vai avanti con le frecce.']);
+  });
+
   test('Interrogazione: tutta la mappa, un concetto alla volta, frecce e tocco', async ({ page }) => {
     await sampleMap(page);
     await toolbar(page, 'Ripassa');
-    await page.getByRole('button', { name: /Interrogazione/ }).click();
+    await page.getByRole('button', { name: /^Interrogazione/ }).click();
     const caption = page.locator('.present-caption');
     await expect(caption).toHaveText('Il ciclo dell’acqua');
     await expect(nodes(page)).toHaveCount(9);
