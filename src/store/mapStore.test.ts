@@ -19,6 +19,23 @@ describe('mapStore', () => {
     expect(map!.edges).toEqual([expect.objectContaining({ source: root.id, target: id })]);
   });
 
+  it('puts a new concept after its siblings, where it covers no other concept', () => {
+    const root = state().map!.nodes[0];
+    const a = state().addChild(root.id, 'A');
+    // something already where the next sibling would go
+    const b = state().addChild(a, 'B');
+    const at = (id: string) => state().map!.nodes.find((n) => n.id === id)!.position;
+    state().moveNode(b, { x: at(a).x + 200, y: at(a).y + 1 });
+    const c = state().addChild(root.id, 'C');
+    expect(at(c).y).toBeGreaterThan(at(a).y);
+    expect(at(c).x).toBeGreaterThan(at(a).x);
+    const boxes = state().map!.nodes.filter((n) => n.id !== c);
+    for (const n of boxes) {
+      const apart = Math.abs(n.position.x - at(c).x) >= 180 || Math.abs(n.position.y - at(c).y) >= 72;
+      expect(apart, n.label).toBe(true);
+    }
+  });
+
   it('removing a node also removes its edges', () => {
     const root = state().map!.nodes[0];
     const id = state().addChild(root.id);

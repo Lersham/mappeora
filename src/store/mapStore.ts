@@ -6,6 +6,7 @@ import { colorForDepth } from '../lib/palette';
 import { collapseInfo } from '../lib/collapse';
 import { fromOutline, type OutlineRow } from '../lib/outline';
 import { spanningTree } from '../lib/tree';
+import { DEFAULT_SIZE } from '../lib/ladder';
 
 type Size = { width: number; height: number };
 
@@ -38,10 +39,26 @@ interface MapState {
 }
 
 const CHILD_OFFSET_Y = 140;
+/** Step from one sibling to the next, side by side. */
+const SIBLING_STEP_X = 200;
 const HISTORY_LIMIT = 200;
 
 /** Level of a concept, counted from the main one (a link back to it doesn't count). */
 const depthOf = (map: ConceptMap, id: string) => spanningTree(map).depth.get(id) ?? 0;
+
+/**
+ * The first place from `start` rightwards where a new concept covers no
+ * other one: on a map placed by hand (or by «Riordina») nothing rearranges
+ * it afterwards.
+ */
+function freeSpot(map: ConceptMap, sizes: Record<string, Size>, start: MapNode['position']): MapNode['position'] {
+  const boxes = map.nodes.map((n) => ({ ...n.position, ...(sizes[n.id] ?? DEFAULT_SIZE) }));
+  const covers = (x: number, y: number) =>
+    boxes.some((b) => x < b.x + b.width && b.x < x + DEFAULT_SIZE.width && y < b.y + b.height && b.y < y + DEFAULT_SIZE.height);
+  let x = start.x;
+  for (let i = 0; i < map.nodes.length && covers(x, start.y); i++) x += SIBLING_STEP_X;
+  return { x, y: start.y };
+}
 
 /**
  * Applies `fn` to the current map and bumps updatedAt. Nothing happens (no
@@ -88,11 +105,16 @@ export const useMapStore = create<MapState>()(
         set((s) =>
           edit(s, (map) => {
             const parent = map.nodes.find((n) => n.id === parentId);
-            const siblings = parent ? map.edges.filter((e) => e.source === parent.id).length : 0;
-            // Below every existing sibling, so the automatic layout lists it last.
-            const siblingYs = parent ? map.edges.filter((e) => e.source === parent.id).map((e) => map.nodes.find((n) => n.id === e.target)?.position.y ?? 0) : [];
+            const siblings = parent
+              ? map.edges.filter((e) => e.source === parent.id).flatMap((e) => map.nodes.find((n) => n.id === e.target)?.position ?? [])
+              : [];
+            // Below and to the right of every existing sibling, so the
+            // automatic layout lists it last.
             const position = parent
-              ? { x: parent.position.x + siblings * 200 - 100, y: Math.max(parent.position.y + CHILD_OFFSET_Y, ...siblingYs.map((y) => y + 1)) }
+              ? freeSpot(map, s.sizes, {
+                  x: Math.max(parent.position.x - SIBLING_STEP_X / 2, ...siblings.map((p) => p.x + SIBLING_STEP_X)),
+                  y: Math.max(parent.position.y + CHILD_OFFSET_Y, ...siblings.map((p) => p.y + 1)),
+                })
               : { x: 0, y: Math.max(0, ...map.nodes.map((n) => n.position.y)) + CHILD_OFFSET_Y };
             const depth = parent ? depthOf(map, parent.id) + 1 : 0;
             const node: MapNode = { id, label, position, color: colorForDepth(depth), shape: 'rettangolo' };

@@ -1,5 +1,5 @@
 import type { MapEdge, MapNode } from '../types/map';
-import { DEFAULT_SIZE, LABEL_OFFSET, LADDER, labelWidth } from './ladder';
+import { DEFAULT_SIZE, LABEL_OFFSET, LADDER, labelWidth, layoutTree } from './ladder';
 
 /**
  * "Foglio A4": the main concept on top, its branches side by side below it,
@@ -61,35 +61,10 @@ export function sheetLayout(
 ): SheetResult {
   const labelSpace = LADDER.labelSpace * scale;
   const size = (id: string) => sizes[id] ?? DEFAULT_SIZE;
-  const pos = new Map(nodes.map((n) => [n.id, n.position]));
-  const valid = edges.filter((e) => pos.has(e.source) && pos.has(e.target) && e.source !== e.target);
-  const byPosition = (a: string, b: string) => pos.get(a)!.y - pos.get(b)!.y || pos.get(a)!.x - pos.get(b)!.x;
-  const hasParent = new Set(valid.map((e) => e.target));
-  const ids = nodes.map((n) => n.id).sort(byPosition);
   const result: SheetResult = { positions: {}, roles: {}, edges: {}, columns: 1 };
-  if (ids.length === 0) return result;
-
-  // Spanning tree, children in on-screen order (dragging reorders them).
-  const kids = new Map<string, GraphEdge[]>();
-  const visited = new Set<string>();
-  const grow = (id: string) => {
-    visited.add(id);
-    const list: GraphEdge[] = [];
-    kids.set(id, list);
-    for (const e of valid.filter((x) => x.source === id).sort((a, b) => byPosition(a.target, b.target))) {
-      if (visited.has(e.target)) continue;
-      list.push(e);
-      grow(e.target);
-    }
-  };
-  const root = ids.find((id) => !hasParent.has(id)) ?? ids[0];
-  grow(root);
-  const extraTops: string[] = [];
-  for (const id of [...ids.filter((i) => !hasParent.has(i)), ...ids]) {
-    if (visited.has(id)) continue;
-    extraTops.push(id);
-    grow(id);
-  }
+  if (nodes.length === 0) return result;
+  const { kids, tops } = layoutTree(nodes, edges);
+  const [root, ...extraTops] = tops;
 
   // Each branch is a small "scaletta", laid out on its own.
   const makeBlock = (head: string, via?: GraphEdge): Block => {
@@ -122,16 +97,17 @@ export function sheetLayout(
   // Branches go into columns like a masonry wall: the first ones side by
   // side on top, each next one under the shortest column. Every number of
   // columns is tried; the one that prints largest on an A4 sheet wins.
-  const band = (b: Block) => BAND + (b.via?.label ? labelSpace : 0);
+  // Every row leaves room for linking words if any branch has them: a branch
+  // lower than the others would come later in the order the next time.
+  const band = BAND + (blocks.some((b) => b.via?.label) ? labelSpace : 0);
   const measure = (cols: number) => {
-    const firstBand = Math.max(...blocks.slice(0, cols).map(band));
     const bottom = Array<number>(cols).fill(0);
     const colW = Array<number>(cols).fill(0);
     const placed = blocks.map((block, i) => {
       const col = i < cols ? i : bottom.indexOf(Math.min(...bottom));
       const first = i < cols;
       const lineY = first ? 14 : bottom[col] + ROW_GAP + 14;
-      const top = first ? firstBand : bottom[col] + ROW_GAP + band(block);
+      const top = first ? band : bottom[col] + ROW_GAP + band;
       bottom[col] = top + block.height;
       colW[col] = Math.max(colW[col], block.width);
       return { block, col, top, lineY, first };

@@ -49,7 +49,8 @@ describe('fromOutline', () => {
       ['a', 'd', undefined],
       ['d', 'n', undefined],
       ['a', 'c', undefined],
-      // the cross-link now points down the list: it would pull "Ghiaccio" under "Ciclo"
+      // the cross-link is newer than the line "Ghiaccio" hangs from: it stays a cross-link
+      ['d', 'c', 'fa sciogliere'],
     ]);
     // the order of the list is the order on the sheet
     expect(ladderLayout(map.nodes, map.edges).order).toEqual(['a', 'd', 'n', 'c']);

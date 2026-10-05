@@ -75,6 +75,33 @@ describe('sheetLayout', () => {
     expect(sheetLayout(nodes, edges, sizes, { x: 40, y: 90 }).positions.r).toEqual({ x: 40, y: 90 });
   });
 
+  it('laying out the sheet again changes nothing, even with linking words on lower branches', () => {
+    for (const items of [[2, 2, 2, 2], [5, 5, 5, 5, 5, 5], [3, 0, 1, 4, 0, 2, 1]]) {
+      const m = map(items);
+      // linking words on a branch lower down, next to one without
+      for (const e of m.edges) if (e.target === 'b2' || e.target === 'b3') e.label = e.target === 'b2' ? 'porta a' : undefined;
+      const first = sheetLayout(m.nodes, m.edges, m.sizes);
+      const again = sheetLayout(m.nodes.map((n) => ({ ...n, position: first.positions[n.id] })), m.edges, m.sizes);
+      expect(again.positions).toEqual(first.positions);
+    }
+  });
+
+  it('dragging a branch sideways in the top row moves it, a few pixels up or down do not matter', () => {
+    const m = map([5, 5, 5]);
+    const first = sheetLayout(m.nodes, m.edges, m.sizes);
+    expect(first.columns).toBe(3);
+    const moved = (id: string, dx: number, dy: number) =>
+      m.nodes.map((n) => {
+        const p = first.positions[n.id];
+        return { ...n, position: n.id === id ? { x: p.x + dx, y: p.y + dy } : p };
+      });
+    const order = (r: ReturnType<typeof sheetLayout>) => ['b0', 'b1', 'b2'].sort((a, b) => r.positions[a].x - r.positions[b].x);
+    // the first branch dropped past the last one, 3 px higher
+    expect(order(sheetLayout(moved('b0', 700, -3), m.edges, m.sizes))).toEqual(['b1', 'b2', 'b0']);
+    // the last branch dropped before the first one, 3 px lower
+    expect(order(sheetLayout(moved('b2', -700, 3), m.edges, m.sizes))).toEqual(['b2', 'b0', 'b1']);
+  });
+
   it('draws rounded corners only where the line turns', () => {
     expect(roundedPath([{ x: 0, y: 0 }, { x: 0, y: 50 }, { x: 100, y: 50 }])).toBe('M 0,0 L 0,40 Q 0,50 10,50 L 100,50');
   });

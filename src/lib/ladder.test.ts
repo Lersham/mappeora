@@ -33,11 +33,25 @@ describe('ladderLayout', () => {
     expect(labelled.b.x).toBe(plain.b.x);
   });
 
-  it('draws a concept with two parents once, under the first', () => {
+  it('hangs a concept with two parents from its oldest link', () => {
     const { treeEdges, order } = ladderLayout([n('a'), n('b', 0, 1), n('c', 0, 2)], [e('a', 'b'), e('a', 'c'), e('b', 'c')], sizes);
     expect(order).toEqual(['a', 'b', 'c']);
-    expect(treeEdges.has('b-c')).toBe(true);
-    expect(treeEdges.has('a-c')).toBe(false);
+    expect(treeEdges.has('a-c')).toBe(true);
+    expect(treeEdges.has('b-c')).toBe(false);
+  });
+
+  it('a link drawn later from another branch never moves a concept out of its branch', () => {
+    const nodes = [n('a'), n('b', 0, 1), n('c', 0, 3), n('d', 0, 4)];
+    const { treeEdges, order } = ladderLayout(nodes, [e('a', 'b'), e('a', 'c'), e('c', 'd'), e('b', 'd')], sizes);
+    expect(order).toEqual(['a', 'b', 'c', 'd']);
+    expect(treeEdges.has('c-d')).toBe(true);
+    expect(treeEdges.has('b-d')).toBe(false);
+  });
+
+  it('keeps concepts side by side in their order left to right, even a few pixels higher or lower', () => {
+    const nodes = [n('a'), n('b', 400, 300), n('c', 0, 303), n('d', 200, 297)];
+    const { order } = ladderLayout(nodes, [e('a', 'b'), e('a', 'c'), e('a', 'd')], sizes);
+    expect(order).toEqual(['a', 'c', 'd', 'b']);
   });
 
   it('places separate trees and cycles one after the other', () => {

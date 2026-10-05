@@ -18,7 +18,7 @@ import { FreeEdge } from './FreeEdge';
 import { LadderEdge } from './LadderEdge';
 import { BusEdge } from './BusEdge';
 import { TreeEdge } from './TreeEdge';
-import { sheetLayout } from '../../lib/sheetLayout';
+import { sheetLayout, type SheetResult } from '../../lib/sheetLayout';
 import { labelScale } from '../../lib/ladder';
 import { useSettings } from '../../store/settingsStore';
 import { NodeStyleDialog } from './NodeStyleDialog';
@@ -122,6 +122,10 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
   // collapsing, dropping a dragged concept). Not an edit by the child, so
   // it stays out of the undo history.
   const dragging = useRef(false);
+  // While a concept is in hand the lines stay as they were: the new sheet
+  // is worked out once it is dropped.
+  const held = useRef<SheetResult | null>(null);
+  const shown = held.current ?? sheet;
   // A drop on a sheet is recorded once the sheet has put the concept in its
   // place: a concept that snaps back leaves no empty undo step.
   const dropPending = useRef(false);
@@ -161,14 +165,14 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           shape: n.shape,
           image: n.image,
           layout,
-          role: sheet?.roles[n.id],
+          role: shown?.roles[n.id],
           hasChildren: parents.has(n.id),
           collapsed: n.collapsed,
           hiddenBelow: collapse.hiddenBelow[n.id] ?? 0,
           onToggle: () => toggleInPlace(n.id),
         },
       })),
-    [map.nodes, selectedId, sizes, review, layout, collapse, parents, sheet, secret],
+    [map.nodes, selectedId, sizes, review, layout, collapse, parents, shown, secret],
   );
   // The links' spoken names need the concepts' names, not their positions:
   // a string that stays the same while a concept is dragged.
@@ -180,23 +184,23 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
     return map.edges.map((e) => {
       const ariaLabel = edgeAriaLabel(labels.get(e.source) ?? '', labels.get(e.target) ?? '', e.label);
       const base = { id: e.id, source: e.source, target: e.target, label: e.label, ariaLabel, interactionWidth: 32, className: 'concept-edge' };
-      const kind = sheet?.edges[e.id];
+      const kind = shown?.edges[e.id];
       if (kind?.kind === 'bus') {
         return { ...base, type: 'bus', sourceHandle: 's-bottom', targetHandle: 't-top', data: { points: kind.points, onEdit: onEdit(e.id) } };
       }
       if (kind?.kind === 'ladder') {
         return { ...base, type: 'ladder', sourceHandle: 's-spine', targetHandle: 't-left', data: { onEdit: onEdit(e.id) } };
       }
-      if (sheetTemplate && !sheet) return { ...base, type: 'free', data: { onEdit: onEdit(e.id) } }; // placed by hand
+      if (sheetTemplate && !shown) return { ...base, type: 'free', data: { onEdit: onEdit(e.id) } }; // placed by hand
       return {
         ...base,
         type: 'tree',
-        ...(sheet && { sourceHandle: 's-spine', targetHandle: 't-left' }), // a cross-link on a sheet
+        ...(shown && { sourceHandle: 's-spine', targetHandle: 't-left' }), // a cross-link on a sheet
         labelBgPadding: [8, 4] as [number, number],
         labelBgBorderRadius: 6,
       };
     });
-  }, [map.edges, nodeNames, sheet, sheetTemplate, review.active, secret]);
+  }, [map.edges, nodeNames, shown, sheetTemplate, review.active, secret]);
 
   const onNodesChange = useCallback((changes: NodeChange<ConceptFlowNode>[]) => {
     const s = useMapStore.getState();
@@ -540,10 +544,12 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           onConnect={({ source, target }) => actions.connect(source, target)}
           onNodeDragStart={() => {
             dragging.current = true;
+            held.current = sheet;
             beginStep();
           }}
           onNodeDragStop={() => {
             dragging.current = false;
+            held.current = null;
             if (sheetMode) {
               dropPending.current = true;
               setDragTick((t) => t + 1); // a dropped concept may have changed place in the list

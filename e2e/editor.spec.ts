@@ -120,6 +120,22 @@ test.describe('Editor', () => {
     expect(overlapping(b)).toEqual([]);
   });
 
+  test('sulla linea del tempo un concetto nuovo non copre quelli che ci sono già', async ({ page }) => {
+    await newMap(page, 'Il Novecento', 'Linea del tempo');
+    await toolbar(page, 'Riordina');
+    await settled(page);
+    const before = (await boxes(page)).length;
+    for (let i = 0; i < 3; i++) {
+      await page.getByRole('button', { name: 'Concetto', exact: true }).click();
+      await settled(page);
+    }
+    await showAll(page);
+    await settled(page);
+    const b = await boxes(page);
+    expect(b.length).toBe(before + 3);
+    expect(overlapping(b)).toEqual([]);
+  });
+
   test('rinomina con doppio clic e il titolo resta quello della mappa', async ({ page }) => {
     await newMap(page, 'Le stagioni');
     await rename(page, 'Le stagioni', 'Le quattro stagioni');
