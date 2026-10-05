@@ -35,9 +35,10 @@ La stessa pagina è dentro l'app: schermata iniziale → «🔒 Privacy».
 
 | Domanda | Risposta | Perché |
 |---|---|---|
-| L'app raccoglie o condivide dati utente? | **No** | Mappe, immagini e impostazioni restano sul dispositivo (SQLite). Non ci sono account, statistiche, pubblicità o SDK di terze parti che inviano dati. La lettura del testo dalle foto (ML Kit) avviene sul dispositivo. |
+| L'app raccoglie o condivide dati utente? | **Sì, solo dati tecnici di ML Kit** | Mappe, immagini e impostazioni restano sul dispositivo (SQLite). Non ci sono account, statistiche o pubblicità. La lettura del testo dalle foto (ML Kit) avviene sul dispositivo, ma [ML Kit invia a Google dati tecnici](https://developers.google.com/ml-kit/android-data-disclosure) e Google chiede di dichiararli (vedi la riga sotto). |
+| Dati tecnici di ML Kit | **Raccolti, non condivisi**: «Informazioni e prestazioni dell'app → Diagnostica» e «Dispositivo o altri ID» | Scopo: funzionalità dell'app. Non collegati all'identità, cifrati in transito, obbligatori (non si possono spegnere). Mai la foto né il testo letto. |
 | Dettatura | Nessun dato raccolto dall'app | Mappeora usa il riconoscimento vocale di sistema di Android (`SpeechRecognizer`) e preferisce quello senza internet. Quando non c'è, è il servizio di sistema (di solito Google) a ricevere l'audio, non Mappeora. Se Google in revisione chiede diversamente, dichiarare «Audio → Registrazioni vocali», *non conservato, trattato in modo temporaneo, obbligatorio solo per la dettatura*. |
-| Illustrazioni da jsDelivr | Nessun dato raccolto | È il download di un'immagine pubblica: non contiene dati dell'utente. |
+| Illustrazioni da jsDelivr | Nessun dato raccolto | È il download di un'immagine pubblica: non contiene dati dell'utente. Lo stesso vale per il programma di lettura Tesseract, che l'app scarica da jsDelivr solo se ML Kit non funziona sul telefono. |
 | Dati cifrati in transito | Sì | Tutte le connessioni sono HTTPS. |
 | Si possono cancellare i dati? | Sì | Si cancella la mappa nell'app, oppure si disinstalla l'app. |
 
@@ -47,7 +48,7 @@ La stessa pagina è dentro l'app: schermata iniziale → «🔒 Privacy».
   applicano le [norme per le famiglie](https://support.google.com/googleplay/android-developer/answer/9893335).
 - Requisiti delle norme per le famiglie già rispettati:
   - niente pubblicità, niente acquisti, niente account, niente chat o contenuti di altri utenti;
-  - nessun SDK di terze parti per statistiche o pubblicità;
+  - nessun SDK di terze parti per statistiche o pubblicità (ML Kit invia a Google solo dati tecnici di diagnostica, dichiarati sopra);
   - permessi minimi (microfono solo per la dettatura; i permessi per l'impronta digitale aggiunti dal plugin SQLite sono tolti);
   - informativa privacy pubblica.
 - **Da valutare**: «Cerca su Google Immagini» apre il browser su Google (con SafeSearch). Le norme per le famiglie chiedono attenzione ai link

@@ -34,7 +34,7 @@ export default defineConfig({
             options: {
               cacheName: 'ocr-engine',
               expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
+              cacheableResponse: { statuses: [200] },
             },
           },
           {
@@ -44,14 +44,15 @@ export default defineConfig({
             options: {
               cacheName: 'illustrations',
               expiration: { maxEntries: 1000, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
+              // Only real images: a failed download must not stay for a year.
+              cacheableResponse: { statuses: [200] },
             },
           },
           {
             // Example maps (public/esempi): fetched on demand, then available offline.
             urlPattern: ({ url }) => url.pathname.includes('/esempi/'),
             handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'esempi' },
+            options: { cacheName: 'esempi', expiration: { maxEntries: 50 } },
           },
         ],
       },

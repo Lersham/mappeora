@@ -62,4 +62,46 @@ describe('fromOutline', () => {
     ]);
     expect(toOutline(map).map((r) => r.depth)).toEqual([0, 1]);
   });
+
+  it('keeps a cross-link from the main concept to a deeper one', () => {
+    const map = { ...water, edges: [...water.edges, edge('a', 'c', 'diventa')] };
+    expect(fromOutline(map, toOutline(map))).toBe(map);
+    // A real change elsewhere keeps it too.
+    const rows = toOutline(map).map((r) => (r.id === 'd' ? { ...r, label: 'Il ciclo' } : r));
+    expect(fromOutline(map, rows).edges).toContainEqual(edge('a', 'c', 'diventa'));
+  });
+
+  it('an emptied line takes its sub-list one step left, like 🗑️', () => {
+    const map = fromOutline(water, [
+      { id: 'a', label: 'Acqua', depth: 0 },
+      { id: 'b', label: '', depth: 1 },
+      { id: 'c', label: 'Ghiaccio', depth: 2 },
+      { id: 'n', label: 'Vapore', depth: 2 },
+      { id: 'd', label: 'Ciclo', depth: 1 },
+    ]);
+    expect(toOutline(map).map((r) => [r.label, r.depth])).toEqual([
+      ['Acqua', 0],
+      ['Ghiaccio', 1],
+      ['Vapore', 1],
+      ['Ciclo', 1],
+    ]);
+  });
+
+  it('opens a closed branch that gets a new line', () => {
+    const closed = { ...water, nodes: water.nodes.map((n) => (n.id === 'a' || n.id === 'b' ? { ...n, collapsed: true } : n)) };
+    const rows = [...toOutline(closed)];
+    rows.splice(3, 0, { id: 'n', label: 'Neve', depth: 2 });
+    const map = fromOutline(closed, rows);
+    expect(map.nodes.find((n) => n.id === 'a')?.collapsed).toBeUndefined();
+    expect(map.nodes.find((n) => n.id === 'b')?.collapsed).toBeUndefined();
+  });
+
+  it('shows a concept on more lines on one row, and keeps its lines if untouched', () => {
+    const map = { ...water, nodes: water.nodes.map((n) => (n.id === 'd' ? { ...n, label: 'Il ciclo\ndell’acqua' } : n)) };
+    const rows = toOutline(map);
+    expect(rows[3].label).toBe('Il ciclo dell’acqua');
+    const changed = fromOutline(map, rows.map((r) => (r.id === 'b' ? { ...r, label: 'Gli stati' } : r)));
+    expect(changed.nodes.find((n) => n.id === 'd')?.label).toBe('Il ciclo\ndell’acqua');
+  });
 });
+

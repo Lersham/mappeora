@@ -172,7 +172,10 @@ export const useMapStore = create<MapState>()(
 
       applyOutline: (rows) =>
         set((s) => {
-          const next = edit(s, (map) => fromOutline(map, rows));
+          const next = edit(s, (map) => {
+            const result = fromOutline(map, rows);
+            return result === map ? {} : result;
+          });
           const gone = s.selectedId && !next.map?.nodes.some((n) => n.id === s.selectedId);
           return gone ? { ...next, selectedId: null } : next;
         }),

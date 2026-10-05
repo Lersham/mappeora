@@ -140,8 +140,12 @@
       <h2>Le funzioni che usano internet</h2>
       <ul>
         <li>
-          <strong>Dal libro (foto di una pagina).</strong> Il testo viene letto sul dispositivo: la foto non viene inviata a nessuno. Sul web, la prima
-          volta l’app scarica il programma di lettura e il vocabolario italiano da jsDelivr, un servizio che distribuisce file.
+          <strong>Dal libro (foto di una pagina).</strong> Il testo viene letto sul dispositivo: la foto non viene inviata a nessuno. Sul web (e su
+          Android solo se il lettore del telefono non funziona), la prima volta l’app scarica il programma di lettura e il vocabolario italiano
+          da jsDelivr, un servizio che distribuisce file: sono alcuni MB. Su Android il testo lo legge ML Kit, un componente di Google che
+          funziona sul telefono ma invia a Google alcuni dati tecnici (modello del telefono, versione dell’app, un codice dell’installazione,
+          statistiche sugli errori), mai la foto né il testo:
+          <a href="https://developers.google.com/ml-kit/android-data-disclosure" rel="noopener">informativa di Google su ML Kit</a>.
         </li>
         <li>
           <strong>Illustrazioni.</strong> Le immagini arrivano da jsDelivr. Come ogni sito, jsDelivr riceve l’indirizzo IP del dispositivo, ma non sa

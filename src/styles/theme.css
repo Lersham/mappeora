@@ -42,6 +42,9 @@
 [data-uppercase='true'] .dictation-text,
 [data-uppercase='true'] .react-flow__edge-text,
 [data-uppercase='true'] .ladder-label,
+[data-uppercase='true'] .outline-input,
+[data-uppercase='true'] .present-caption,
+[data-uppercase='true'] .link-word-input,
 [data-uppercase='true'] .ocr-text,
 [data-uppercase='true'] .chip {
   text-transform: uppercase;

@@ -4,7 +4,7 @@ import { pickPhoto, type PhotoSource } from '../../services/photo';
 import { ocr, OcrDownloadError, PhotoDecodeError } from '../../services/ocr';
 import { cleanOcrText, selectionToConcepts, tokenize } from '../../lib/ocrText';
 import { useReadLongText } from '../../hooks/useReadLongText';
-import { useBackHandler } from '../../lib/backButton';
+import { useModal } from '../../components/Dialog';
 
 type Step =
   | { kind: 'pick' }
@@ -31,7 +31,8 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
   const textBeforeEdit = useRef('');
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
   const reader = useReadLongText();
-  useBackHandler(onClose);
+  // No closing on a tap outside: the text read from the photo would be lost.
+  const { ref, onKeyDown, tabIndex } = useModal(onClose);
 
   const tokens = useMemo(() => tokenize(text), [text]);
   const concepts = useMemo(() => selectionToConcepts(text, tokens, selected), [text, tokens, selected]);
@@ -142,7 +143,7 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
   }, []);
 
   return (
-    <div className="overlay" role="dialog" aria-modal="true" aria-label="Dal libro">
+    <div className="overlay" role="dialog" aria-modal="true" aria-label="Dal libro" ref={ref} onKeyDown={onKeyDown} tabIndex={tabIndex}>
       <div className="overlay-card photo-text">
         <h2 className="dialog-title">📷 Dal libro</h2>
 

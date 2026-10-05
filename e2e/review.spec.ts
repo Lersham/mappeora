@@ -33,8 +33,13 @@ test.describe('Lettura, ripasso e voce', () => {
     await toolbar(page, 'Ripassa');
     await page.getByRole('button', { name: /Indovina/ }).click();
     await expect(page.locator('.concept-mystery')).toBeVisible();
+    // its words are nowhere, not even for a screen reader
+    await expect(node(page, 'Il ciclo dell’acqua')).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Concetto nascosto' })).toHaveCount(1);
+    await expect(page.getByRole('group', { name: /Il ciclo dell’acqua/ })).toHaveCount(0);
     await page.getByRole('button', { name: 'Scopri' }).click();
     await expect(page.locator('.concept-mystery')).toHaveCount(0);
+    await expect(node(page, 'Il ciclo dell’acqua')).toBeVisible();
     await expect.poll(() => spoken(page)).toContain('Il ciclo dell’acqua');
   });
 
@@ -53,7 +58,7 @@ test.describe('Lettura, ripasso e voce', () => {
     await page.keyboard.press('ArrowLeft');
     await expect(caption).toHaveText('Evaporazione');
     // the view follows the current concept: show the whole map, then tap one
-    await page.getByRole('button', { name: 'Tutta' }).click();
+    await page.getByRole('button', { name: 'Tutta', exact: true }).click();
     await settled(page);
     await node(page, 'Neve').click();
     await expect(caption).toHaveText('Neve');

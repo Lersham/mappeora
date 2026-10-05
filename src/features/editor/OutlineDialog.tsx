@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
 import { MicButton } from '../../components/MicButton';
@@ -20,10 +20,11 @@ function subtreeEnd(rows: OutlineRow[], i: number): number {
 export function OutlineDialog({ onDone, onClose }: { onDone(): void; onClose(): void }) {
   const map = useMapStore((s) => s.map)!;
   const applyOutline = useMapStore((s) => s.applyOutline);
-  const [rows, setRows] = useState<OutlineRow[]>(() => {
+  const [initial] = useState<OutlineRow[]>(() => {
     const list = toOutline(map);
     return list.length ? list : [{ id: newId(), label: '', depth: 0 }];
   });
+  const [rows, setRows] = useState(initial);
   const [focusId, setFocusId] = useState<string | null>(null);
   const inputs = useRef(new Map<string, HTMLInputElement>());
 
@@ -83,11 +84,28 @@ export function OutlineDialog({ onDone, onClose }: { onDone(): void; onClose(): 
     else dictated.current = add(text);
   };
 
+  const done = () => {
+    applyOutline(rows);
+    onDone();
+  };
+
+  /** Esc, Back or a tap outside: written lines are not thrown away unasked. */
+  const close = () => {
+    const changed = rows.length !== initial.length || rows.some((r, i) => r.id !== initial[i].id || r.label !== initial[i].label || r.depth !== initial[i].depth);
+    if (!changed || window.confirm('Chiudere la scaletta senza cambiare la mappa? Le righe scritte andranno perse.')) onClose();
+  };
+
   const onKey = (e: KeyboardEvent<HTMLInputElement>, i: number) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      done();
+    } else if (e.key === 'Enter') {
       e.preventDefault();
       insertAfter(i);
     } else if (e.key === 'Tab') {
+      // Only when the line can move: otherwise Tab goes to the next button as usual.
+      const canMove = e.shiftKey ? rows[i].depth > 0 : i > 0 && rows[i].depth <= rows[i - 1].depth;
+      if (!canMove) return;
       e.preventDefault();
       shift(i, e.shiftKey ? -1 : 1);
     } else if (e.key === 'Backspace' && !rows[i].label && rows.length > 1) {
@@ -97,11 +115,12 @@ export function OutlineDialog({ onDone, onClose }: { onDone(): void; onClose(): 
   };
 
   return (
-    <Dialog title="Scaletta" onClose={onClose} className="outline-dialog">
+    <Dialog title="Scaletta" onClose={close} className="outline-dialog">
       <p className="muted small">Un concetto per riga. Con ➡️ lo metti sotto quello di sopra, con ⬅️ lo riporti indietro.</p>
+      <p className="muted small outline-keys">Con la tastiera: Invio per una nuova riga, Tab e Maiusc+Tab per spostarla, Ctrl+Invio per finire.</p>
       <ol className="outline-list">
         {rows.map((r, i) => (
-          <li key={r.id} className="outline-row" style={{ paddingLeft: `${Math.min(r.depth, 6) * 20}px` }}>
+          <li key={r.id} className="outline-row" style={{ '--depth': Math.min(r.depth, 6) } as CSSProperties}>
             <span className="outline-bullet" aria-hidden>
               {r.depth === 0 ? '●' : '–'}
             </span>
@@ -115,7 +134,7 @@ export function OutlineDialog({ onDone, onClose }: { onDone(): void; onClose(): 
               onChange={(e) => setLabel(r.id, e.target.value)}
               onKeyDown={(e) => onKey(e, i)}
             />
-            <button type="button" className="outline-tool" aria-label="Sposta a sinistra" disabled={r.depth === 0} onClick={() => shift(i, -1)}>
+            <button type="button" className="outline-tool outline-tools-start" aria-label="Sposta a sinistra" disabled={r.depth === 0} onClick={() => shift(i, -1)}>
               ⬅️
             </button>
             <button type="button" className="outline-tool" aria-label="Sposta a destra" disabled={i === 0 || r.depth > rows[i - 1].depth} onClick={() => shift(i, 1)}>
@@ -139,10 +158,7 @@ export function OutlineDialog({ onDone, onClose }: { onDone(): void; onClose(): 
           icon="✅"
           label="Fatto"
           variant="primary"
-          onClick={() => {
-            applyOutline(rows);
-            onDone();
-          }}
+          onClick={done}
         />
       </div>
     </Dialog>

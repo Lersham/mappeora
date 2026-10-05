@@ -163,9 +163,9 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
 
   return (
     <Dialog title="Immagine e colore" onClose={onClose} className="style-dialog">
-      <div className="choice-row" role="tablist">
+      <div className="choice-row" role="group" aria-label="Scegli da dove">
         {TABS.map((t) => (
-          <button key={t.value} type="button" role="tab" className="choice" aria-selected={tab === t.value} onClick={() => setTab(t.value)}>
+          <button key={t.value} type="button" className="choice" aria-pressed={tab === t.value} onClick={() => setTab(t.value)}>
             {t.label}
           </button>
         ))}
@@ -284,7 +284,7 @@ function IllustrationTile({ illustration: i, disabled, onChoose }: { illustratio
           {i.glyph}
         </span>
       ) : (
-        <img src={illustrationThumbUrl(i.path)} alt="" loading="lazy" onError={() => setFailed(true)} />
+        <img src={illustrationThumbUrl(i.path)} alt="" loading="lazy" crossOrigin="anonymous" onError={() => setFailed(true)} />
       )}
     </button>
   );

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures';
-import { newMap, node, toolbar } from './helpers';
+import { newMap, node, nodes, toolbar } from './helpers';
 
 /** WCAG 2.2 A/AA problems that block or seriously hinder someone. */
 async function seriousProblems(page: import('@playwright/test').Page) {
@@ -38,5 +38,47 @@ test.describe('Accessibilità (axe-core)', () => {
     await toolbar(page, 'Immagine');
     await expect(page.locator('.illustration-tile').first()).toBeVisible();
     expect(await seriousProblems(page)).toEqual([]);
+  });
+});
+
+test.describe('Tastiera', () => {
+  test('Esc chiude il dialogo e il fuoco torna al pulsante che l’ha aperto', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'on a phone «Aspetto» is under «Altro», which closes');
+    await newMap(page, 'I vulcani');
+    await toolbar(page, 'Aspetto');
+    const settings = page.getByRole('dialog', { name: 'Aspetto e voce' });
+    await expect(settings).toBeVisible();
+    await expect(settings).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(settings).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Aspetto', exact: true })).toBeFocused();
+  });
+
+  test('Invio su un collegamento apre la parola di collegamento', async ({ page }) => {
+    await newMap(page, 'Il sistema solare', 'Le 5 W');
+    const link = page.getByRole('group', { name: /^Collegamento da «Il sistema solare»/ }).first();
+    await link.focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', { name: 'Parola di collegamento' });
+    await expect(dialog).toBeVisible();
+    await page.keyboard.type('ha');
+    await dialog.getByRole('button', { name: 'Fatto' }).click();
+    await expect(page.getByRole('group', { name: /^Collegamento da «Il sistema solare» a .*: ha$/ })).toHaveCount(1);
+  });
+
+  test('Scaletta: Esc dopo aver scritto chiede prima di perdere le righe', async ({ page }) => {
+    await newMap(page, 'Le piante');
+    await toolbar(page, 'Scaletta');
+    const outline = page.getByRole('dialog', { name: 'Scaletta' });
+    await outline.getByRole('button', { name: 'Nuova riga', exact: true }).click();
+    await page.keyboard.type('Radici');
+    page.once('dialog', (d) => void d.dismiss());
+    await page.keyboard.press('Escape');
+    await expect(outline).toBeVisible();
+    await expect(outline.locator('.outline-input').nth(1)).toHaveValue('Radici');
+    page.once('dialog', (d) => void d.accept());
+    await page.keyboard.press('Escape');
+    await expect(outline).toHaveCount(0);
+    await expect(nodes(page)).toHaveCount(1);
   });
 });

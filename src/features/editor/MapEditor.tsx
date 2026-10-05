@@ -42,6 +42,8 @@ import { NEW_MAP_TITLE } from '../../lib/mapFactory';
 import type { ConceptMap, MapNode } from '../../types/map';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 import { useBackHandler } from '../../lib/backButton';
+import { motion } from '../../lib/motion';
+import { MAP_ARIA_LABELS, edgeAriaLabel, spokenLabel } from './a11yLabels';
 import { SaveProblemNotice } from './SaveProblemNotice';
 
 const nodeTypes = { concept: ConceptNode };
@@ -141,11 +143,14 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
   }, [sheet, dragTick, review.active]);
 
   // The store holds our document model; React Flow nodes are derived from it.
+  // At «Indovina» the concept to guess has no name, not even for a screen reader.
+  const secret = map.nodes.find((n) => reviewVisibility(review, n.id) === 'mystery')?.id;
   const nodes = useMemo<ConceptFlowNode[]>(
     () =>
       map.nodes.map((n) => ({
         id: n.id,
         type: 'concept',
+        ariaLabel: n.id === secret ? 'Concetto nascosto' : spokenLabel(n.label),
         position: n.position,
         selected: !review.active && n.id === selectedId,
         hidden: collapse.hidden.has(n.id) || reviewVisibility(review, n.id) === 'hidden',
@@ -163,12 +168,18 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           onToggle: () => toggleInPlace(n.id),
         },
       })),
-    [map.nodes, selectedId, sizes, review, layout, collapse, parents, sheet],
+    [map.nodes, selectedId, sizes, review, layout, collapse, parents, sheet, secret],
   );
+  // The links' spoken names need the concepts' names, not their positions:
+  // a string that stays the same while a concept is dragged.
+  const nodeNames = useMemo(() => JSON.stringify(map.nodes.map((n) => [n.id, n.label])), [map.nodes]);
   const edges = useMemo<Edge[]>(() => {
     const onEdit = (edgeId: string) => (review.active ? undefined : () => setDialog({ kind: 'link', edgeId }));
+    const labels = new Map<string, string>(JSON.parse(nodeNames));
+    if (secret) labels.set(secret, '?');
     return map.edges.map((e) => {
-      const base = { id: e.id, source: e.source, target: e.target, label: e.label, interactionWidth: 32, className: 'concept-edge' };
+      const ariaLabel = edgeAriaLabel(labels.get(e.source) ?? '', labels.get(e.target) ?? '', e.label);
+      const base = { id: e.id, source: e.source, target: e.target, label: e.label, ariaLabel, interactionWidth: 32, className: 'concept-edge' };
       const kind = sheet?.edges[e.id];
       if (kind?.kind === 'bus') {
         return { ...base, type: 'bus', sourceHandle: 's-bottom', targetHandle: 't-top', data: { points: kind.points, onEdit: onEdit(e.id) } };
@@ -185,7 +196,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
         labelBgBorderRadius: 6,
       };
     });
-  }, [map.edges, sheet, sheetTemplate, review.active]);
+  }, [map.edges, nodeNames, sheet, sheetTemplate, review.active, secret]);
 
   const onNodesChange = useCallback((changes: NodeChange<ConceptFlowNode>[]) => {
     const s = useMapStore.getState();
@@ -234,7 +245,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
       const [left, top] = [p.x * zoom + x, p.y * zoom + y];
       const m = 24;
       if (left >= m && top >= m && left + width * zoom <= box.width - m && top + height * zoom <= box.height - m) return;
-      void setCenter(p.x + width / 2, p.y + height / 2, { zoom, duration: 300 });
+      void setCenter(p.x + width / 2, p.y + height / 2, { zoom, duration: motion(300) });
     }, 150);
 
   const addConcept = (label?: string) => reveal(actions.addChild(parentForNew(), label));
@@ -251,7 +262,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
       const after = getInternalNode(id)?.internals.positionAbsolute;
       if (!after) return;
       const { x, y, zoom } = getViewport();
-      void setViewport({ x: x - (after.x - before.x) * zoom, y: y - (after.y - before.y) * zoom, zoom }, { duration: 200 });
+      void setViewport({ x: x - (after.x - before.x) * zoom, y: y - (after.y - before.y) * zoom, zoom }, { duration: motion(200) });
     }, 150);
   };
 
@@ -260,7 +271,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
     // hand goes back on the sheet.
     if (sheetTemplate) {
       if (!sheetMode) actions.setFreeLayout(false);
-      return void setTimeout(() => void fitView({ padding: 0.2, duration: 400 }), 150);
+      return void setTimeout(() => void fitView({ padding: 0.2, duration: motion(400) }), 150);
     }
     await arrange();
   };
@@ -288,7 +299,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
       if (followUp) untracked(() => actions.applyPositions(fresh));
       else actions.applyPositions(fresh);
       // Give React Flow a frame to render the new positions before fitting.
-      setTimeout(() => void fitView({ padding: 0.2, duration: 400 }), 50);
+      setTimeout(() => void fitView({ padding: 0.2, duration: motion(400) }), 50);
     } catch {
       setNotice('Non sono riuscito a riordinare la mappa. Riprova.');
     } finally {
@@ -298,7 +309,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
 
   /** After «Dal libro» or «Scaletta»: a sheet orders itself, a map placed by hand stays so. */
   const afterBulkEdit = () =>
-    setTimeout(() => void (sheetTemplate ? fitView({ padding: 0.2, duration: 400 }) : arrange({ followUp: true })), 150);
+    setTimeout(() => void (sheetTemplate ? fitView({ padding: 0.2, duration: motion(400) }) : arrange({ followUp: true })), 150);
 
   const dictate = async () => {
     const command = parseVoiceCommand(await dictation.start());
@@ -370,11 +381,11 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
     void reader.stop();
     review.exit();
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
-    setTimeout(() => void fitView({ padding: 0.2, duration: 400 }), 50);
+    setTimeout(() => void fitView({ padding: 0.2, duration: motion(400) }), 50);
   };
 
   useBackHandler(exitReview, review.active);
-  const overview = () => void fitView({ padding: 0.15, duration: 500 });
+  const overview = () => void fitView({ padding: 0.15, duration: motion(500) });
 
   // Review: follow the current concept and read it once it is visible.
   const current = review.active ? review.steps[review.index] : undefined;
@@ -385,7 +396,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
     const size = useMapStore.getState().sizes[node.id] ?? { width: 180, height: 72 };
     void setCenter(node.position.x + size.width / 2, node.position.y + size.height / 2, {
       zoom: Math.max(getZoom(), 1),
-      duration: 500,
+      duration: motion(500),
     });
     // At the "interrogazione" the child speaks: the app reads only on request.
     if (review.mode === 'interrogazione') return;
@@ -429,9 +440,16 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
   useEffect(() => {
     if (review.active || dialogOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      const target = e.target instanceof HTMLElement ? e.target : null;
+      const target = e.target instanceof Element ? e.target : null;
       if (target?.closest('input, textarea, select, button, [contenteditable="true"], [role="dialog"]')) return;
       const s = useMapStore.getState();
+      // Enter on a link (reached with Tab) writes its linking words.
+      const edgeId = target?.closest('.react-flow__edge')?.getAttribute('data-id');
+      if ((e.key === 'Enter' || e.key === 'F2') && edgeId) {
+        e.preventDefault();
+        setDialog({ kind: 'link', edgeId });
+        return;
+      }
       const node = s.map?.nodes.find((n) => n.id === s.selectedId);
       if ((e.key === 'Enter' || e.key === 'F2') && node) {
         const el = target?.closest('.react-flow__node')?.querySelector('.concept-node');
@@ -490,6 +508,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
         <input
           className="title-input"
           value={map.title}
+          maxLength={1000}
           aria-label="Titolo della mappa"
           readOnly={!editing}
           // The whole title is one undo step, not one per letter.
@@ -551,6 +570,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           fitViewOptions={{ padding: 0.3, maxZoom: 1.2 }}
           minZoom={0.2}
           proOptions={{ hideAttribution: true }}
+          ariaLabelConfig={MAP_ARIA_LABELS}
         >
           <Background gap={24} />
           <Controls showInteractive={false} />

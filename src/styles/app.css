@@ -27,6 +27,7 @@ select,
 textarea {
   font: inherit;
   letter-spacing: inherit;
+  word-spacing: inherit;
   color: inherit;
 }
 
@@ -449,6 +450,24 @@ textarea {
   background: var(--primary);
   border: 2px solid var(--surface);
 }
+/* On a touch screen a finger hits a wider area than the dot it sees. */
+@media (pointer: coarse) {
+  .react-flow__handle::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+  }
+}
+/* A concept or a link reached with Tab shows where the keyboard is. */
+.react-flow__node:focus-visible > .concept-node {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.react-flow__edge:focus-visible .react-flow__edge-path {
+  stroke: var(--focus);
+  stroke-width: 4;
+}
 .react-flow__controls-button {
   width: 40px;
   height: 40px;
@@ -542,6 +561,10 @@ textarea {
   place-items: center;
   padding: 16px;
   background: rgba(15, 20, 30, 0.45);
+}
+.overlay:focus {
+  /* The dialog itself takes the focus only so Tab starts inside it. */
+  outline: none;
 }
 .overlay-card {
   width: min(520px, 100%);
@@ -725,6 +748,12 @@ textarea {
 .mic-button.is-listening {
   border-color: var(--danger);
   animation: pulse 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mic-button.is-listening {
+    animation: none;
+    border-width: 4px;
+  }
 }
 
 .picto-grid {
@@ -920,7 +949,7 @@ textarea {
 .concept-toggle.is-collapsed {
   background: var(--primary);
   border-color: var(--primary);
-  color: #ffffff;
+  color: var(--primary-text);
 }
 
 /* ---------- Review mode ---------- */
@@ -1158,9 +1187,11 @@ textarea {
 }
 .outline-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   min-width: 0;
+  padding-left: calc(var(--depth, 0) * 20px);
 }
 .outline-bullet {
   flex: none;
@@ -1169,9 +1200,16 @@ textarea {
   text-align: center;
 }
 .outline-input {
-  width: 0; /* grows with flex: a text box would otherwise push the buttons out */
+  /* Grows with flex; when a deep line leaves too little room the buttons
+     go to a second line instead of squeezing the text. */
+  flex: 1 1 7rem;
+  width: 0;
+  min-width: 7rem;
   min-height: 48px;
   padding: 8px 10px;
+}
+.outline-tools-start {
+  margin-left: auto;
 }
 .outline-tool {
   flex: none;
@@ -1195,8 +1233,14 @@ textarea {
   margin-top: 12px;
 }
 @media (max-width: 520px) {
-  .outline-tool {
-    width: 36px;
+  .outline-row {
+    padding-left: calc(var(--depth, 0) * 12px);
+  }
+}
+/* Keyboard shortcuts only where there is probably a keyboard. */
+@media not (hover: hover) {
+  .outline-keys {
+    display: none;
   }
 }
 
@@ -1237,6 +1281,18 @@ textarea {
   gap: 8px;
   margin: 16px 0 0;
   color: var(--border);
+}
+/* Read by screen readers, not shown. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 .welcome-dots .current {
   color: var(--primary);

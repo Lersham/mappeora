@@ -27,7 +27,7 @@ export function LinkWordDialog({ edge, onClose }: { edge: MapEdge; onClose(): vo
         }}
       >
         <input
-          className="text-field"
+          className="text-field link-word-input"
           value={text}
           autoFocus
           placeholder="es. è formato da"

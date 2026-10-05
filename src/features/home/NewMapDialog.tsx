@@ -25,6 +25,7 @@ export function NewMapDialog({ onCreate, onClose }: Props) {
           <input
             className="text-field"
             value={title}
+            maxLength={1000}
             autoFocus
             placeholder="es. Il ciclo dell'acqua"
             onChange={(e) => setTitle(e.target.value)}

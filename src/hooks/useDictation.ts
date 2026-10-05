@@ -66,7 +66,7 @@ export function useDictation() {
 
 export const DICTATION_ERRORS: Record<DictationError, string> = {
   'stt-unsupported': 'Questo browser non sa ascoltare la voce. Prova con Chrome, Edge o con l’app.',
-  'not-allowed': 'Serve il permesso per usare il microfono.',
+  'not-allowed': 'Per dettare, permetti a Mappeora di usare il microfono nelle impostazioni del telefono o del browser.',
   network: 'Per dettare serve internet. Controlla la connessione e riprova.',
   'no-microphone': 'Non trovo il microfono, oppure lo sta usando un’altra app.',
   service: 'La dettatura adesso non è disponibile. Riprova più tardi, o scrivi con la tastiera.',

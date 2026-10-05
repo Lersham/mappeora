@@ -16,6 +16,7 @@ test('Aspetto: carattere, sfondo e maiuscolo si applicano e restano dopo aver ri
   await page.reload();
   await expect(html).toHaveAttribute('data-theme', 'scuro');
   await expect(html).toHaveAttribute('data-font', 'atkinson');
+  await expect(html).toHaveAttribute('data-uppercase', 'true');
 });
 
 test('Testo grande in stampatello: le parole lunghe di un concetto non vanno a capo a metà', async ({ page }) => {

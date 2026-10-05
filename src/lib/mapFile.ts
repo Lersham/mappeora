@@ -96,7 +96,7 @@ function readEdge(v: unknown, nodeIds: Set<string>): MapEdge | undefined {
   const source = str(v.source, 100);
   const target = str(v.target, 100);
   if (!id || !source || !target || !nodeIds.has(source) || !nodeIds.has(target)) return undefined;
-  const label = str(v.label, SHORT_TEXT_MAX);
+  const label = str(v.label);
   return label ? { id, source, target, label } : { id, source, target };
 }
 

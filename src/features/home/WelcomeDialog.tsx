@@ -97,7 +97,10 @@ export function WelcomeDialog({ onClose, onExamples, onTryBook }: Props) {
           {page.tryBook && <BigButton icon="📷" label="Provalo adesso" variant="primary" onClick={() => close(onTryBook)} />}
         </div>
       </div>
-      <p className="welcome-dots" aria-label={`Pagina ${index + 1} di ${PAGES.length}`}>
+      <p className="welcome-dots">
+        <span className="sr-only">
+          Pagina {index + 1} di {PAGES.length}
+        </span>
         {PAGES.map((p, i) => (
           <span key={p.title} className={i === index ? 'current' : ''} aria-hidden>
             ●

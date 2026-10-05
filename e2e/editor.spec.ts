@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { addConcept, boxes, newMap, node, nodes, overlapping, rename, sampleMap, settled, tapLink, toolbar } from './helpers';
+import { addConcept, boxes, newMap, node, nodes, overlapping, rename, sampleMap, settled, showAll, tapLink, toolbar } from './helpers';
 
 test.describe('Editor', () => {
   test('aggiunge, rinomina, annulla, ripete ed elimina concetti', async ({ page }) => {
@@ -91,6 +91,7 @@ test.describe('Editor', () => {
 
     await toolbar(page, 'Riordina');
     await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toBeVisible();
+    await showAll(page);
     await settled(page);
     const tidy = await boxes(page);
     expect(overlapping(tidy)).toEqual([]);
@@ -99,6 +100,14 @@ test.describe('Editor', () => {
     expect(at(tidy, 'Neve').x).toBeCloseTo(at(tidy, 'Pioggia').x, 0);
     expect(at(tidy, 'Neve').y).toBeGreaterThan(at(tidy, 'Pioggia').y);
     expect(tidy.length).toBe(onSheet.length);
+    // and every other concept back where the sheet had it
+    // (the view may frame it at another zoom: compare from the main concept, to scale)
+    const [r0, r1] = [at(onSheet, 'Il ciclo dell’acqua'), at(tidy, 'Il ciclo dell’acqua')];
+    const k = r1.w / r0.w;
+    for (const b of onSheet) {
+      expect(at(tidy, b.label).x - r1.x, b.label).toBeCloseTo((b.x - r0.x) * k, -1);
+      expect(at(tidy, b.label).y - r1.y, b.label).toBeCloseTo((b.y - r0.y) * k, -1);
+    }
   });
 
   test('«Riordina» mette in colonna la linea del tempo', async ({ page }) => {
