@@ -1,4 +1,4 @@
-import { test, expect, holdMic, lateVoices, micError, micsOpen, say, slowVoice, spoken } from './fixtures';
+import { test, expect, holdMic, lateVoices, micError, micsOpen, say, slowVoice, spoken, voicesUsed } from './fixtures';
 import { newMap, sampleMap, toolbar } from './helpers';
 
 test.describe('Voce', () => {
@@ -97,10 +97,10 @@ test.describe('Voce', () => {
     await lateVoices(page);
     await toolbar(page, 'Aspetto');
     const settings = page.getByRole('dialog', { name: 'Aspetto e voce' });
-    await settings.getByLabel('Voce', { exact: true }).selectOption({ label: 'Italiano (test)' });
+    await settings.getByRole('combobox', { name: 'Voce', exact: true }).selectOption({ label: 'Italiano (test)' });
     await page.keyboard.press('Escape');
     await expect(settings).toHaveCount(0);
     await toolbar(page, 'Leggi');
-    await expect.poll(() => spoken(page)).toHaveLength(1);
+    await expect.poll(() => voicesUsed(page)).toEqual(['it-test']);
   });
 });

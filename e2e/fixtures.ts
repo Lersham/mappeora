@@ -21,6 +21,8 @@ const SPEECH_STUB = () => {
   const w = window as unknown as Record<string, unknown>;
   const spoken: string[] = [];
   w.__spoken = spoken;
+  const voicesUsed: string[] = [];
+  w.__voicesUsed = voicesUsed;
   w.__nextTranscript = '';
   type Utterance = SpeechSynthesisUtterance & { __stopped?: boolean };
   let current: Utterance | null = null;
@@ -46,6 +48,7 @@ const SPEECH_STUB = () => {
     },
     speak(u: Utterance) {
       spoken.push(u.text);
+      voicesUsed.push(u.voice?.voiceURI ?? '');
       current = u;
       const words = [...u.text.matchAll(/\S+/g)];
       let i = 0;
@@ -87,6 +90,17 @@ const SPEECH_STUB = () => {
     },
   };
   Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
+  // Chrome only accepts its own voice objects in `utterance.voice`.
+  class FakeUtterance {
+    lang = '';
+    rate = 1;
+    voice: unknown = null;
+    onboundary: ((e: SpeechSynthesisEvent) => void) | null = null;
+    onend: ((e: SpeechSynthesisEvent) => void) | null = null;
+    onerror: ((e: SpeechSynthesisErrorEvent) => void) | null = null;
+    constructor(public text = '') {}
+  }
+  w.SpeechSynthesisUtterance = FakeUtterance;
 
   // `__holdMic`: the microphone keeps listening until stop(), like a child
   // still talking. `__micError`: the next session fails with that code.
@@ -203,6 +217,11 @@ export function lateVoices(page: Page) {
 /** Slows the simulated voice down, to see the highlighted word. */
 export function slowVoice(page: Page, msPerWord = 400) {
   return page.evaluate((ms) => ((window as unknown as { __wordMs: number }).__wordMs = ms), msPerWord);
+}
+
+/** The voice of each thing read aloud ('' = the default one). */
+export function voicesUsed(page: Page): Promise<string[]> {
+  return page.evaluate(() => [...(window as unknown as { __voicesUsed: string[] }).__voicesUsed]);
 }
 
 /** Everything the app has read aloud so far. */
