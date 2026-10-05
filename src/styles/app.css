@@ -217,6 +217,37 @@ textarea {
   grid-template-columns: minmax(0, 1fr);
   height: 100%;
 }
+.editor-notice {
+  position: fixed;
+  z-index: 20;
+  top: calc(max(8px, env(safe-area-inset-top)) + 72px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 32px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 16px;
+  border: 2px solid var(--danger);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--danger);
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
+}
+.editor-notice span {
+  flex: 1;
+}
+.editor-notice-close {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
 .topbar {
   display: flex;
   align-items: center;

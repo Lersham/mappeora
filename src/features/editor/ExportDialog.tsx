@@ -28,11 +28,13 @@ const PAGES: { value: PageCount; label: string }[] = [
 
 interface Props {
   busy: boolean;
+  /** The last attempt failed (not cancelled by the child). */
+  error?: boolean;
   onExport(choice: ExportChoice): void;
   onClose(): void;
 }
 
-export function ExportDialog({ busy, onExport, onClose }: Props) {
+export function ExportDialog({ busy, error, onExport, onClose }: Props) {
   const [kind, setKind] = useState<ExportKind>('pdf');
   const [paper, setPaper] = useState<Paper>('a4');
   const [pages, setPages] = useState<PageCount>(1);
@@ -89,6 +91,12 @@ export function ExportDialog({ busy, onExport, onClose }: Props) {
             <span className="muted">Sfondo bianco, senza colori né decorazioni.</span>
           </span>
         </label>
+      )}
+
+      {error && (
+        <p className="field-error" role="alert">
+          Non sono riuscito a preparare il file. Riprova.
+        </p>
       )}
 
       <div className="dialog-actions">

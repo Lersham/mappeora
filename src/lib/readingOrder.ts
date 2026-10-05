@@ -29,13 +29,13 @@ export function readingOrder(map: Pick<ConceptMap, 'nodes' | 'edges'>, opts: { d
 
   const byId = new Map(map.nodes.map((n) => [n.id, n]));
   const hasParent = new Set(map.edges.map((e) => e.target));
-  const roots = map.nodes.filter((n) => !hasParent.has(n.id));
-  const queue: MapNode[] = roots.length > 0 ? [...roots] : map.nodes.slice(0, 1);
   const visited = new Set<string>();
   const steps: ReadingStep[] = [];
 
-  const visit = (start: MapNode) => {
-    queue.push(start);
+  // One level at a time across every root («Causa 1», «Causa 2», then the
+  // effect they share), then whatever is left over.
+  const visit = (seeds: MapNode[]) => {
+    const queue = [...seeds];
     while (queue.length > 0) {
       const node = queue.shift()!;
       if (visited.has(node.id)) continue;
@@ -50,9 +50,7 @@ export function readingOrder(map: Pick<ConceptMap, 'nodes' | 'edges'>, opts: { d
     }
   };
 
-  // Drain the initial queue, then pick up anything left over.
-  const initial = queue.splice(0);
-  for (const n of initial) visit(n);
-  for (const n of map.nodes) if (!visited.has(n.id)) visit(n);
+  visit(map.nodes.filter((n) => !hasParent.has(n.id)));
+  for (const n of map.nodes) if (!visited.has(n.id)) visit([n]);
   return steps;
 }

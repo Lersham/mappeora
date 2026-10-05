@@ -29,6 +29,14 @@ describe('collapse', () => {
     expect(info.hiddenBelow).toEqual({ A: 6 });
   });
 
+  it('a link back to the main concept does not hide the whole map', () => {
+    // Ciclo dell'acqua: A → B → C → A, plus A → D.
+    const nodes = [node('A'), node('B', true), node('C'), node('D')];
+    const info = collapseInfo({ nodes, edges: [edge('A', 'B'), edge('B', 'C'), edge('C', 'A'), edge('A', 'D')] });
+    expect([...info.hidden]).toEqual(['C']);
+    expect(info.hiddenBelow).toEqual({ B: 1 });
+  });
+
   it('survives cycles', () => {
     const nodes = [node('X', true), node('Y')];
     const info = collapseInfo({ nodes, edges: [edge('X', 'Y'), edge('Y', 'X')] });

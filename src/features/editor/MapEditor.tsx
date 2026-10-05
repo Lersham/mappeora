@@ -11,7 +11,7 @@ import {
   type NodeChange,
 } from '@xyflow/react';
 import { useStore } from 'zustand';
-import { beginDrag, endDrag, mapHistory, useMapStore } from '../../store/mapStore';
+import { beginStep, endStep, mapHistory, untracked, useMapStore } from '../../store/mapStore';
 import { reviewVisibility, useReview, type ReviewMode } from '../../store/reviewStore';
 import { ConceptNode, type ConceptFlowNode } from './ConceptNode';
 import { FreeEdge } from './FreeEdge';
@@ -33,12 +33,23 @@ import { autoLayout } from '../../services/layout';
 import { exportMap, saveMapFile } from '../../services/export';
 import { readingOrder } from '../../lib/readingOrder';
 import { collapseInfo, visiblePart } from '../../lib/collapse';
+import { spanningTree } from '../../lib/tree';
 import { layoutOf, templateInfo } from '../../lib/templates';
 import { NEW_MAP_TITLE } from '../../lib/mapFactory';
-import type { MapNode } from '../../types/map';
+import type { ConceptMap, MapNode } from '../../types/map';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 
 const nodeTypes = { concept: ConceptNode };
+
+/** Where a new concept goes when none is selected: under the main one. */
+function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined {
+  const visible = map.nodes.filter((n) => !hidden.has(n.id));
+  const targets = new Set(map.edges.map((e) => e.target));
+  return visible.find((n) => n.shape === 'ellisse') ?? visible.find((n) => !targets.has(n.id)) ?? visible[0];
+}
+
+/** A failed share sheet the child closed is not an error. */
+const isCancel = (e: unknown) => e instanceof Error && /cancel/i.test(e.message);
 const edgeTypes: EdgeTypes = { ladder: LadderEdge, bus: BusEdge, free: FreeEdge };
 
 type DialogState =
@@ -66,20 +77,24 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
   const canUndo = useStore(useMapStore.temporal, (t) => t.pastStates.length > 0);
   const canRedo = useStore(useMapStore.temporal, (t) => t.futureStates.length > 0);
   const review = useReview();
-  const { fitView, getNodes, setCenter, getZoom, getInternalNode, getViewport, setViewport } = useReactFlow();
+  const { fitView, getNodes, getEdges, setCenter, getZoom, getInternalNode, getViewport, setViewport } = useReactFlow();
   const reader = useReadAloud();
   const dictation = useDictation();
-  const [busy, setBusy] = useState(false);
+  const [arranging, setArranging] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
   // Libera and 5 W fill an A4 sheet by themselves, unless the child chose
   // to place the concepts by hand.
   const sheetTemplate = templateInfo(map.template).layout === 'foglio';
   const layout = layoutOf(map);
   const sheetMode = layout === 'foglio';
-  const selectedNode = map.nodes.find((n) => n.id === selectedId);
-
   const collapse = useMemo(() => collapseInfo(map), [map]);
-  const parents = useMemo(() => new Set(map.edges.map((e) => e.source)), [map.edges]);
+  // Only a concept on screen can be the one in hand.
+  const selectedNode = map.nodes.find((n) => n.id === selectedId && !collapse.hidden.has(n.id));
+  // A link back to the main concept doesn't give a «−» that would hide nothing.
+  const parents = useMemo(() => new Set(spanningTree(map).forward.map((e) => e.source)), [map.nodes, map.edges]);
 
   // "Foglio": where every visible concept should be. Anchored to the main
   // concept, so dragging it moves the whole map.
@@ -99,17 +114,24 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
   // collapsing, dropping a dragged concept). Not an edit by the child, so
   // it stays out of the undo history.
   const dragging = useRef(false);
+  // A drop on a sheet is recorded once the sheet has put the concept in its
+  // place: a concept that snaps back leaves no empty undo step.
+  const dropPending = useRef(false);
   const [dragTick, setDragTick] = useState(0);
   useEffect(() => {
-    if (!sheet || dragging.current || review.active) return;
+    if (dragging.current) return;
+    const finishDrop = () => {
+      if (!dropPending.current) return;
+      dropPending.current = false;
+      endStep();
+    };
+    if (!sheet || review.active) return finishDrop();
     const moved = Object.entries(sheet.positions).filter(([id, p]) => {
       const n = map.nodes.find((x) => x.id === id);
       return n && (Math.abs(n.position.x - p.x) > 0.5 || Math.abs(n.position.y - p.y) > 0.5);
     });
-    if (moved.length === 0) return;
-    mapHistory().pause();
-    actions.applyPositions(Object.fromEntries(moved));
-    mapHistory().resume();
+    if (moved.length > 0) untracked(() => actions.applyPositions(Object.fromEntries(moved), { auto: true }));
+    finishDrop();
   }, [sheet, dragTick, review.active]);
 
   // The store holds our document model; React Flow nodes are derived from it.
@@ -163,7 +185,12 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
     const removed: string[] = [];
     for (const c of changes) {
       if (c.type === 'dimensions' && c.dimensions) s.setSize(c.id, c.dimensions);
-      else if (c.type === 'position' && c.position) s.moveNode(c.id, c.position);
+      else if (c.type === 'position' && c.position) {
+        // On a sheet only a drag moves a concept (it then finds its place in
+        // the list); arrow keys would add undo steps that change nothing.
+        if (c.dragging !== true && layoutOf(s.map!) === 'foglio') continue;
+        s.moveNode(c.id, c.position);
+      }
       else if (c.type === 'select') {
         if (c.selected) s.select(c.id);
         else if (useMapStore.getState().selectedId === c.id) s.select(null);
@@ -177,7 +204,13 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
     if (removed.length) useMapStore.getState().removeEdges(removed);
   }, []);
 
-  const parentForNew = () => selectedId ?? map.nodes[0]?.id ?? null;
+  const parentForNew = () => {
+    const { map: current, selectedId: selected } = useMapStore.getState();
+    if (!current) return null;
+    const hidden = collapseInfo(current).hidden;
+    if (selected && current.nodes.some((n) => n.id === selected) && !hidden.has(selected)) return selected;
+    return mainConcept(current, hidden)?.id ?? null;
+  };
 
   /**
    * A new concept can land outside the visible part of the map: once the
@@ -187,7 +220,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
     setTimeout(() => {
       const n = getInternalNode(id);
       const box = document.querySelector('.react-flow')?.getBoundingClientRect();
-      if (!n || !box) return;
+      if (!n || n.hidden || !box) return;
       const { x, y, zoom } = getViewport();
       const { width = 180, height = 72 } = n.measured;
       const p = n.internals.positionAbsolute;
@@ -225,22 +258,40 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
     await arrange();
   };
 
-  /** Top-down layout (elkjs) of the concepts on screen. */
-  const arrange = async () => {
-    setBusy(true);
+  /**
+   * Top-down layout (elkjs) of the concepts on screen. `followUp`: it
+   * completes the step just made («Dal libro», «Scaletta»), so one «Annulla»
+   * undoes both.
+   */
+  const arrange = async ({ followUp = false } = {}) => {
+    setArranging(true);
     try {
       // Read fresh state: this also runs right after adding concepts.
       const { map: current, sizes: measured } = useMapStore.getState();
       if (!current) return;
       // Collapsed branches keep their place and are laid out when reopened.
       const part = visiblePart(current);
-      actions.applyPositions(await autoLayout(part.nodes, part.edges, measured));
+      const positions = await autoLayout(part.nodes, part.edges, measured);
+      // The child may have moved on meanwhile: leave alone another map and
+      // any concept moved since.
+      const now = useMapStore.getState().map;
+      if (!now || now.id !== current.id) return;
+      const before = new Map(current.nodes.map((n) => [n.id, n.position]));
+      const fresh = Object.fromEntries(Object.entries(positions).filter(([id]) => now.nodes.find((n) => n.id === id)?.position === before.get(id)));
+      if (followUp) untracked(() => actions.applyPositions(fresh));
+      else actions.applyPositions(fresh);
       // Give React Flow a frame to render the new positions before fitting.
       setTimeout(() => void fitView({ padding: 0.2, duration: 400 }), 50);
+    } catch {
+      setNotice('Non sono riuscito a riordinare la mappa. Riprova.');
     } finally {
-      setBusy(false);
+      setArranging(false);
     }
   };
+
+  /** After «Dal libro» or «Scaletta»: a sheet orders itself, a map placed by hand stays so. */
+  const afterBulkEdit = () =>
+    setTimeout(() => void (sheetTemplate ? fitView({ padding: 0.2, duration: 400 }) : arrange({ followUp: true })), 150);
 
   const dictate = async () => {
     const command = parseVoiceCommand(await dictation.start());
@@ -255,6 +306,8 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
   const addFromPhoto = (concepts: string[]) => {
     const parent = parentForNew();
     let rest = concepts;
+    // All the words chosen are one undo step.
+    beginStep();
     // A map just made and still empty: the first word chosen is its main
     // concept and its title, the others hang from it.
     const [root] = map.nodes;
@@ -265,14 +318,15 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
     }
     for (const label of rest) actions.addChild(parent, label);
     actions.select(parent);
+    endStep();
     setDialog(null);
-    // Let React Flow measure the new nodes, then lay the map out again
-    // (a map placed by hand stays so: the new concepts are just put in order).
-    setTimeout(() => void (sheetMode ? tidy() : arrange()), 150);
+    // Let React Flow measure the new nodes, then lay the map out again.
+    afterBulkEdit();
   };
 
   const doExport = async ({ kind, paper, pages, simple, print }: ExportChoice) => {
-    setBusy(true);
+    setExporting(true);
+    setExportError(false);
     try {
       if (kind === 'file') {
         await saveMapFile(map);
@@ -288,9 +342,12 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           usesPictograms: map.nodes.some((n) => n.image?.kind === 'arasaac'),
         });
       }
-      setDialog(null);
+      // Only this dialog: the child may have opened another meanwhile.
+      setDialog((d) => (d?.kind === 'export' ? null : d));
+    } catch (e) {
+      if (!isCancel(e)) setExportError(true);
     } finally {
-      setBusy(false);
+      setExporting(false);
     }
   };
 
@@ -347,8 +404,48 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [review.active]);
 
-  // Leaving the editor must not leave a half-finished review behind.
-  useEffect(() => () => useReview.getState().exit(), []);
+  // Leaving the editor must not leave a half-finished review (or full
+  // screen, or an open undo step) behind.
+  useEffect(
+    () => () => {
+      useReview.getState().exit();
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+      endStep();
+    },
+    [],
+  );
+
+  // Delete or Backspace removes the concept in hand (with its links) and
+  // the selected links, as one undo step. Enter or F2 renames it.
+  const dialogOpen = dialog !== null;
+  useEffect(() => {
+    if (review.active || dialogOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      if (target?.closest('input, textarea, select, button, [contenteditable="true"], [role="dialog"]')) return;
+      const s = useMapStore.getState();
+      const node = s.map?.nodes.find((n) => n.id === s.selectedId);
+      if ((e.key === 'Enter' || e.key === 'F2') && node) {
+        const el = target?.closest('.react-flow__node')?.querySelector('.concept-node');
+        if (!el || target?.closest('.react-flow__node')?.getAttribute('data-id') !== node.id) return;
+        e.preventDefault();
+        el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        return;
+      }
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const links = getEdges()
+        .filter((x) => x.selected)
+        .map((x) => x.id);
+      if (!node && links.length === 0) return;
+      e.preventDefault();
+      beginStep();
+      if (links.length) s.removeEdges(links);
+      if (node) s.removeNodes([node.id]);
+      endStep();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [review.active, dialogOpen]);
 
   const editing = !review.active;
 
@@ -371,9 +468,9 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           label: 'Riordina',
           title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4.' : undefined,
           onClick: () => void tidy(),
-          disabled: busy,
+          disabled: arranging,
         },
-    { key: 'delete', icon: '🗑️', label: 'Elimina', variant: 'danger', onClick: () => selectedId && actions.removeNodes([selectedId]), disabled: !selectedId },
+    { key: 'delete', icon: '🗑️', label: 'Elimina', variant: 'danger', onClick: () => selectedNode && actions.removeNodes([selectedNode.id]), disabled: !selectedNode },
     { key: 'save', icon: '💾', label: 'Salva', onClick: () => setDialog({ kind: 'export' }) },
     { key: 'settings', icon: '🎨', label: 'Aspetto', onClick: onOpenSettings },
   ];
@@ -387,6 +484,12 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           value={map.title}
           aria-label="Titolo della mappa"
           readOnly={!editing}
+          // The whole title is one undo step, not one per letter.
+          onFocus={() => editing && beginStep()}
+          onBlur={() => {
+            if (!map.title.trim()) actions.setTitle(map.nodes[0]?.label.trim() || NEW_MAP_TITLE);
+            endStep();
+          }}
           onChange={(e) => actions.setTitle(e.target.value)}
         />
         {editing ? (
@@ -410,12 +513,14 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           onConnect={({ source, target }) => actions.connect(source, target)}
           onNodeDragStart={() => {
             dragging.current = true;
-            beginDrag();
+            beginStep();
           }}
           onNodeDragStop={() => {
-            endDrag();
             dragging.current = false;
-            setDragTick((t) => t + 1); // a dropped concept may have changed place in the list
+            if (sheetMode) {
+              dropPending.current = true;
+              setDragTick((t) => t + 1); // a dropped concept may have changed place in the list
+            } else endStep();
           }}
           onPaneClick={() => actions.select(null)}
           onNodeClick={(_, node) => {
@@ -427,7 +532,8 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           nodesDraggable={editing}
           nodesConnectable={editing}
           elementsSelectable={editing}
-          deleteKeyCode={editing ? ['Backspace', 'Delete'] : null}
+          // Our own handler (above): one undo step, and never behind a dialog.
+          deleteKeyCode={null}
           zoomOnDoubleClick={false}
           // A tap focuses the concept, and React Flow would scroll it fully
           // into view: the concept moved away from under the finger between
@@ -467,6 +573,15 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
         </nav>
       )}
 
+      {notice && (
+        <div className="editor-notice" role="alert">
+          <span>{notice}</span>
+          <button type="button" className="editor-notice-close" aria-label="Chiudi il messaggio" onClick={() => setNotice(null)}>
+            ✖️
+          </button>
+        </div>
+      )}
+
       <DictationOverlay
         listening={dictation.listening}
         partial={dictation.partial}
@@ -481,7 +596,9 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           const edge = map.edges.find((e) => e.id === dialog.edgeId);
           return edge ? <LinkWordDialog edge={edge} onClose={() => setDialog(null)} /> : null;
         })()}
-      {dialog?.kind === 'export' && <ExportDialog busy={busy} onExport={doExport} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'export' && (
+        <ExportDialog busy={exporting} error={exportError} onExport={doExport} onClose={() => (setExportError(false), setDialog(null))} />
+      )}
       {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'outline' && (
@@ -489,8 +606,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           onClose={() => setDialog(null)}
           onDone={() => {
             setDialog(null);
-            // A sheet puts itself in order; any other map is laid out again.
-            setTimeout(() => void (sheetMode ? fitView({ padding: 0.2, duration: 400 }) : arrange()), 150);
+            afterBulkEdit();
           }}
         />
       )}

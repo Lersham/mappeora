@@ -104,8 +104,11 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
     <div
       className={`concept-node shape-${data.shape ?? 'rettangolo'}${selected ? ' is-selected' : ''}${isReading ? ' is-reading' : ''} review-${visibility}`}
       style={{ background: data.color }}
-      onDoubleClick={() => {
-        if (reviewing) return;
+      onDoubleClick={(e) => {
+        // A double tap on 🔊 or on «−», or a double click to select a word
+        // in the box, is not a request to rename.
+        if (reviewing || editing) return;
+        if (e.target instanceof Element && e.target.closest('button, textarea')) return;
         setDraft(data.label);
         setEditing(true);
       }}

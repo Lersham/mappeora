@@ -116,4 +116,24 @@ test.describe('Editor', () => {
     await rename(page, 'Le stagioni', 'Le quattro stagioni');
     await expect(page.locator('.title-input')).toHaveValue('Le stagioni');
   });
+
+  test('da tastiera: Invio rinomina, Canc elimina e un solo «Annulla» lo rimette', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Tastiera fisica');
+    await newMap(page, 'I pianeti');
+    await addConcept(page, 'I pianeti', 'Marte');
+    await settled(page);
+    await page.locator('.react-flow__node', { has: node(page, 'Marte') }).focus();
+    await page.keyboard.press('Enter');
+    const input = page.getByRole('textbox', { name: 'Testo del concetto' });
+    await input.fill('Giove');
+    await input.press('Enter');
+    await expect(node(page, 'Giove')).toBeVisible();
+
+    await page.locator('.react-flow__node', { has: node(page, 'Giove') }).focus();
+    await page.keyboard.press('Delete');
+    await expect(nodes(page)).toHaveCount(1);
+    await page.getByRole('button', { name: 'Annulla' }).click();
+    await expect(nodes(page)).toHaveCount(2);
+    await expect(page.locator('.react-flow__edge')).toHaveCount(1);
+  });
 });

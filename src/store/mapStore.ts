@@ -5,6 +5,7 @@ import { newId } from '../lib/id';
 import { colorForDepth } from '../lib/palette';
 import { collapseInfo } from '../lib/collapse';
 import { fromOutline, type OutlineRow } from '../lib/outline';
+import { spanningTree } from '../lib/tree';
 
 type Size = { width: number; height: number };
 
@@ -25,7 +26,8 @@ interface MapState {
   /** Hides or shows the concepts below `id`. */
   toggleCollapsed(id: string): void;
   moveNode(id: string, position: MapNode['position']): void;
-  applyPositions(positions: Record<string, MapNode['position']>): void;
+  /** `auto`: placed by the automatic layout, not an edit by the child. */
+  applyPositions(positions: Record<string, MapNode['position']>, opts?: { auto?: boolean }): void;
   removeNodes(ids: string[]): void;
   connect(source: string, target: string): void;
   updateEdge(id: string, patch: Partial<Omit<MapEdge, 'id'>>): void;
@@ -36,24 +38,34 @@ interface MapState {
 }
 
 const CHILD_OFFSET_Y = 140;
+const HISTORY_LIMIT = 200;
 
-function depthOf(map: ConceptMap, id: string): number {
-  let depth = 0;
-  let current = id;
-  const seen = new Set<string>();
-  for (;;) {
-    const parent = map.edges.find((e) => e.target === current)?.source;
-    if (!parent || seen.has(parent)) return depth;
-    seen.add(parent);
-    current = parent;
-    depth++;
-  }
+/** Level of a concept, counted from the main one (a link back to it doesn't count). */
+const depthOf = (map: ConceptMap, id: string) => spanningTree(map).depth.get(id) ?? 0;
+
+/**
+ * Applies `fn` to the current map and bumps updatedAt. Nothing happens (no
+ * undo step, no save) without a map or when `fn` changes nothing.
+ */
+function edit(state: MapState, fn: (map: ConceptMap) => Partial<ConceptMap>, opts: { touch?: boolean } = {}): Partial<MapState> {
+  if (!state.map) return {};
+  const patch = fn(state.map);
+  if (Object.keys(patch).length === 0) return {};
+  return { map: { ...state.map, ...patch, ...(opts.touch !== false && { updatedAt: Date.now() }) } };
 }
 
-/** Applies `fn` to the current map and bumps updatedAt; no-op without a map. */
-function edit(state: MapState, fn: (map: ConceptMap) => Partial<ConceptMap>): Partial<MapState> {
-  if (!state.map) return {};
-  return { map: { ...state.map, ...fn(state.map), updatedAt: Date.now() } };
+/** The concepts above `id`, nearest first. */
+function ancestors(map: ConceptMap, id: string): string[] {
+  const seen = new Set([id]);
+  const queue = [id];
+  for (let i = 0; i < queue.length; i++) {
+    for (const e of map.edges) {
+      if (e.target !== queue[i] || seen.has(e.source)) continue;
+      seen.add(e.source);
+      queue.push(e.source);
+    }
+  }
+  return queue.slice(1);
 }
 
 export const useMapStore = create<MapState>()(
@@ -65,7 +77,7 @@ export const useMapStore = create<MapState>()(
 
       load: (map) => set({ map, selectedId: null, sizes: {} }),
 
-      setTitle: (title) => set((s) => edit(s, () => ({ title }))),
+      setTitle: (title) => set((s) => edit(s, (map) => (map.title === title ? {} : { title }))),
 
       setFreeLayout: (free) => set((s) => edit(s, () => ({ freeLayout: free || undefined }))),
 
@@ -85,8 +97,9 @@ export const useMapStore = create<MapState>()(
             const depth = parent ? depthOf(map, parent.id) + 1 : 0;
             const node: MapNode = { id, label, position, color: colorForDepth(depth), shape: 'rettangolo' };
             const edges = parent ? [...map.edges, { id: newId(), source: parent.id, target: id }] : map.edges;
-            // A new child must be visible: open its parent if it was collapsed.
-            const nodes = map.nodes.map((n) => (n.id === parentId && n.collapsed ? { ...n, collapsed: false } : n));
+            // A new child must be visible: open whatever collapsed concept hides it.
+            const above = new Set(ancestors({ ...map, edges }, id));
+            const nodes = map.nodes.map((n) => (above.has(n.id) && n.collapsed ? { ...n, collapsed: false } : n));
             return { nodes: [...nodes, node], edges };
           }),
         );
@@ -95,33 +108,45 @@ export const useMapStore = create<MapState>()(
       },
 
       updateNode: (id, patch) =>
-        set((s) => edit(s, (map) => ({ nodes: map.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) }))),
+        set((s) =>
+          edit(s, (map) => (map.nodes.some((n) => n.id === id) ? { nodes: map.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) } : {})),
+        ),
 
       toggleCollapsed: (id) => {
         const node = get().map?.nodes.find((n) => n.id === id);
         if (!node) return;
+        // A selected concept that disappears hands the selection to this one
+        // (see the subscription below).
         get().updateNode(id, { collapsed: !node.collapsed });
-        // Don't leave the selection on a concept that just disappeared.
-        const selected = get().selectedId;
-        if (selected && selected !== id && collapseInfo(get().map!).hidden.has(selected)) get().select(id);
       },
 
       moveNode: (id, position) => get().updateNode(id, { position }),
 
-      applyPositions: (positions) =>
+      applyPositions: (positions, opts = {}) =>
         set((s) =>
-          edit(s, (map) => ({
-            nodes: map.nodes.map((n) => (positions[n.id] ? { ...n, position: positions[n.id] } : n)),
-          })),
+          edit(
+            s,
+            (map) => {
+              const moves = (n: MapNode) => positions[n.id] && (positions[n.id].x !== n.position.x || positions[n.id].y !== n.position.y);
+              if (!map.nodes.some(moves)) return {};
+              return { nodes: map.nodes.map((n) => (moves(n) ? { ...n, position: positions[n.id] } : n)) };
+            },
+            // Laying out a map just opened must not make it look "changed today".
+            { touch: !opts.auto },
+          ),
         ),
 
       removeNodes: (ids) => {
         const gone = new Set(ids);
         set((s) => ({
-          ...edit(s, (map) => ({
-            nodes: map.nodes.filter((n) => !gone.has(n.id)),
-            edges: map.edges.filter((e) => !gone.has(e.source) && !gone.has(e.target)),
-          })),
+          ...edit(s, (map) =>
+            map.nodes.some((n) => gone.has(n.id))
+              ? {
+                  nodes: map.nodes.filter((n) => !gone.has(n.id)),
+                  edges: map.edges.filter((e) => !gone.has(e.source) && !gone.has(e.target)),
+                }
+              : {},
+          ),
           selectedId: s.selectedId && gone.has(s.selectedId) ? null : s.selectedId,
         }));
       },
@@ -136,11 +161,13 @@ export const useMapStore = create<MapState>()(
         ),
 
       updateEdge: (id, patch) =>
-        set((s) => edit(s, (map) => ({ edges: map.edges.map((e) => (e.id === id ? { ...e, ...patch } : e)) }))),
+        set((s) =>
+          edit(s, (map) => (map.edges.some((e) => e.id === id) ? { edges: map.edges.map((e) => (e.id === id ? { ...e, ...patch } : e)) } : {})),
+        ),
 
       removeEdges: (ids) => {
         const gone = new Set(ids);
-        set((s) => edit(s, (map) => ({ edges: map.edges.filter((e) => !gone.has(e.id)) })));
+        set((s) => edit(s, (map) => (map.edges.some((e) => gone.has(e.id)) ? { edges: map.edges.filter((e) => !gone.has(e.id)) } : {})));
       },
 
       applyOutline: (rows) =>
@@ -156,7 +183,7 @@ export const useMapStore = create<MapState>()(
       // Only the document is undoable; selection and sizes are not.
       partialize: (s) => ({ map: s.map }),
       equality: (a, b) => a.map === b.map,
-      limit: 200,
+      limit: HISTORY_LIMIT,
     },
   ),
 );
@@ -164,20 +191,70 @@ export const useMapStore = create<MapState>()(
 export const mapHistory = () => useMapStore.temporal.getState();
 
 /**
- * Dragging emits a position update per frame. We pause history while
- * dragging and record a single undo step (the pre-drag snapshot) on drop.
+ * The selection is not part of the undo history. After «Annulla», a load or
+ * a collapse it may point to a concept that is gone or hidden: move it to
+ * the nearest visible concept above, or clear it.
  */
-let dragSnapshot: { map: ConceptMap | null } | null = null;
+function repairedSelection(map: ConceptMap | null, selectedId: string | null): string | null {
+  if (!map || !selectedId) return null;
+  if (!map.nodes.some((n) => n.id === selectedId)) return null;
+  if (!map.nodes.some((n) => n.collapsed)) return selectedId;
+  const { hidden } = collapseInfo(map);
+  if (!hidden.has(selectedId)) return selectedId;
+  return ancestors(map, selectedId).find((id) => !hidden.has(id)) ?? null;
+}
 
-export function beginDrag() {
-  dragSnapshot = { map: useMapStore.getState().map };
+useMapStore.subscribe((s, prev) => {
+  if (s.map === prev.map && s.selectedId === prev.selectedId) return;
+  const selectedId = repairedSelection(s.map, s.selectedId);
+  if (selectedId !== s.selectedId) useMapStore.setState({ selectedId });
+});
+
+/** Same document, apart from updatedAt and positions that ended where they started. */
+function sameDocument(a: ConceptMap | null, b: ConceptMap | null): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.id !== b.id || a.title !== b.title || a.freeLayout !== b.freeLayout || a.edges !== b.edges) return false;
+  if (a.nodes.length !== b.nodes.length) return false;
+  return a.nodes.every((n, i) => {
+    const m = b.nodes[i];
+    if (n === m) return true;
+    const keys = new Set([...Object.keys(n), ...Object.keys(m)]) as Set<keyof MapNode>;
+    return [...keys].every((k) =>
+      k === 'position' ? n.position.x === m.position.x && n.position.y === m.position.y : n[k] === m[k],
+    );
+  });
+}
+
+/**
+ * Some gestures send many updates: a drag (one per frame), typing the
+ * title (one per letter). History is paused in between and the gesture is
+ * recorded as a single undo step when it ends, if it changed anything.
+ */
+let stepSnapshot: { map: ConceptMap | null } | null = null;
+
+export function beginStep() {
+  if (stepSnapshot) return;
+  stepSnapshot = { map: useMapStore.getState().map };
   mapHistory().pause();
 }
 
-export function endDrag() {
+export function endStep() {
+  const snapshot = stepSnapshot;
+  if (!snapshot) return;
+  stepSnapshot = null;
   mapHistory().resume();
-  const snapshot = dragSnapshot;
-  dragSnapshot = null;
-  if (!snapshot || snapshot.map === useMapStore.getState().map) return;
-  useMapStore.temporal.setState((t) => ({ pastStates: [...t.pastStates, snapshot], futureStates: [] }));
+  if (sameDocument(snapshot.map, useMapStore.getState().map)) return;
+  useMapStore.temporal.setState((t) => ({ pastStates: [...t.pastStates, snapshot].slice(-HISTORY_LIMIT), futureStates: [] }));
+}
+
+/** Runs `fn` without recording it in the undo history (e.g. an automatic layout). */
+export function untracked(fn: () => void) {
+  const history = mapHistory();
+  if (!history.isTracking) return fn();
+  history.pause();
+  try {
+    fn();
+  } finally {
+    mapHistory().resume();
+  }
 }

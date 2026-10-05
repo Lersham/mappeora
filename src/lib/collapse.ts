@@ -1,4 +1,5 @@
 import type { ConceptMap } from '../types/map';
+import { spanningTree } from './tree';
 
 export interface CollapseInfo {
   /** Nodes hidden because an ancestor is collapsed. */
@@ -24,13 +25,15 @@ function walk(starts: Iterable<string>, children: Map<string, string[]>, canExpa
 /**
  * A concept is hidden when every way to reach it passes through a
  * collapsed concept: something also linked from an open branch stays.
+ * Links that close a cycle (back to the main concept, say) don't count:
+ * collapsing a branch never hides the concepts above it.
  */
 export function collapseInfo(map: Graph): CollapseInfo {
   const collapsed = new Set(map.nodes.filter((n) => n.collapsed).map((n) => n.id));
   if (collapsed.size === 0) return { hidden: new Set(), hiddenBelow: {} };
 
   const children = new Map<string, string[]>();
-  for (const e of map.edges) children.set(e.source, [...(children.get(e.source) ?? []), e.target]);
+  for (const e of spanningTree(map).forward) children.set(e.source, [...(children.get(e.source) ?? []), e.target]);
 
   // Everything below a collapsed concept (the collapsed ones stay visible)…
   const below = new Set<string>();

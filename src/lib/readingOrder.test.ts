@@ -37,4 +37,12 @@ describe('readingOrder', () => {
     });
     expect(steps.map((s) => s.nodeId).sort()).toEqual(['a', 'b', 'x']);
   });
+
+  it('reads every root before what they share (Causa ed effetto)', () => {
+    const steps = readingOrder({
+      nodes: [node('c1'), node('c2'), node('r'), node('e1')],
+      edges: [edge('c1', 'r'), edge('c2', 'r'), edge('r', 'e1')],
+    });
+    expect(steps.map((s) => s.nodeId)).toEqual(['c1', 'c2', 'r', 'e1']);
+  });
 });
