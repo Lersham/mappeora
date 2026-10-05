@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { App as NativeApp } from '@capacitor/app';
 import { HomeScreen } from './features/home/HomeScreen';
 import { MapEditor } from './features/editor/MapEditor';
 import { SettingsPanel } from './features/accessibility/SettingsPanel';
@@ -11,6 +12,11 @@ import type { MapTemplate } from './types/map';
 import { useAutosave } from './hooks/useAutosave';
 import { useReadAloud } from './hooks/useReadAloud';
 import { embedMissingImages } from './services/embed';
+import { flushAutosave, recovered, showMap, useSaveStatus } from './services/autosave';
+import { reloadIfSafe } from './services/pwaUpdate';
+import { isNative } from './services/platform';
+import { handleBack } from './lib/backButton';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { illustrationUrl } from './services/illustrations';
 import type { ConceptMap } from './types/map';
 
@@ -55,41 +61,88 @@ export default function App() {
   const hasMap = useMapStore((s) => s.map !== null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newMapOpen, setNewMapOpen] = useState(false);
+  const [homeError, setHomeError] = useState<string | null>(null);
   // The welcome's «Provalo adesso» opens the new map straight on «Dal libro».
   const [startDialog, setStartDialog] = useState<'photo' | undefined>();
   const { stop } = useReadAloud();
 
   const open = async (id: string) => {
-    const stored = await storage().get(id);
-    if (!stored) return;
-    setStartDialog(undefined);
-    // Voice notes ("Spiega") were removed: drop any left in older maps.
-    const map = { ...stored, nodes: stored.nodes.map(({ audio: _audio, ...n }: typeof stored.nodes[number] & { audio?: unknown }) => n) };
-    useMapStore.getState().load(map);
-    mapHistory().clear();
-    void embedOldImages(map);
+    setHomeError(null);
+    try {
+      await recovered();
+      const stored = await storage().get(id);
+      if (!stored) {
+        setHomeError('Non trovo più questa mappa.');
+        return;
+      }
+      setStartDialog(undefined);
+      // Voice notes ("Spiega") were removed: drop any left in older maps.
+      const map = { ...stored, nodes: stored.nodes.map(({ audio: _audio, ...n }: typeof stored.nodes[number] & { audio?: unknown }) => n) };
+      showMap(map);
+      void embedOldImages(map);
+    } catch {
+      setHomeError('Non riesco ad aprire questa mappa. Riprova.');
+    }
   };
 
   const create = async (title: string, template: MapTemplate, dialog?: 'photo') => {
+    setHomeError(null);
+    const map = createMap(title, template);
+    try {
+      await storage().save(map);
+    } catch {
+      setNewMapOpen(false);
+      setHomeError('Non riesco a creare la mappa: forse lo spazio sul dispositivo è pieno.');
+      return;
+    }
     setNewMapOpen(false);
     setStartDialog(dialog);
-    const map = createMap(title, template);
-    await storage().save(map);
-    useMapStore.getState().load(map);
-    mapHistory().clear();
+    showMap(map);
   };
 
   const back = async () => {
     void stop();
-    // Save now so the list shows the latest title (autosave is debounced).
-    const current = useMapStore.getState().map;
-    if (current) await storage().save(current);
-    useMapStore.getState().load(null);
-    mapHistory().clear();
+    // The list must show the latest title, and nothing may be lost unnoticed.
+    if (!(await flushAutosave())) {
+      const why =
+        useSaveStatus.getState().problem === 'conflict'
+          ? 'Questa mappa è stata cambiata in un’altra finestra e le tue ultime modifiche non sono salvate.'
+          : 'Non riesco a salvare le ultime modifiche.';
+      if (!window.confirm(`${why} Vuoi tornare alle mappe lo stesso? Le ultime modifiche andranno perse.`)) return;
+    }
+    showMap(null);
   };
 
+  // A new version of the app waits for the list of maps (see pwaUpdate).
+  useEffect(() => {
+    if (hasMap) return;
+    reloadIfSafe();
+    const onHide = () => document.visibilityState === 'hidden' && reloadIfSafe();
+    document.addEventListener('visibilitychange', onHide);
+    return () => document.removeEventListener('visibilitychange', onHide);
+  }, [hasMap]);
+
+  // Android's Back: closes the newest dialog, then leaves the map, then
+  // puts the app in the background (like Home, keeping it as it was).
+  const backRef = useRef(back);
+  backRef.current = back;
+  useEffect(() => {
+    if (!isNative()) return;
+    const listener = NativeApp.addListener('backButton', () => {
+      if (handleBack()) return;
+      if (useMapStore.getState().map) void backRef.current();
+      else void NativeApp.minimizeApp();
+    });
+    return () => void listener.then((l) => l.remove());
+  }, []);
+
   return (
-    <>
+    <ErrorBoundary
+      onReset={async () => {
+        await flushAutosave();
+        showMap(null);
+      }}
+    >
       {hasMap ? (
         <MapEditor onBack={back} onOpenSettings={() => setSettingsOpen(true)} initialDialog={startDialog} />
       ) : (
@@ -97,10 +150,12 @@ export default function App() {
           onOpen={open}
           onCreate={() => setNewMapOpen(true)}
           onStartFromBook={() => void create(NEW_MAP_TITLE, 'libera', 'photo')}
-          onOpenSettings={() => setSettingsOpen(true)} />
+          onOpenSettings={() => setSettingsOpen(true)}
+          error={homeError}
+        />
       )}
       {newMapOpen && <NewMapDialog onCreate={create} onClose={() => setNewMapOpen(false)} />}
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
-    </>
+    </ErrorBoundary>
   );
 }

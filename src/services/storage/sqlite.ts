@@ -23,16 +23,25 @@ export class SqliteStorage implements StorageService {
   private db: Promise<SQLiteDBConnection> | undefined;
 
   private connection(): Promise<SQLiteDBConnection> {
-    this.db ??= (async () => {
+    if (this.db) return this.db;
+    const db = (async () => {
+      // After a WebView reload (e.g. back from the privacy page) the native
+      // side still holds the old connection: realign before reusing it.
+      await this.sqlite.checkConnectionsConsistency().catch(() => undefined);
       const exists = (await this.sqlite.isConnection(DB_NAME, false)).result;
-      const db = exists
+      const conn = exists
         ? await this.sqlite.retrieveConnection(DB_NAME, false)
         : await this.sqlite.createConnection(DB_NAME, false, 'no-encryption', 1, false);
-      await db.open();
-      await db.execute(SCHEMA);
-      return db;
+      if (!(await conn.isDBOpen()).result) await conn.open();
+      await conn.execute(SCHEMA);
+      return conn;
     })();
-    return this.db;
+    this.db = db;
+    // A failed attempt is not kept: the next call tries again.
+    db.catch(() => {
+      if (this.db === db) this.db = undefined;
+    });
+    return db;
   }
 
   async list(): Promise<MapSummary[]> {

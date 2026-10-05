@@ -37,6 +37,12 @@ describe('collapse', () => {
     expect(info.hiddenBelow).toEqual({ B: 1 });
   });
 
+  it('never hides every concept, even when they are all collapsed in a loop', () => {
+    const info = collapseInfo({ nodes: [node('A', true), node('B', true)], edges: [edge('A', 'B'), edge('B', 'A')] });
+    expect([...info.hidden]).toEqual(['B']);
+    expect(info.hiddenBelow).toEqual({ A: 1 });
+  });
+
   it('survives cycles', () => {
     const nodes = [node('X', true), node('Y')];
     const info = collapseInfo({ nodes, edges: [edge('X', 'Y'), edge('Y', 'X')] });

@@ -21,8 +21,13 @@ export class DexieStorage implements StorageService {
   }
 
   async list(): Promise<MapSummary[]> {
-    const maps = await this.db.maps.orderBy('updatedAt').reverse().toArray();
-    return maps.map(({ id, title, updatedAt }) => ({ id, title, updatedAt }));
+    // One map at a time: photos make the whole archive too big to hold at once.
+    const list: MapSummary[] = [];
+    await this.db.maps
+      .orderBy('updatedAt')
+      .reverse()
+      .each(({ id, title, updatedAt }) => void list.push({ id, title, updatedAt }));
+    return list;
   }
 
   get(id: string) {

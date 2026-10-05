@@ -217,13 +217,21 @@ textarea {
   grid-template-columns: minmax(0, 1fr);
   height: 100%;
 }
-.editor-notice {
+.editor-notices {
   position: fixed;
   z-index: 20;
   top: calc(max(8px, env(safe-area-inset-top)) + 72px);
   left: 50%;
   transform: translateX(-50%);
   width: min(560px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.editor-notices:empty {
+  display: none;
+}
+.editor-notice {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -237,6 +245,17 @@ textarea {
 }
 .editor-notice span {
   flex: 1;
+}
+.save-problem {
+  flex-wrap: wrap;
+}
+.save-problem span {
+  flex-basis: 100%;
+}
+.save-problem-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .editor-notice-close {
   flex: none;
@@ -1145,4 +1164,9 @@ textarea {
 }
 .welcome-dots .current {
   color: var(--primary);
+}
+.crash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }

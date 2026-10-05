@@ -27,8 +27,23 @@ const SHAPES: NodeShape[] = ['rettangolo', 'ellisse', 'nuvola'];
 const TEMPLATES: MapTemplate[] = ['libera', 'causa-effetto', 'timeline', 'confronto', '5w'];
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
-const str = (v: unknown, max = 2000): string | undefined => (typeof v === 'string' ? v.slice(0, max) : undefined);
+/**
+ * The limits only stop absurd files: they are well above anything the
+ * editor produces, so a map exported and reopened comes back whole.
+ */
+const TEXT_MAX = 20_000;
+const SHORT_TEXT_MAX = 1000;
+const MAX_NODES = 2000;
+const MAX_EDGES = 4000;
+/** Far beyond any real map, small enough for «Mostra tutto» to frame. */
+const COORD_MAX = 1e6;
+
+const str = (v: unknown, max = TEXT_MAX): string | undefined => (typeof v === 'string' ? v.slice(0, max) : undefined);
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+const coord = (v: unknown): number | undefined => {
+  const n = num(v);
+  return n === undefined ? undefined : Math.min(COORD_MAX, Math.max(-COORD_MAX, n));
+};
 
 /**
  * Only data URLs are accepted for embedded media: a shared file must never
@@ -60,8 +75,8 @@ function readNode(v: unknown): MapNode | undefined {
   if (!isObj(v) || !isObj(v.position)) return undefined;
   const id = str(v.id, 100);
   const label = str(v.label);
-  const x = num(v.position.x);
-  const y = num(v.position.y);
+  const x = coord(v.position.x);
+  const y = coord(v.position.y);
   if (!id || label === undefined || x === undefined || y === undefined) return undefined;
   const node: MapNode = { id, label, position: { x, y } };
   const color = str(v.color, 32);
@@ -81,7 +96,7 @@ function readEdge(v: unknown, nodeIds: Set<string>): MapEdge | undefined {
   const source = str(v.source, 100);
   const target = str(v.target, 100);
   if (!id || !source || !target || !nodeIds.has(source) || !nodeIds.has(target)) return undefined;
-  const label = str(v.label, 200);
+  const label = str(v.label, SHORT_TEXT_MAX);
   return label ? { id, source, target, label } : { id, source, target };
 }
 
@@ -103,6 +118,7 @@ export function parseMapFile(text: string): ConceptMap {
     throw new MapFileError('Questa mappa è stata fatta con una versione più nuova di Mappeora. Aggiorna l’app.');
   }
   const m = data.map;
+  const tooBig = () => new MapFileError('La mappa nel file è troppo grande.');
   const nodes: MapNode[] = [];
   const seen = new Set<string>();
   for (const raw of Array.isArray(m.nodes) ? m.nodes : []) {
@@ -110,17 +126,31 @@ export function parseMapFile(text: string): ConceptMap {
     if (node && !seen.has(node.id)) {
       seen.add(node.id);
       nodes.push(node);
+      if (nodes.length > MAX_NODES) throw tooBig();
     }
   }
   if (nodes.length === 0) throw new MapFileError('La mappa nel file è vuota o rovinata.');
-  const edges = (Array.isArray(m.edges) ? m.edges : [])
-    .map((e) => readEdge(e, seen))
-    .filter((e): e is MapEdge => e !== undefined);
+  // Same rules as linking in the editor: no link to itself, one link per
+  // pair, and every link with its own id.
+  const edges: MapEdge[] = [];
+  const edgeIds = new Set<string>();
+  const pairs = new Set<string>();
+  for (const raw of Array.isArray(m.edges) ? m.edges : []) {
+    const edge = readEdge(raw, seen);
+    if (!edge || edge.source === edge.target) continue;
+    const pair = `${edge.source}\u0000${edge.target}`;
+    if (pairs.has(pair)) continue;
+    pairs.add(pair);
+    if (edgeIds.has(edge.id)) edge.id = newId();
+    edgeIds.add(edge.id);
+    edges.push(edge);
+    if (edges.length > MAX_EDGES) throw tooBig();
+  }
 
   const now = Date.now();
   return {
     id: newId(),
-    title: str(m.title, 200)?.trim() || 'Mappa importata',
+    title: str(m.title, SHORT_TEXT_MAX)?.trim() || 'Mappa importata',
     createdAt: num(m.createdAt) ?? now,
     updatedAt: now,
     template: TEMPLATES.includes(m.template as MapTemplate) ? (m.template as MapTemplate) : 'libera',

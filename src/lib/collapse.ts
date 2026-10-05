@@ -41,6 +41,9 @@ export function collapseInfo(map: Graph): CollapseInfo {
   const underCollapsed = walk(below, children, () => true);
   // …unless it can be reached from the rest without crossing a collapsed one.
   const seeds = map.nodes.map((n) => n.id).filter((id) => !underCollapsed.has(id) || (collapsed.has(id) && !below.has(id)));
+  // A loop where every concept is collapsed (from a file) would hide them
+  // all, leaving nothing to open again: the first one stays on screen.
+  if (seeds.length === 0 && map.nodes.length > 0) seeds.push(map.nodes[0].id);
   const visible = walk(seeds, children, (id) => !collapsed.has(id));
   const hidden = new Set(map.nodes.map((n) => n.id).filter((id) => !visible.has(id)));
 

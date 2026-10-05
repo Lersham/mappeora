@@ -1,5 +1,6 @@
 import { DICTATION_ERRORS, type DictationError } from '../hooks/useDictation';
 import { VOICE_COMMAND_HINTS } from '../lib/voiceCommands';
+import { useBackHandler } from '../lib/backButton';
 
 interface Props {
   listening: boolean;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function DictationOverlay({ listening, partial, error, onStop, onClose }: Props) {
+  useBackHandler(listening ? onStop : onClose, listening || error !== null);
   if (!listening && !error) return null;
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-live="polite">

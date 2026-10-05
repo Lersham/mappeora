@@ -26,6 +26,27 @@ test.describe('Schermata iniziale', () => {
     await expect(nodes(page)).toHaveCount(1);
   });
 
+  test('se la mappa è cambiata in un’altra finestra non la sovrascrive: si salva come copia', async ({ page, context }) => {
+    await newMap(page, 'Le piante');
+    await page.getByRole('button', { name: 'Mappe' }).click();
+    await page.locator('.map-open', { hasText: 'Le piante' }).click();
+    const other = await context.newPage();
+    await other.goto('/');
+    await other.locator('.map-open', { hasText: 'Le piante' }).click();
+    await other.locator('.title-input').fill('Le piante (altra finestra)');
+    await other.getByRole('button', { name: 'Mappe' }).click();
+    await expect(other.locator('.map-title')).toHaveText(['Le piante (altra finestra)']);
+
+    await page.locator('.title-input').fill('Le piante (qui)');
+    const notice = page.getByRole('alert').filter({ hasText: 'cambiata in un’altra finestra' });
+    await expect(notice).toBeVisible();
+    await notice.getByRole('button', { name: 'Salva come copia' }).click();
+    await expect(notice).toBeHidden();
+    await expect(page.locator('.title-input')).toHaveValue('Le piante (qui) (copia)');
+    await page.getByRole('button', { name: 'Mappe' }).click();
+    await expect(page.locator('.map-title')).toHaveText(['Le piante (qui) (copia)', 'Le piante (altra finestra)']);
+  });
+
   test('cancella una mappa dopo la conferma', async ({ page }) => {
     await newMap(page, 'Da cancellare');
     await page.getByRole('button', { name: 'Mappe' }).click();

@@ -11,9 +11,10 @@ import './styles/theme.css';
 import './styles/app.css';
 import App from './App';
 import { isNative } from './services/platform';
+import { updateReady } from './services/pwaUpdate';
 
 // The native apps bundle their assets: the service worker is only for web/PWA.
-if (!isNative()) registerSW({ immediate: true });
+if (!isNative()) registerSW({ immediate: true, onNeedReload: updateReady });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

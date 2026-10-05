@@ -38,6 +38,8 @@ import { layoutOf, templateInfo } from '../../lib/templates';
 import { NEW_MAP_TITLE } from '../../lib/mapFactory';
 import type { ConceptMap, MapNode } from '../../types/map';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
+import { useBackHandler } from '../../lib/backButton';
+import { SaveProblemNotice } from './SaveProblemNotice';
 
 const nodeTypes = { concept: ConceptNode };
 
@@ -366,6 +368,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
     setTimeout(() => void fitView({ padding: 0.2, duration: 400 }), 50);
   };
 
+  useBackHandler(exitReview, review.active);
   const overview = () => void fitView({ padding: 0.15, duration: 500 });
 
   // Review: follow the current concept and read it once it is visible.
@@ -573,14 +576,17 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
         </nav>
       )}
 
-      {notice && (
-        <div className="editor-notice" role="alert">
-          <span>{notice}</span>
-          <button type="button" className="editor-notice-close" aria-label="Chiudi il messaggio" onClick={() => setNotice(null)}>
-            ✖️
-          </button>
-        </div>
-      )}
+      <div className="editor-notices">
+        <SaveProblemNotice />
+        {notice && (
+          <div className="editor-notice" role="alert">
+            <span>{notice}</span>
+            <button type="button" className="editor-notice-close" aria-label="Chiudi il messaggio" onClick={() => setNotice(null)}>
+              ✖️
+            </button>
+          </div>
+        )}
+      </div>
 
       <DictationOverlay
         listening={dictation.listening}

@@ -67,6 +67,40 @@ describe('mapFile', () => {
     expect(map.edges).toEqual([{ id: 'e1', source: 'a', target: 'b', label: 'causa' }]);
   });
 
+  const file = (nodes: unknown[], edges: unknown[] = []) =>
+    JSON.stringify({ format: 'mappeora', version: 1, map: { title: 'Test', nodes, edges } });
+  const n = (id: string, x = 0, y = 0) => ({ id, label: id, position: { x, y } });
+
+  it('drops loops and repeated links, and gives repeated link ids a new one', () => {
+    const map = parseMapFile(
+      file(
+        [n('a'), n('b'), n('c')],
+        [
+          { id: 'e1', source: 'a', target: 'b' },
+          { id: 'e2', source: 'a', target: 'a' },
+          { id: 'e3', source: 'a', target: 'b' },
+          { id: 'e1', source: 'b', target: 'c' },
+        ],
+      ),
+    );
+    expect(map.edges.map((e) => [e.source, e.target])).toEqual([
+      ['a', 'b'],
+      ['b', 'c'],
+    ]);
+    expect(map.edges[0].id).toBe('e1');
+    expect(map.edges[1].id).not.toBe('e1');
+  });
+
+  it('brings concepts placed absurdly far back within reach', () => {
+    const map = parseMapFile(file([n('a', 1e300, -1e300)]));
+    expect(map.nodes[0].position).toEqual({ x: 1e6, y: -1e6 });
+  });
+
+  it('refuses maps too big to show', () => {
+    const nodes = Array.from({ length: 2001 }, (_, i) => n(`n${i}`));
+    expect(() => parseMapFile(file(nodes))).toThrow(/troppo grande/);
+  });
+
   it('encodes UTF-8 text as a data URL', () => {
     const url = textToDataUrl('perché è così', 'application/json');
     const decoded = new TextDecoder().decode(Uint8Array.from(atob(url.split(',')[1]), (c) => c.charCodeAt(0)));

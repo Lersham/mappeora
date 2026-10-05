@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSettings, type FontChoice, type ThemeChoice } from '../../store/settingsStore';
 import { speech, type Voice } from '../../services/speech';
 import { BigButton } from '../../components/BigButton';
+import { useBackHandler } from '../../lib/backButton';
 
 const FONTS: { value: FontChoice; label: string }[] = [
   { value: 'lexend', label: 'Lexend' },
@@ -25,6 +26,12 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
   useEffect(() => {
     void speech().getVoices().then(setVoices);
   }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  useBackHandler(onClose);
 
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title">

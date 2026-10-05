@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { MapSummary } from '../../types/map';
 import { storage } from '../../services/storage';
+import { recovered } from '../../services/autosave';
 import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { pickMapFile } from '../../services/openFile';
@@ -14,21 +15,36 @@ interface Props {
   /** A new map that opens on «Dal libro», from the welcome. */
   onStartFromBook(): void;
   onOpenSettings(): void;
+  /** Something that went wrong opening or creating a map. */
+  error?: string | null;
 }
 
-export function HomeScreen({ onOpen, onCreate, onStartFromBook, onOpenSettings }: Props) {
+export function HomeScreen({ onOpen, onCreate, onStartFromBook, onOpenSettings, error }: Props) {
   const [maps, setMaps] = useState<MapSummary[] | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(welcomeNeeded);
   const { readText } = useReadAloud();
 
-  const refresh = () => void storage().list().then(setMaps);
+  const [listError, setListError] = useState<string | null>(null);
+  const refresh = () =>
+    void recovered()
+      .then(() => storage().list())
+      .then((list) => {
+        setMaps(list);
+        setListError(null);
+      })
+      .catch(() => setListError('Non riesco a leggere le mappe salvate. Chiudi l’app e riaprila.'));
   useEffect(refresh, []);
 
   const remove = async (m: MapSummary) => {
     if (!window.confirm(`Vuoi cancellare la mappa "${m.title}"?`)) return;
-    await storage().remove(m.id);
+    try {
+      await storage().remove(m.id);
+    } catch {
+      setListError(`Non sono riuscito a cancellare "${m.title}". Riprova.`);
+      return;
+    }
     refresh();
   };
 
@@ -64,11 +80,11 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onOpenSettings }
         <BigButton icon="📂" label="Apri file" className="home-new" onClick={() => void importFile()} />
         <BigButton icon="📚" label="Esempi" className="home-new" onClick={() => setExamplesOpen(true)} />
       </div>
-      {importError && (
-        <p className="field-error" role="alert">
-          {importError}
+      {[error, importError, listError].filter(Boolean).map((message) => (
+        <p key={message} className="field-error" role="alert">
+          {message}
         </p>
-      )}
+      ))}
 
       {maps && maps.length === 0 && (
         <p className="empty">

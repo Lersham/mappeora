@@ -4,6 +4,7 @@ import { pickPhoto, type PhotoSource } from '../../services/photo';
 import { ocr } from '../../services/ocr';
 import { cleanOcrText, selectionToConcepts, tokenize } from '../../lib/ocrText';
 import { useReadLongText } from '../../hooks/useReadLongText';
+import { useBackHandler } from '../../lib/backButton';
 
 type Step =
   | { kind: 'pick' }
@@ -28,6 +29,7 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
   const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
   const reader = useReadLongText();
+  useBackHandler(onClose);
 
   const tokens = useMemo(() => tokenize(text), [text]);
   const concepts = useMemo(() => selectionToConcepts(text, tokens, selected), [text, tokens, selected]);
