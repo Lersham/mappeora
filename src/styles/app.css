@@ -747,6 +747,10 @@ textarea {
   background: var(--surface);
   padding: 10px;
 }
+.illustration-glyph {
+  font-size: 2rem;
+  line-height: 1;
+}
 .picto-tile:disabled {
   opacity: 0.5;
   cursor: progress;
@@ -878,9 +882,11 @@ textarea {
   pointer-events: none;
 }
 .concept-photo {
-  width: 140px;
-  max-height: 120px;
-  object-fit: cover;
+  /* The whole picture, also when taken upright (a page of the book). */
+  width: auto;
+  height: auto;
+  max-width: 140px;
+  max-height: 160px;
   border-radius: 10px;
   pointer-events: none;
 }

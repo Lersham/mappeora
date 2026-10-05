@@ -35,8 +35,14 @@ export function searchTerms(query: string): string[] {
   return [...new Set(words)];
 }
 
-/** Rough Italian stem, enough to match "piante" with "pianta". */
+/**
+ * Rough Italian stem, enough to match "piante" with "pianta", "api" with
+ * "ape" and "funghi" with "fungo".
+ */
 export function stem(word: string): string {
   const w = fold(word);
-  return w.length > 4 ? w.replace(/[aeio]$/, '') : w;
+  if (w.length < 3) return w;
+  // funghi, foche, fuochi: the "h" only keeps the sound of fungo, foca, fuoco.
+  const hard = w.length > 3 ? w.replace(/([cg])h([ei])$/, '$1$2') : w;
+  return hard.replace(/[aeio]$/, '');
 }

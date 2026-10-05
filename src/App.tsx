@@ -42,6 +42,18 @@ async function embedOldImages(map: ConceptMap) {
   mapHistory().resume();
 }
 
+/** Back online: the illustrations that could not be saved in the map yet. */
+function useEmbedWhenOnline() {
+  useEffect(() => {
+    const retry = () => {
+      const map = useMapStore.getState().map;
+      if (map) void embedOldImages(map);
+    };
+    window.addEventListener('online', retry);
+    return () => window.removeEventListener('online', retry);
+  }, []);
+}
+
 /** Mirrors accessibility settings onto <html> so plain CSS can react to them. */
 function useApplySettings() {
   const { font, theme, textScale, uppercase, wideSpacing } = useSettings();
@@ -58,6 +70,7 @@ function useApplySettings() {
 export default function App() {
   useApplySettings();
   useAutosave();
+  useEmbedWhenOnline();
   const hasMap = useMapStore((s) => s.map !== null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newMapOpen, setNewMapOpen] = useState(false);

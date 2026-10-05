@@ -18,6 +18,8 @@ interface Entry extends Illustration {
   nameWords: string[];
   keywordWords: string[];
   phrases: string[];
+  /** The name with each word stemmed: "stella" for a search of "stelle". */
+  stemmedName: string;
 }
 
 interface IndexFile {
@@ -44,10 +46,13 @@ function load(): Promise<Entry[]> {
       nameWords: fold(i.n).split(/\s+/),
       keywordWords: i.k.flatMap((k) => fold(k).split(/\s+/)),
       phrases: [fold(i.n), ...i.k.map(fold)],
+      stemmedName: stemPhrase(fold(i.n)),
     }));
   });
   return index;
 }
+
+const stemPhrase = (phrase: string) => phrase.split(/\s+/).map(stem).join(' ');
 
 const CDN = 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji';
 
@@ -65,12 +70,15 @@ function score(entry: Entry, phrase: string, terms: string[]): [matched: number,
   let matched = 0;
   let points = 0;
   if (entry.phrases[0] === phrase) points += 100;
+  else if (entry.stemmedName === stemPhrase(phrase)) points += 80;
   else if (entry.phrases.includes(phrase)) points += 60;
   for (const t of terms) {
     const s = stem(t);
     let best = 0;
     // "acqua" is the subject of "goccia d'acqua", less so of "pistola ad acqua".
     if (entry.nameWords.includes(t)) best = Math.max(12, 20 - 4 * (entry.nameWords.length - 1));
+    // "stelle" is first of all "stella", then what has "stelle" among its keywords.
+    else if (stem(entry.nameWords[0]) === s) best = 16;
     else if (entry.keywordWords.includes(t)) best = 15;
     else if (entry.nameWords.some((w) => stem(w) === s)) best = 12;
     else if (entry.keywordWords.some((w) => stem(w) === s)) best = 10;

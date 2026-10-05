@@ -7,6 +7,9 @@ import { MAP_FILE_EXTENSION, serializeMap, textToDataUrl } from '../lib/mapFile'
 import { planPages, type PageCount, type Paper } from '../lib/pagePlan';
 import type { ConceptMap } from '../types/map';
 
+/** 1×1 transparent PNG. */
+const EMPTY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
 /** Required by the licence of the ARASAAC symbols that older maps may still contain. */
 const ARASAAC_CREDIT =
   'Pittogrammi: Sergio Palao. Origine: ARASAAC (https://arasaac.org). Licenza: CC BY-NC-SA. Proprietà: Governo di Aragona (Spagna).';
@@ -113,6 +116,8 @@ async function renderMap(nodes: Node[], background: string, simple: boolean): Pr
       width,
       height,
       pixelRatio: 2,
+      // A web picture that cannot load (offline) must not stop the export.
+      imagePlaceholder: EMPTY_PNG,
       filter: keepInExport,
       style: {
         width: `${width}px`,

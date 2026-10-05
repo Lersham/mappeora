@@ -20,11 +20,14 @@ export function openGoogleImages(query: string): void {
 export class PasteError extends Error {}
 
 const IMAGE_LINK = /^https?:\/\/\S+$/i;
+const INLINE_IMAGE = /^data:image\/[\w.+-]+;base64,/i;
 
 /** A copied picture (or the copied address of a picture) as a small JPEG. */
 export async function pastedToDataUrl(pasted: Blob | string): Promise<string> {
   if (typeof pasted === 'string') {
     const link = pasted.trim();
+    // Google Images often copies small pictures as the picture itself.
+    if (INLINE_IMAGE.test(link)) return photoToDataUrl(link);
     if (!IMAGE_LINK.test(link)) throw new PasteError('Negli appunti non c’è un’immagine. Su Google tieni premuta l’immagine e scegli «Copia immagine».');
     // Many sites don't let other apps download their pictures.
     const data = await toDataUrl(link);

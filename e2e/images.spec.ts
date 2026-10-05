@@ -13,6 +13,19 @@ test.describe('Immagini nei concetti', () => {
     await expect(node(page, 'Il vulcano').locator('.concept-illustration')).toHaveAttribute('src', /^data:image\/png;base64,/);
   });
 
+  test('senza internet l’illustrazione diventa il suo simbolo, non un riquadro vuoto', async ({ page }) => {
+    await newMap(page, 'Il vulcano');
+    await page.context().route(/cdn\.jsdelivr\.net\/gh\/microsoft/, (route) => route.abort('internetdisconnected'));
+    await node(page, 'Il vulcano').click();
+    await toolbar(page, 'Immagine');
+    await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('vulcano');
+    const tile = page.getByRole('button', { name: 'vulcano', exact: true });
+    await expect(tile).toHaveText('🌋'); // the preview could not load
+    await tile.click();
+    await expect(node(page, 'Il vulcano').locator('.concept-emoji')).toHaveText('🌋');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
   test('«Cerca su Google» apre Google Immagini con il filtro per ragazzi', async ({ page }) => {
     await newMap(page, 'Il Colosseo');
     await node(page, 'Il Colosseo').click();

@@ -17,5 +17,8 @@ describe('searchText', () => {
     expect(stem('piante')).toBe(stem('pianta'));
     expect(stem('vulcani')).toBe(stem('vulcano'));
     expect(stem('re')).toBe('re');
+    for (const [plural, singular] of [['cani', 'cane'], ['api', 'ape'], ['funghi', 'fungo'], ['foche', 'foca'], ['fuochi', 'fuoco'], ['mele', 'mela']]) {
+      expect(stem(plural)).toBe(stem(singular));
+    }
   });
 });

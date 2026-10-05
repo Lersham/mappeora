@@ -12,6 +12,13 @@ describe('illustrations', () => {
     expect(await names('piante')).toContain('pianta in vaso');
   });
 
+  it('finds the subject of a plural first', async () => {
+    expect((await names('Le stelle'))[0]).toBe('stella');
+    expect(await names('I funghi')).toContain('fungo');
+    expect(await names('le api')).toContain('ape');
+    expect(await names('i cani')).toContain('cane');
+  });
+
   it('ignores articles and uses all the words of a phrase', async () => {
     const water = (await searchIllustrations('il ciclo dell’acqua')).slice(0, 10).map((i) => i.name);
     expect(water).toContain('goccia');

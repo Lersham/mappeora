@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { MicButton } from '../../components/MicButton';
 import { BigButton } from '../../components/BigButton';
@@ -11,7 +11,7 @@ import {
   type Illustration,
 } from '../../services/illustrations';
 import { toDataUrl } from '../../services/embed';
-import { NODE_COLORS } from '../../lib/palette';
+import { COLOR_NAMES, NODE_COLORS } from '../../lib/palette';
 import { useMapStore } from '../../store/mapStore';
 import { photoToDataUrl, pickPhoto, type PhotoSource } from '../../services/photo';
 import { PasteError, fromPasteEvent, openGoogleImages, pastedToDataUrl, readClipboardImage } from '../../services/webImage';
@@ -48,6 +48,15 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
   const [busy, setBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [showPasteBox, setShowPasteBox] = useState(false);
+  /** The illustration being downloaded: dropped when the dialog closes. */
+  const pending = useRef<AbortController | null>(null);
+  useEffect(
+    () => () => {
+      pending.current?.abort();
+      pending.current = null;
+    },
+    [],
+  );
 
   // Illustrations are searched on the device: no delay needed.
   useEffect(() => {
@@ -61,15 +70,24 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
   useEffect(() => void illustrationsFor(SUGGESTED).then(setSuggested), []);
 
   const choose = (image: MapNode['image']) => {
+    pending.current?.abort();
+    pending.current = null;
     updateNode(node.id, { image });
     onClose();
   };
 
-  /** Saves the picture inside the map, so it shows offline and in shared files. */
-  const chooseEmbedded = async (image: NonNullable<MapNode['image']>, url: string) => {
+  /**
+   * Saves the picture inside the map, so it shows offline and in shared
+   * files. Without internet the concept gets the same subject as a symbol.
+   */
+  const chooseIllustration = async (i: Illustration) => {
+    const download = new AbortController();
+    pending.current = download;
     setBusy(true);
-    const src = await toDataUrl(url);
-    choose(src ? { ...image, src } : image);
+    const src = await toDataUrl(illustrationUrl(i.path), download.signal);
+    // Closed, or «Togli immagine», while waiting: nothing more to do.
+    if (pending.current !== download) return;
+    choose(src ? { kind: 'illustrazione', ref: i.path, src } : { kind: 'emoji', ref: i.glyph });
   };
 
   const addPhoto = async (source: PhotoSource) => {
@@ -148,19 +166,14 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
           {illustrations && illustrations.length === 0 && (
             <p className="muted">{query.trim() ? 'Nessuna illustrazione per questa parola. Eccone alcune:' : 'Scrivi o detta una parola, oppure scegli:'}</p>
           )}
+          {busy && (
+            <p className="muted" role="status">
+              Preparo l’immagine…
+            </p>
+          )}
           <div className="picto-grid" aria-busy={busy}>
             {shownIllustrations.map((i) => (
-              <button
-                key={i.path}
-                type="button"
-                className="picto-tile illustration-tile"
-                aria-label={i.name}
-                title={i.name}
-                disabled={busy}
-                onClick={() => void chooseEmbedded({ kind: 'illustrazione', ref: i.path }, illustrationUrl(i.path))}
-              >
-                <img src={illustrationThumbUrl(i.path)} alt="" loading="lazy" />
-              </button>
+              <IllustrationTile key={i.path} illustration={i} disabled={busy} onChoose={() => void chooseIllustration(i)} />
             ))}
           </div>
           <p className="credit">{ILLUSTRATIONS_CREDIT}</p>
@@ -222,7 +235,8 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
               type="button"
               className="color-swatch"
               style={{ background: c }}
-              aria-label={`Colore ${c}`}
+              aria-label={`Colore ${COLOR_NAMES[c] ?? c}`}
+              title={COLOR_NAMES[c]}
               aria-pressed={node.color === c}
               onClick={() => updateNode(node.id, { color: c })}
             />
@@ -246,5 +260,21 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
         <BigButton icon="✅" label="Fatto" variant="primary" onClick={onClose} />
       </div>
     </Dialog>
+  );
+}
+
+/** Offline the preview cannot load: the tile then shows the same subject as a symbol. */
+function IllustrationTile({ illustration: i, disabled, onChoose }: { illustration: Illustration; disabled: boolean; onChoose(): void }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <button type="button" className="picto-tile illustration-tile" aria-label={i.name} title={i.name} disabled={disabled} onClick={onChoose}>
+      {failed ? (
+        <span className="illustration-glyph" aria-hidden>
+          {i.glyph}
+        </span>
+      ) : (
+        <img src={illustrationThumbUrl(i.path)} alt="" loading="lazy" onError={() => setFailed(true)} />
+      )}
+    </button>
   );
 }

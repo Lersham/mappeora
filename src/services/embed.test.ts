@@ -16,6 +16,15 @@ describe('embed', () => {
     expect(await toDataUrl('https://x/y.png')).toBeUndefined();
   });
 
+  it('recognises a picture served as octet-stream, and stops when asked', async () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    vi.stubGlobal('fetch', async () => new Response(png, { headers: { 'content-type': 'application/octet-stream' } }));
+    expect(await toDataUrl('https://x/y')).toBe('data:image/png;base64,iVBORw==');
+    const stop = new AbortController();
+    stop.abort();
+    expect(await toDataUrl('https://x/y', stop.signal)).toBeUndefined();
+  });
+
   it('embeds only web pictures that are not saved yet', async () => {
     const urls: string[] = [];
     vi.stubGlobal('fetch', async (url: string) => {

@@ -39,6 +39,10 @@ function HighlightedLabel({ id, label }: { id: string; label: string }) {
 }
 
 function NodeImageView({ image }: { image: NonNullable<ConceptNodeData['image']> }) {
+  // A web picture that cannot load (offline) leaves no empty box behind.
+  const [failed, setFailed] = useState<string | null>(null);
+  const onError = () => setFailed(image.src ?? image.ref);
+  if (failed !== null && failed === (image.src ?? image.ref)) return null;
   if (image.kind === 'emoji') {
     return (
       <span className="concept-emoji" aria-hidden>
@@ -48,14 +52,14 @@ function NodeImageView({ image }: { image: NonNullable<ConceptNodeData['image']>
   }
   if (image.kind === 'arasaac') {
     // Symbols are no longer offered: older maps show the copy saved inside them.
-    return image.src ? <img className="concept-picto" src={image.src} alt="" draggable={false} /> : null;
+    return image.src ? <img className="concept-picto" src={image.src} alt="" draggable={false} onError={onError} /> : null;
   }
   if (image.kind === 'illustrazione') {
     return (
-      <img className="concept-illustration" src={image.src ?? illustrationUrl(image.ref)} alt="" crossOrigin="anonymous" draggable={false} />
+      <img className="concept-illustration" src={image.src ?? illustrationUrl(image.ref)} alt="" crossOrigin="anonymous" draggable={false} onError={onError} />
     );
   }
-  return <img className="concept-photo" src={image.ref} alt="" draggable={false} />;
+  return <img className="concept-photo" src={image.ref} alt="" draggable={false} onError={onError} />;
 }
 
 /**
