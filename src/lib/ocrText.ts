@@ -37,7 +37,27 @@ export interface Token {
   end: number;
 }
 
-const WORD = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
+// Numbers with separators first, so «4.810» and «3,14» stay whole.
+const WORD = /\p{N}+(?:[.,]\p{N}+)+|[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
+
+/**
+ * A full stop that ends a sentence, as opposed to «a.C.», «ecc. e poi»:
+ * the text ends or goes to a new line, or a capital letter follows.
+ */
+const SENTENCE_DOT = /^\.+(?:\s*$|[ \t]*\n|\s+[«"“(]?\p{Lu})/u;
+
+/** Punctuation that separates two concepts even between adjacent words. */
+const CLAUSE_BREAK = /[!?;:\n,()[\]«»"“”–—•·*/-]/;
+
+/** An elided article or preposition at the start: «l'acqua» is «acqua». */
+const ELIDED = /^(?:[Ll]|[Uu]n|[Dd]ell|[Nn]ell|[Aa]ll|[Dd]all|[Ss]ull|[Cc]oll|[Qq]uest|[Qq]uell)['’](?=\p{L})|^[Dd]['’](?=\p{Ll})/u;
+
+function breaksBetween(text: string, from: number, to: number): boolean {
+  const gap = text.slice(from, to);
+  if (CLAUSE_BREAK.test(gap)) return true;
+  const dot = gap.indexOf('.');
+  return dot >= 0 && SENTENCE_DOT.test(text.slice(from + dot));
+}
 
 /** Splits text into words and the gaps between them, keeping offsets. */
 export function tokenize(text: string): Token[] {
@@ -67,7 +87,10 @@ export function selectionToConcepts(text: string, tokens: Token[], selected: Rea
 
   const flush = () => {
     if (group.length === 0) return;
-    const phrase = text.slice(group[0].start, group[group.length - 1].end).replace(/\s+/g, ' ');
+    const last = group[group.length - 1];
+    // «a.C.»: the final dot belongs to the abbreviation
+    const end = /^\p{L}$/u.test(last.text) && text[last.start - 1] === '.' && text[last.end] === '.' ? last.end + 1 : last.end;
+    const phrase = text.slice(group[0].start, end).replace(/\s+/g, ' ').replace(ELIDED, '');
     const label = phrase.charAt(0).toLocaleUpperCase('it-IT') + phrase.slice(1);
     const key = label.toLocaleLowerCase('it-IT');
     if (!seen.has(key)) {
@@ -83,7 +106,7 @@ export function selectionToConcepts(text: string, tokens: Token[], selected: Rea
       continue;
     }
     const prev = group[group.length - 1];
-    if (prev && /[.!?;:\n]/.test(text.slice(prev.end, w.start))) flush();
+    if (prev && breaksBetween(text, prev.end, w.start)) flush();
     group.push(w);
   }
   flush();
@@ -101,8 +124,19 @@ export interface Chunk {
  */
 export function sentences(text: string): Chunk[] {
   const chunks: Chunk[] = [];
-  for (const m of text.matchAll(/[^.!?;\n]+[.!?;]*/g)) {
-    if (m[0].trim()) chunks.push({ text: m[0], start: m.index! });
+  let start = 0;
+  const push = (end: number, next: number) => {
+    const chunk = text.slice(start, end);
+    if (chunk.trim()) chunks.push({ text: chunk, start });
+    start = next;
+  };
+  for (const m of text.matchAll(/[.!?;]*[!?;][.!?;]*|\.+|\n/g)) {
+    const at = m.index!;
+    if (m[0] === '\n') push(at, at + 1);
+    // «4.810», «a.C.», «ecc. e poi» are not the end of a sentence
+    else if (m[0].startsWith('.') && !/[!?;]/.test(m[0]) && !SENTENCE_DOT.test(text.slice(at))) continue;
+    else push(at + m[0].length, at + m[0].length);
   }
+  push(text.length, text.length);
   return chunks;
 }

@@ -4,6 +4,7 @@ import { NativeOcr } from './native';
 import { WebOcr } from './web';
 
 export type { OcrService } from './types';
+export { OcrDownloadError, PhotoDecodeError } from './types';
 
 let instance: OcrService | undefined;
 

@@ -23,7 +23,7 @@ const VisionOcr = registerPlugin<VisionOcrPlugin>('MappeoraOcr');
 export class NativeOcr implements OcrService {
   private fallback: WebOcr | undefined;
 
-  async recognize(photo: PickedPhoto, onProgress?: (p: number) => void): Promise<string> {
+  async recognize(photo: PickedPhoto, onProgress?: (p: number) => void, signal?: AbortSignal): Promise<string> {
     try {
       if (!photo.uri) throw new Error('missing-file');
       const path = toFileUri(photo.uri);
@@ -32,9 +32,10 @@ export class NativeOcr implements OcrService {
       }
       return (await TextRecognition.processImage({ path })).text;
     } catch (e) {
+      if (signal?.aborted) throw signal.reason;
       console.warn('OCR nativo non riuscito, uso Tesseract:', e);
       this.fallback ??= new WebOcr();
-      return this.fallback.recognize(photo, onProgress);
+      return this.fallback.recognize(photo, onProgress, signal);
     }
   }
 }

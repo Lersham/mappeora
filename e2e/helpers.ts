@@ -124,11 +124,20 @@ export async function showAll(page: Page) {
  * each job is answered with the same action and job id.
  */
 export async function fakeOcr(page: Page, text: string) {
-  const script = `self.onmessage = ({ data }) => postMessage({
+  await fakeOcrWorker(
+    page,
+    `self.onmessage = ({ data }) => postMessage({
     workerId: data.workerId, jobId: data.jobId, action: data.action, status: 'resolve',
     data: data.action === 'recognize' ? { text: ${JSON.stringify(text)} } : {},
-  });`;
-  await page.context().route(/cdn\.jsdelivr\.net\/npm\/tesseract\.js@[^/]+\/dist\/worker\.min\.js/, (route) =>
+  });`,
+  );
+}
+
+/** Replaces Tesseract's worker script with `script` (the latest call wins). */
+export async function fakeOcrWorker(page: Page, script: string) {
+  const worker = /cdn\.jsdelivr\.net\/npm\/tesseract\.js@[^/]+\/dist\/worker\.min\.js/;
+  await page.context().unroute(worker);
+  await page.context().route(worker, (route) =>
     route.fulfill({ body: script, contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' } }),
   );
 }

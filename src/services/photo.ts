@@ -13,9 +13,13 @@ export type PhotoSource = 'camera' | 'gallery';
 /** Long side in pixels: enough for book text, small enough to OCR quickly. */
 const TARGET_WIDTH = 2000;
 
+/** Codes of @capacitor/camera for a picker the child closed on purpose. */
+const CANCELLED = new Set(['OS-PLUG-CAMR-0006', 'OS-PLUG-CAMR-0020']);
+
 /**
- * Returns null if the child cancels. On the web this must be called from
- * a click handler, because it opens a file picker.
+ * Returns null if the child cancels, and throws if the camera or gallery
+ * fails. On the web this must be called from a click handler, because it
+ * opens a file picker.
  */
 export async function pickPhoto(source: PhotoSource): Promise<PickedPhoto | null> {
   if (isNative()) {
@@ -33,8 +37,10 @@ export async function pickPhoto(source: PhotoSource): Promise<PickedPhoto | null
       });
       const r = results[0];
       return r?.webPath ? { webPath: r.webPath, uri: r.uri } : null;
-    } catch {
-      return null; // the plugin rejects when the picker is dismissed
+    } catch (e) {
+      // The plugin also rejects when the picker is dismissed.
+      if (CANCELLED.has((e as { code?: string } | null)?.code ?? '') || /cancel/i.test(String((e as Error)?.message))) return null;
+      throw e;
     }
   }
   return pickFileOnWeb(source);

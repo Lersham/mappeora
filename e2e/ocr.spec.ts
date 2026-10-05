@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { fakeOcr, highlight, newMap, node, nodes, photographPage, toolbar } from './helpers';
+import { fakeOcr, fakeOcrWorker, highlight, newMap, node, nodes, photographPage, toolbar } from './helpers';
 
 /*
  * The text recognition itself (Tesseract on the web, ML Kit / Vision in the
@@ -22,6 +22,8 @@ test('«Dal libro» offre fotocamera e galleria, e spiega se manca internet', as
   });
   // the OCR engine can't be downloaded in the test: a friendly error, a way back
   await expect(dialog.getByRole('button', { name: 'Riprova' })).toBeVisible({ timeout: 20_000 });
+  // even if the browser thinks it is online (e.g. a school network blocking the CDN)
+  await expect(dialog.getByRole('alert')).toContainText('La prima volta serve internet');
   // Expected here: Tesseract's worker reports the failed download itself.
   const unrelated = consoleErrors.filter((e) => !/tesseract/i.test(e));
   consoleErrors.splice(0, consoleErrors.length, ...unrelated);
@@ -58,3 +60,62 @@ test('dal testo della foto si scelgono le parole: col dito come un evidenziatore
   await expect(nodes(page)).toHaveCount(4);
   for (const label of ['Fotosintesi', 'Ossigeno', 'Clorofilla']) await expect(node(page, label)).toBeVisible();
 });
+
+test('se il modello italiano non si scarica, lo dice invece di restare fermo; «Annulla» interrompe', async ({ page, consoleErrors }) => {
+  // the engine starts, but the Italian model fails: before the fix it waited forever
+  await fakeOcrWorker(page, `self.onmessage = ({ data }) => postMessage({
+    workerId: data.workerId, jobId: data.jobId, action: data.action,
+    status: data.action === 'loadLanguage' ? 'reject' : 'resolve', data: data.action === 'loadLanguage' ? 'NetworkError' : {},
+  });`);
+  await newMap(page, 'La cellula');
+  await toolbar(page, 'Dal libro');
+  const dialog = page.getByRole('dialog', { name: 'Dal libro' });
+  await choosePage(page);
+  await expect(dialog.getByRole('alert')).toContainText('La prima volta serve internet', { timeout: 20_000 });
+  consoleErrors.splice(0, consoleErrors.length, ...consoleErrors.filter((e) => !/tesseract|NetworkError/i.test(e)));
+
+  // a download that never answers: the child can stop waiting
+  await fakeOcrWorker(page, 'self.onmessage = () => {};');
+  await dialog.getByRole('button', { name: 'Riprova' }).click();
+  await choosePage(page);
+  await expect(dialog.getByText('Sto leggendo la pagina…')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Annulla' }).click();
+  await expect(dialog.getByRole('button', { name: 'Scegli una foto' })).toBeVisible();
+});
+
+test('«Correggi» senza cambiare nulla tiene le parole scelte; «Altra foto» permette di tornare al testo', async ({ page }) => {
+  await fakeOcr(page, 'Le piante producono ossigeno.');
+  await newMap(page, 'Le piante');
+  await toolbar(page, 'Dal libro');
+  const dialog = await photographPage(page);
+  const chosen = dialog.locator('.concept-preview .chip');
+  await dialog.getByRole('button', { name: 'ossigeno', exact: true }).click();
+  await expect(chosen).toHaveText(['Ossigeno']);
+
+  await dialog.getByRole('button', { name: 'Correggi' }).click();
+  // while editing, nothing can be added from words that may have moved
+  await expect(dialog.getByRole('button', { name: /^Aggiungi/ })).toBeDisabled();
+  await dialog.getByRole('button', { name: 'Fatto' }).click();
+  await expect(chosen).toHaveText(['Ossigeno']);
+
+  // a real correction moves the words: the choice starts over
+  await dialog.getByRole('button', { name: 'Correggi' }).click();
+  await dialog.getByRole('textbox', { name: 'Testo letto dalla foto' }).fill('Le piante producono molto ossigeno.');
+  await dialog.getByRole('button', { name: 'Fatto' }).click();
+  await expect(chosen).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'molto', exact: true }).click();
+
+  await dialog.getByRole('button', { name: 'Altra foto' }).click();
+  await dialog.getByRole('button', { name: 'Torna al testo' }).click();
+  await expect(chosen).toHaveText(['Molto']);
+});
+
+async function choosePage(page: import('@playwright/test').Page) {
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('dialog', { name: 'Dal libro' }).getByRole('button', { name: 'Scegli una foto' }).click();
+  await (await chooser).setFiles({
+    name: 'pagina.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'),
+  });
+}

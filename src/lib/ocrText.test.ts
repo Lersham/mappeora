@@ -42,6 +42,30 @@ describe('selectionToConcepts', () => {
     expect(selectionToConcepts(text, tokens, sel)).toEqual(['Sole', 'Producono']);
   });
 
+  it('keeps words apart across commas, brackets, quotes, dashes and bullets', () => {
+    const t = 'Radici, fusto • foglie (clorofilla) – «fotosintesi» / luce';
+    const tk = tokenize(t);
+    const all = new Set(tk.filter((x) => x.word >= 0).map((x) => x.word));
+    expect(selectionToConcepts(t, tk, all)).toEqual(['Radici', 'Fusto', 'Foglie', 'Clorofilla', 'Fotosintesi', 'Luce']);
+  });
+
+  it('drops an elided article or preposition, but not from names', () => {
+    const t = "dell'acqua, l'Italia, un'isola, D'Annunzio";
+    const tk = tokenize(t);
+    expect(selectionToConcepts(t, tk, new Set([0, 1, 2, 3]))).toEqual(['Acqua', 'Italia', 'Isola', "D'Annunzio"]);
+  });
+
+  it('keeps numbers and abbreviations whole', () => {
+    const t = 'Il monte è alto 4.810 metri, fondata nel 753 a.C. dai Romani. Pi greco vale 3,14 circa.';
+    const tk = tokenize(t);
+    const words = tk.filter((x) => x.word >= 0).map((x) => x.text);
+    expect(words).toContain('4.810');
+    expect(words).toContain('3,14');
+    const idx = (w: string) => words.indexOf(w);
+    const sel = new Set([idx('4.810'), idx('metri'), idx('753'), idx('a'), idx('C')]);
+    expect(selectionToConcepts(t, tk, sel)).toEqual(['4.810 metri', '753 a.C.']);
+  });
+
   it('removes duplicates', () => {
     const t = 'acqua e acqua';
     const tk = tokenize(t);
@@ -56,6 +80,14 @@ describe('sentences', () => {
       { text: 'Prima frase.', start: 0 },
       { text: ' Seconda!', start: 12 },
       { text: 'Terza', start: 23 },
+    ]);
+  });
+
+  it('does not stop at numbers, abbreviations or lowercase after a dot', () => {
+    expect(sentences('Alto 4.810 metri. Nel 753 a.C. nasce Roma, ecc. e poi. Fine').map((c) => c.text.trim())).toEqual([
+      'Alto 4.810 metri.',
+      'Nel 753 a.C. nasce Roma, ecc. e poi.',
+      'Fine',
     ]);
   });
 });

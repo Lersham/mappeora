@@ -91,8 +91,19 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
   };
 
   const addPhoto = async (source: PhotoSource) => {
-    const photo = await pickPhoto(source);
+    let photo;
+    try {
+      photo = await pickPhoto(source);
+    } catch {
+      setPhotoError(
+        source === 'camera'
+          ? 'Non riesco ad aprire la fotocamera. Prova con «Dalla galleria».'
+          : 'Non riesco ad aprire le foto. Riprova!',
+      );
+      return;
+    }
     if (!photo) return;
+    setPhotoError(null);
     setBusy(true);
     try {
       choose({ kind: 'foto', ref: await photoToDataUrl(photo.webPath) });

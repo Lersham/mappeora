@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BigButton } from '../../components/BigButton';
 import { pickPhoto, type PhotoSource } from '../../services/photo';
-import { ocr } from '../../services/ocr';
+import { ocr, OcrDownloadError, PhotoDecodeError } from '../../services/ocr';
 import { cleanOcrText, selectionToConcepts, tokenize } from '../../lib/ocrText';
 import { useReadLongText } from '../../hooks/useReadLongText';
 import { useBackHandler } from '../../lib/backButton';
@@ -27,6 +27,8 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
   const [step, setStep] = useState<Step>({ kind: 'pick' });
   const [text, setText] = useState('');
   const [editing, setEditing] = useState(false);
+  /** The text when «Correggi» was pressed: chosen words survive if it did not change. */
+  const textBeforeEdit = useRef('');
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
   const reader = useReadLongText();
   useBackHandler(onClose);
@@ -34,14 +36,40 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
   const tokens = useMemo(() => tokenize(text), [text]);
   const concepts = useMemo(() => selectionToConcepts(text, tokens, selected), [text, tokens, selected]);
 
+  // The page being read: «Annulla», closing, or another photo cancel it.
+  const job = useRef<AbortController | null>(null);
+  useEffect(() => () => job.current?.abort(), []);
+
   const takePhoto = async (source: PhotoSource) => {
-    const photo = await pickPhoto(source);
+    void reader.stop();
+    let photo;
+    try {
+      photo = await pickPhoto(source);
+    } catch (e) {
+      setStep({
+        kind: 'error',
+        message: source === 'camera'
+          ? 'Non riesco ad aprire la fotocamera. Prova con «Scegli una foto».'
+          : 'Non riesco ad aprire le foto. Riprova!',
+        detail: errorDetail(e),
+      });
+      return;
+    }
     if (!photo) return;
+    job.current?.abort();
+    const current = new AbortController();
+    job.current = current;
     setStep({ kind: 'reading', progress: null, photo: photo.webPath });
     try {
-      const raw = await ocr().recognize(photo, (p) =>
-        setStep((s) => (s.kind === 'reading' ? { ...s, progress: p } : s)),
+      const raw = await ocr().recognize(
+        photo,
+        (p) => {
+          if (job.current === current) setStep((s) => (s.kind === 'reading' ? { ...s, progress: p } : s));
+        },
+        current.signal,
       );
+      if (job.current !== current) return;
+      job.current = null;
       const clean = cleanOcrText(raw);
       if (!clean) {
         setStep({ kind: 'error', message: 'Non ho trovato parole nella foto. Prova con più luce e la pagina dritta.' });
@@ -52,15 +80,26 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
       setEditing(false);
       setStep({ kind: 'text' });
     } catch (e) {
+      if (job.current !== current) return; // cancelled: nothing to say
+      job.current = null;
       setStep({
         kind: 'error',
-        message: navigator.onLine
-          ? 'Non sono riuscito a leggere la foto. Riprova!'
-          : 'La prima volta serve internet per scaricare il lettore di testo.',
+        message:
+          e instanceof OcrDownloadError || !navigator.onLine
+            ? 'La prima volta serve internet per scaricare il lettore di testo. Controlla la connessione: a volte la rete della scuola blocca il download.'
+            : e instanceof PhotoDecodeError
+              ? 'Questa foto non si apre. Prova con un’altra foto, o con una foto JPG o PNG.'
+              : 'Non sono riuscito a leggere la foto. Riprova!',
         // Shown small, so an adult can report what went wrong.
-        detail: e instanceof Error ? e.message : String(e),
+        detail: errorDetail(e),
       });
     }
+  };
+
+  const cancelReading = () => {
+    job.current?.abort();
+    job.current = null;
+    setStep(text ? { kind: 'text' } : { kind: 'pick' });
   };
 
   const toggle = (word: number) =>
@@ -115,6 +154,11 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
               <BigButton icon="🖼️" label="Scegli una foto" onClick={() => void takePhoto('gallery')} />
             </div>
             <p className="muted small">🔒 La foto resta sul tuo dispositivo: non viene inviata a nessuno.</p>
+            {text && (
+              <div className="photo-sources">
+                <BigButton icon="↩️" label="Torna al testo" onClick={() => setStep({ kind: 'text' })} />
+              </div>
+            )}
           </>
         )}
 
@@ -125,6 +169,7 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
             <div className="progress-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={step.progress === null ? undefined : Math.round(step.progress * 100)}>
               <div className={`progress-fill${step.progress === null ? ' indeterminate' : ''}`} style={step.progress === null ? undefined : { width: `${Math.round(step.progress * 100)}%` }} />
             </div>
+            <BigButton icon="⏹️" label="Annulla" onClick={cancelReading} />
           </div>
         )}
 
@@ -151,11 +196,20 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
                 label={editing ? 'Fatto' : 'Correggi'}
                 onClick={() => {
                   void reader.stop();
-                  if (editing) setSelected(new Set()); // word positions changed
+                  // Word positions changed: the chosen words no longer match.
+                  if (editing && text !== textBeforeEdit.current) setSelected(new Set());
+                  textBeforeEdit.current = text;
                   setEditing(!editing);
                 }}
               />
-              <BigButton icon="📷" label="Altra foto" onClick={() => setStep({ kind: 'pick' })} />
+              <BigButton
+                icon="📷"
+                label="Altra foto"
+                onClick={() => {
+                  void reader.stop();
+                  setStep({ kind: 'pick' });
+                }}
+              />
             </div>
 
             {editing ? (
@@ -201,17 +255,19 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
               </>
             )}
 
-            <div className="concept-preview" aria-live="polite">
-              {concepts.length === 0 ? (
-                <span className="muted small">Nessun concetto scelto.</span>
-              ) : (
-                concepts.map((c) => (
-                  <span key={c} className="chip static">
-                    {c}
-                  </span>
-                ))
-              )}
-            </div>
+            {!editing && (
+              <div className="concept-preview" aria-live="polite">
+                {concepts.length === 0 ? (
+                  <span className="muted small">Nessun concetto scelto.</span>
+                ) : (
+                  concepts.map((c) => (
+                    <span key={c} className="chip static">
+                      {c}
+                    </span>
+                  ))
+                )}
+              </div>
+            )}
           </>
         )}
 
@@ -222,7 +278,7 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
               icon="➕"
               label={concepts.length === 1 ? 'Aggiungi 1 concetto' : `Aggiungi ${concepts.length} concetti`}
               variant="primary"
-              disabled={concepts.length === 0}
+              disabled={editing || concepts.length === 0}
               onClick={() => onAdd(concepts)}
             />
           )}
@@ -230,4 +286,10 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
       </div>
     </div>
   );
+}
+
+function errorDetail(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  const code = (e as { code?: string } | null)?.code;
+  return code ? `${code} ${String((e as { message?: string }).message ?? '')}`.trim() : String(e);
 }
