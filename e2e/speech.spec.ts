@@ -1,4 +1,4 @@
-import { test, expect, holdMic, micError, micsOpen, say, slowVoice, spoken } from './fixtures';
+import { test, expect, holdMic, lateVoices, micError, micsOpen, say, slowVoice, spoken } from './fixtures';
 import { newMap, sampleMap, toolbar } from './helpers';
 
 test.describe('Voce', () => {
@@ -74,5 +74,33 @@ test.describe('Voce', () => {
     await micError(page, 'audio-capture');
     await toolbar(page, 'Detta');
     await expect(page.getByText('Non trovo il microfono')).toBeVisible();
+  });
+
+  test('se il microfono non è permesso spiega cosa fare', async ({ page }) => {
+    await newMap(page, 'Le stagioni');
+    await micError(page, 'not-allowed');
+    await toolbar(page, 'Detta');
+    await expect(page.getByText('permetti a Mappeora di usare il microfono')).toBeVisible();
+  });
+
+  test('se il bambino non dice niente la dettatura si chiude senza rimproveri', async ({ page }) => {
+    await newMap(page, 'Le stagioni');
+    await micError(page, 'no-speech');
+    await toolbar(page, 'Detta');
+    await expect.poll(() => micsOpen(page)).toBe(0);
+    await expect(page.getByRole('dialog').filter({ hasText: 'Ti ascolto' })).toHaveCount(0);
+    await expect(page.getByText('Non ho capito bene')).toHaveCount(0);
+  });
+
+  test('le voci che arrivano in ritardo compaiono in «Aspetto» e la mappa si legge con quella scelta', async ({ page }) => {
+    await sampleMap(page);
+    await lateVoices(page);
+    await toolbar(page, 'Aspetto');
+    const settings = page.getByRole('dialog', { name: 'Aspetto e voce' });
+    await settings.getByLabel('Voce', { exact: true }).selectOption({ label: 'Italiano (test)' });
+    await page.keyboard.press('Escape');
+    await expect(settings).toHaveCount(0);
+    await toolbar(page, 'Leggi');
+    await expect.poll(() => spoken(page)).toHaveLength(1);
   });
 });

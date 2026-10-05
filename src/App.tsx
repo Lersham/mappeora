@@ -15,7 +15,7 @@ import { embedMissingImages } from './services/embed';
 import { flushAutosave, recovered, showMap, useSaveStatus } from './services/autosave';
 import { reloadIfSafe } from './services/pwaUpdate';
 import { isNative } from './services/platform';
-import { handleBack } from './lib/backButton';
+import { backIsHandled, handleBack, installWebBack } from './lib/backButton';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SpeechProblemNotice } from './components/SpeechProblemNotice';
 import { illustrationUrl } from './services/illustrations';
@@ -151,6 +151,15 @@ export default function App() {
       else void NativeApp.minimizeApp();
     });
     return () => void listener.then((l) => l.remove());
+  }, []);
+  // The browser's Back does the same on the web.
+  useEffect(() => {
+    if (isNative()) return;
+    return installWebBack(
+      () => handleBack() || (useMapStore.getState().map ? backRef.current() : undefined),
+      () => backIsHandled() || useMapStore.getState().map !== null,
+      (sync) => useMapStore.subscribe(sync),
+    );
   }, []);
 
   return (

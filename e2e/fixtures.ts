@@ -24,12 +24,26 @@ const SPEECH_STUB = () => {
   w.__nextTranscript = '';
   type Utterance = SpeechSynthesisUtterance & { __stopped?: boolean };
   let current: Utterance | null = null;
+  // `__voicesLate`: like Chrome on first load, there are no voices until a
+  // `voiceschanged` event a moment later.
+  const voiceListeners = new Set<() => void>();
+  const voices = [{ voiceURI: 'it-test', name: 'Italiano (test)', lang: 'it-IT', default: true, localService: true }];
   const synth = {
     speaking: false,
     pending: false,
     paused: false,
     onvoiceschanged: null,
-    getVoices: () => [{ voiceURI: 'it-test', name: 'Italiano (test)', lang: 'it-IT', default: true, localService: true }],
+    getVoices() {
+      if (!w.__voicesLate) return voices;
+      if (w.__voicesLate === true) {
+        w.__voicesLate = 'loading';
+        setTimeout(() => {
+          w.__voicesLate = false;
+          voiceListeners.forEach((l) => l());
+        }, 300);
+      }
+      return [];
+    },
     speak(u: Utterance) {
       spoken.push(u.text);
       current = u;
@@ -58,8 +72,19 @@ const SPEECH_STUB = () => {
     },
     pause() {},
     resume() {},
-    addEventListener() {},
-    removeEventListener() {},
+    addEventListener(type: string, listener: () => void, options?: { once?: boolean }) {
+      if (type !== 'voiceschanged') return;
+      const wrapped = options?.once
+        ? () => {
+            voiceListeners.delete(wrapped);
+            listener();
+          }
+        : listener;
+      voiceListeners.add(wrapped);
+    },
+    removeEventListener(type: string, listener: () => void) {
+      voiceListeners.delete(listener);
+    },
   };
   Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
 
@@ -168,6 +193,11 @@ export function micError(page: Page, code: string) {
 /** Microphone sessions still running. */
 export function micsOpen(page: Page): Promise<number> {
   return page.evaluate(() => (window as unknown as { __micsOpen: number }).__micsOpen);
+}
+
+/** The voices arrive late, after a `voiceschanged` event, as in Chrome. */
+export function lateVoices(page: Page) {
+  return page.evaluate(() => ((window as unknown as { __voicesLate: boolean }).__voicesLate = true));
 }
 
 /** Slows the simulated voice down, to see the highlighted word. */

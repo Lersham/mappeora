@@ -4,10 +4,19 @@ import type { StorageService } from './types';
 
 class MappeoraDB extends Dexie {
   maps!: Table<ConceptMap, string>;
+  /** Title and date of each map: the list never has to read the photos. */
+  summaries!: Table<MapSummary, string>;
 
   constructor() {
     super('mappeora');
     this.version(1).stores({ maps: 'id, updatedAt' });
+    this.version(2)
+      .stores({ maps: 'id, updatedAt', summaries: 'id, updatedAt' })
+      .upgrade((tx) =>
+        tx
+          .table<ConceptMap, string>('maps')
+          .each(({ id, title, updatedAt }) => void tx.table<MapSummary, string>('summaries').put({ id, title, updatedAt })),
+      );
   }
 }
 
@@ -20,14 +29,8 @@ export class DexieStorage implements StorageService {
     void navigator.storage?.persist?.();
   }
 
-  async list(): Promise<MapSummary[]> {
-    // One map at a time: photos make the whole archive too big to hold at once.
-    const list: MapSummary[] = [];
-    await this.db.maps
-      .orderBy('updatedAt')
-      .reverse()
-      .each(({ id, title, updatedAt }) => void list.push({ id, title, updatedAt }));
-    return list;
+  list(): Promise<MapSummary[]> {
+    return this.db.summaries.orderBy('updatedAt').reverse().toArray();
   }
 
   get(id: string) {
@@ -35,10 +38,17 @@ export class DexieStorage implements StorageService {
   }
 
   async save(map: ConceptMap) {
-    await this.db.maps.put(map);
+    const { id, title, updatedAt } = map;
+    await this.db.transaction('rw', this.db.maps, this.db.summaries, async () => {
+      await this.db.maps.put(map);
+      await this.db.summaries.put({ id, title, updatedAt });
+    });
   }
 
   async remove(id: string) {
-    await this.db.maps.delete(id);
+    await this.db.transaction('rw', this.db.maps, this.db.summaries, async () => {
+      await this.db.maps.delete(id);
+      await this.db.summaries.delete(id);
+    });
   }
 }

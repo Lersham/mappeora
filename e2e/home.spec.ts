@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { addConcept, newMap, node, nodes, type TemplateName } from './helpers';
+import { addConcept, newMap, node, nodes, toolbar, type TemplateName } from './helpers';
 
 test.describe('Schermata iniziale', () => {
   const templates: [TemplateName, number][] = [
@@ -34,6 +34,45 @@ test.describe('Schermata iniziale', () => {
     await page.locator('.map-open', { hasText: 'I vulcani attivi' }).click();
     await expect(nodes(page)).toHaveCount(2);
     await expect(node(page, 'Lava')).toBeVisible();
+  });
+
+  test('«Indietro» del browser chiude la finestra aperta, poi torna alle mappe, senza uscire dal sito', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'basta provarlo una volta');
+    await newMap(page, 'I fiumi');
+    await toolbar(page, 'Salva');
+    const dialog = page.getByRole('dialog', { name: 'Salva, esporta o stampa' });
+    await expect(dialog).toBeVisible();
+    await page.goBack();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('.title-input')).toHaveValue('I fiumi');
+    await page.goBack();
+    await expect(page.locator('.map-title')).toHaveText(['I fiumi']);
+    // and opening it again, Back still comes back here
+    await page.locator('.map-open', { hasText: 'I fiumi' }).click();
+    await expect(page.locator('.title-input')).toHaveValue('I fiumi');
+    await page.goBack();
+    await expect(page.locator('.map-title')).toHaveText(['I fiumi']);
+  });
+
+  test('le mappe salvate con la versione precedente compaiono ancora nell’elenco', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'basta provarlo una volta');
+    await page.goto('/privacy.html'); // same site, without the app holding the database open
+    await page.evaluate(async () => {
+      const done = (r: IDBRequest | IDBOpenDBRequest) => new Promise((ok, ko) => ((r.onsuccess = ok), (r.onerror = ko)));
+      await done(indexedDB.deleteDatabase('mappeora'));
+      const open = indexedDB.open('mappeora', 10); // Dexie's version 1
+      open.onupgradeneeded = () => open.result.createObjectStore('maps', { keyPath: 'id' }).createIndex('updatedAt', 'updatedAt');
+      await done(open);
+      const map = { id: 'vecchia', title: 'Una mappa di prima', createdAt: 1, updatedAt: 2, template: 'libera', edges: [] };
+      const tx = open.result.transaction('maps', 'readwrite');
+      tx.objectStore('maps').put({ ...map, nodes: [{ id: 'a', label: 'Una mappa di prima', position: { x: 0, y: 0 } }] });
+      await new Promise((ok) => (tx.oncomplete = ok));
+      open.result.close();
+    });
+    await page.goto('/');
+    await expect(page.locator('.map-title')).toContainText(['Una mappa di prima']);
+    await page.locator('.map-open', { hasText: 'Una mappa di prima' }).click();
+    await expect(nodes(page)).toHaveCount(1);
   });
 
   test('se la mappa è cambiata in un’altra finestra non la sovrascrive: si salva come copia', async ({ page, context }) => {
