@@ -1,5 +1,6 @@
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react';
-import { LADDER } from '../../lib/ladder';
+import { LADDER, labelScale } from '../../lib/ladder';
+import { useSettings } from '../../store/settingsStore';
 import { roundedPath } from '../../lib/sheetLayout';
 
 export type BusEdgeData = { points: { x: number; y: number }[]; onEdit?: () => void };
@@ -12,6 +13,7 @@ export type BusFlowEdge = Edge<BusEdgeData, 'bus'>;
  * the branch.
  */
 export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, interactionWidth }: EdgeProps<BusFlowEdge>) {
+  const scale = labelScale(useSettings((s) => s.textScale));
   // The first and last bends follow the real connection points, which can
   // be a few pixels off the planned ones while concepts are being measured.
   const points = (data?.points ?? []).map((p) => ({ ...p }));
@@ -38,7 +40,7 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
           <button
             type="button"
             className="ladder-label nodrag nopan"
-            style={{ transform: `translate(${targetX}px, ${targetY - LADDER.labelSpace / 2 - 2}px) translate(-50%, -50%)` }}
+            style={{ transform: `translate(${targetX}px, ${targetY - (LADDER.labelSpace * scale) / 2 - 2}px) translate(-50%, -50%)` }}
             onClick={data?.onEdit}
             disabled={!data?.onEdit}
           >

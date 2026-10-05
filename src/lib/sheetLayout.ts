@@ -1,5 +1,5 @@
 import type { MapEdge, MapNode } from '../types/map';
-import { DEFAULT_SIZE, LADDER } from './ladder';
+import { DEFAULT_SIZE, LABEL_OFFSET, LADDER, labelWidth } from './ladder';
 
 /**
  * "Foglio A4": the main concept on top, its branches side by side below it,
@@ -56,7 +56,10 @@ export function sheetLayout(
   edges: GraphEdge[],
   sizes: Sizes = {},
   origin: Point = { x: 0, y: 0 },
+  /** From labelScale(): linking words need more room at a larger text size. */
+  scale = 1,
 ): SheetResult {
+  const labelSpace = LADDER.labelSpace * scale;
   const size = (id: string) => sizes[id] ?? DEFAULT_SIZE;
   const pos = new Map(nodes.map((n) => [n.id, n.position]));
   const valid = edges.filter((e) => pos.has(e.source) && pos.has(e.target) && e.source !== e.target);
@@ -99,7 +102,10 @@ export function sheetLayout(
       cursor += size(id).height + LADDER.gap;
       for (const e of kids.get(id) ?? []) {
         result.edges[e.id] = { kind: 'ladder' };
-        if (e.label) cursor += LADDER.labelSpace;
+        if (e.label) {
+          cursor += labelSpace;
+          width = Math.max(width, depth * LADDER.indent + LABEL_OFFSET + labelWidth(e.label, scale));
+        }
         place(e.target, depth + 1);
       }
     };
@@ -116,7 +122,7 @@ export function sheetLayout(
   // Branches go into columns like a masonry wall: the first ones side by
   // side on top, each next one under the shortest column. Every number of
   // columns is tried; the one that prints largest on an A4 sheet wins.
-  const band = (b: Block) => BAND + (b.via?.label ? LADDER.labelSpace : 0);
+  const band = (b: Block) => BAND + (b.via?.label ? labelSpace : 0);
   const measure = (cols: number) => {
     const firstBand = Math.max(...blocks.slice(0, cols).map(band));
     const bottom = Array<number>(cols).fill(0);

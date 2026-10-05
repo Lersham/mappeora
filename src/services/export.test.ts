@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { safeBreaks, slug } from './export';
+import { pdfText, safeBreaks, slug } from './export';
 
 describe('export', () => {
   it('finds the empty space between concepts, never inside one', () => {
@@ -10,6 +10,11 @@ describe('export', () => {
       { top: 204, bottom: 240 },
     ]);
     expect(breaks).toEqual([68, 202]);
+  });
+
+  it('keeps PDF titles printable with the built-in font', () => {
+    expect(pdfText('L’acqua → il “ciclo” 💧 – così…')).toBe(`L'acqua -> il "ciclo" - così...`);
+    expect(pdfText('🌍🌱')).toBe('');
   });
 
   it('makes file names without accents or spaces', () => {

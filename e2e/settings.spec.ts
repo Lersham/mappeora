@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { newMap, node, rename } from './helpers';
 
 test('Aspetto: carattere, sfondo e maiuscolo si applicano e restano dopo aver ricaricato', async ({ page }) => {
   await page.goto('/');
@@ -15,4 +16,27 @@ test('Aspetto: carattere, sfondo e maiuscolo si applicano e restano dopo aver ri
   await page.reload();
   await expect(html).toHaveAttribute('data-theme', 'scuro');
   await expect(html).toHaveAttribute('data-font', 'atkinson');
+});
+
+test('Testo grande in stampatello: le parole lunghe di un concetto non vanno a capo a metà', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('mappeora-settings')) {
+      const state = { font: 'lexend', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
+      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+    }
+  });
+  await newMap(page, 'Acqua');
+  await rename(page, 'Acqua', 'La precipitazione');
+  const words = await node(page, 'La precipitazione')
+    .locator('.concept-label')
+    .evaluate((label) => {
+      // One box per line the word is drawn on.
+      const text = label.firstChild!;
+      const at = (label.textContent ?? '').indexOf('precipitazione');
+      const range = document.createRange();
+      range.setStart(text, at);
+      range.setEnd(text, at + 'precipitazione'.length);
+      return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+    });
+  expect(words).toBe(1);
 });

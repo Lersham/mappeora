@@ -18,4 +18,11 @@ describe('autoLayout', () => {
     expect(pos.c.y).toBeGreaterThan(pos.a.y);
     expect(pos.b.x).not.toBe(pos.c.x);
   });
+
+  it('makes room for long linking words', async () => {
+    const nodes = ['a', 'b'].map((id) => ({ id, label: id, position: { x: 0, y: 0 } }));
+    const plain = await autoLayout(nodes, [{ id: 'ab', source: 'a', target: 'b' }]);
+    const worded = await autoLayout(nodes, [{ id: 'ab', source: 'a', target: 'b', label: 'è la causa principale di' }]);
+    expect(worded.b.y - worded.a.y).toBeGreaterThan(plain.b.y - plain.a.y);
+  });
 });

@@ -91,6 +91,7 @@ textarea {
 }
 .home-header {
   display: flex;
+  flex-wrap: wrap; /* large text: the buttons go under the name */
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -113,7 +114,9 @@ textarea {
 }
 .home-header-tools {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  margin-left: auto;
 }
 @media (max-width: 520px) {
   .home-brand {
@@ -128,6 +131,13 @@ textarea {
   }
   .home-header-tools .big-button {
     padding: 6px 8px;
+  }
+  .home-header-tools .big-button-icon {
+    font-size: min(1.4rem, 7vw);
+  }
+  .home-header-tools .big-button-label {
+    font-size: min(0.8rem, 3.4vw);
+    letter-spacing: normal;
   }
 }
 .home-actions {
@@ -332,10 +342,28 @@ textarea {
   .toolbar .toolbar-more {
     display: inline-flex;
   }
+  .toolbar {
+    gap: 4px;
+    padding-left: 6px;
+    padding-right: 6px;
+  }
   .toolbar .big-button {
     flex: 1 1 0;
     min-width: 0;
-    padding: 6px 4px;
+    padding: 6px 2px;
+  }
+  /* Five buttons share the width: with large text the words must still
+     fit inside their button. */
+  .toolbar .big-button-icon {
+    font-size: min(1.4rem, 7vw);
+  }
+  .toolbar .big-button-label {
+    max-width: 100%;
+    font-size: min(0.8rem, 3.1vw);
+    letter-spacing: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 /* Phones: the title gets a line of its own instead of being cut short. */
@@ -346,6 +374,18 @@ textarea {
   }
   .topbar > .big-button:first-child {
     margin-right: auto;
+  }
+  /* «Mappe», «Annulla» and «Ripeti» stay on one row with large text too. */
+  .topbar .big-button {
+    min-width: 0;
+    padding: 4px 8px;
+  }
+  .topbar .big-button-icon {
+    font-size: min(1.4rem, 7vw);
+  }
+  .topbar .big-button-label {
+    font-size: min(0.8rem, 3.4vw);
+    letter-spacing: normal;
   }
   .title-input {
     order: 1;
@@ -415,7 +455,8 @@ textarea {
   align-items: center;
   gap: 4px;
   min-width: 140px;
-  max-width: 260px;
+  /* Grows with the text size, so long words still fit on one line. */
+  max-width: min(calc(260px * var(--text-scale) / 1.15), 80vw);
   padding: 14px 18px;
   border: 3px solid rgba(0, 0, 0, 0.25);
   border-radius: 14px;
@@ -445,7 +486,8 @@ textarea {
   font-size: 1rem;
   font-weight: 600;
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 .concept-input {
   width: 100%;
@@ -487,6 +529,8 @@ textarea {
   inset: 0;
   z-index: 100;
   display: grid;
+  /* One column as wide as the screen: large text must not push a dialog off it. */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   padding: 16px;
   background: rgba(15, 20, 30, 0.45);
@@ -752,7 +796,7 @@ textarea {
 }
 .template-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
   gap: 10px;
 }
 .template-card {
@@ -921,6 +965,24 @@ textarea {
 
 /* ---------- Export: "versione per la verifica" ---------- */
 
+/* Dark text on white, whatever the theme on screen. */
+.export-simple {
+  --text: #1f2430;
+  --surface: #ffffff;
+  --bg: #ffffff;
+  --xy-edge-label-color: #1f2430;
+  --xy-edge-label-background-color: #ffffff;
+}
+.export-simple .react-flow__edge-text {
+  fill: #1f2430;
+}
+/* Pictures stay (they help to remember) but in grey, like the rest. */
+.export-simple .concept-emoji,
+.export-simple .concept-picto,
+.export-simple .concept-illustration,
+.export-simple .concept-photo {
+  filter: grayscale(1);
+}
 .export-simple .concept-node {
   background: #ffffff !important;
   border-color: #1f2430;

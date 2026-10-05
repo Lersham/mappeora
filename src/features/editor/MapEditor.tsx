@@ -17,7 +17,10 @@ import { ConceptNode, type ConceptFlowNode } from './ConceptNode';
 import { FreeEdge } from './FreeEdge';
 import { LadderEdge } from './LadderEdge';
 import { BusEdge } from './BusEdge';
+import { TreeEdge } from './TreeEdge';
 import { sheetLayout } from '../../lib/sheetLayout';
+import { labelScale } from '../../lib/ladder';
+import { useSettings } from '../../store/settingsStore';
 import { NodeStyleDialog } from './NodeStyleDialog';
 import { LinkWordDialog } from './LinkWordDialog';
 import { ExportDialog, type ExportChoice } from './ExportDialog';
@@ -52,7 +55,7 @@ function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined 
 
 /** A failed share sheet the child closed is not an error. */
 const isCancel = (e: unknown) => e instanceof Error && /cancel/i.test(e.message);
-const edgeTypes: EdgeTypes = { ladder: LadderEdge, bus: BusEdge, free: FreeEdge };
+const edgeTypes: EdgeTypes = { ladder: LadderEdge, bus: BusEdge, free: FreeEdge, tree: TreeEdge };
 
 type DialogState =
   | { kind: 'style' }
@@ -100,6 +103,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
 
   // "Foglio": where every visible concept should be. Anchored to the main
   // concept, so dragging it moves the whole map.
+  const scale = labelScale(useSettings((s) => s.textScale));
   const sheet = useMemo(() => {
     if (!sheetMode) return null;
     const part = visiblePart(map);
@@ -109,8 +113,8 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
       (best, n) => (!best || n.position.y < best.position.y || (n.position.y === best.position.y && n.position.x < best.position.x) ? n : best),
       undefined,
     );
-    return sheetLayout(part.nodes, part.edges, sizes, first?.position);
-  }, [sheetMode, map, sizes]);
+    return sheetLayout(part.nodes, part.edges, sizes, first?.position, scale);
+  }, [sheetMode, map, sizes, scale]);
 
   // Keep the sheet in order after every change (adding, deleting,
   // collapsing, dropping a dragged concept). Not an edit by the child, so
@@ -175,6 +179,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
       if (sheetTemplate && !sheet) return { ...base, type: 'free', data: { onEdit: onEdit(e.id) } }; // placed by hand
       return {
         ...base,
+        type: 'tree',
         ...(sheet && { sourceHandle: 's-spine', targetHandle: 't-left' }), // a cross-link on a sheet
         labelBgPadding: [8, 4] as [number, number],
         labelBgBorderRadius: 6,

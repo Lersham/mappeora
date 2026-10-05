@@ -43,6 +43,16 @@ describe('planPages', () => {
     expect(new Set(plan.tiles.map((t) => t.x)).size).toBe(2);
   });
 
+  it('on two sheets a wide map is cut down the middle, and prints larger than on one', () => {
+    const one = planPages(3000, 2000, 'a4', 1, layout);
+    const two = planPages(3000, 2000, 'a4', 2, layout);
+    expect(two.tiles.map((t) => [t.page, t.y])).toEqual([
+      [0, 0],
+      [1, 0],
+    ]);
+    expect(two.scale).toBeGreaterThan(one.scale * 1.5);
+  });
+
   it('does not blow up a tiny map', () => {
     expect(planPages(320, 240, 'a3', 1, layout).scale).toBeLessThanOrEqual(0.35);
   });

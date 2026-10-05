@@ -1,9 +1,16 @@
 import type { ELK } from 'elkjs/lib/elk-api';
 import type { MapEdge, MapNode } from '../types/map';
+import { labelWidth } from '../lib/ladder';
 
 // elkjs is ~1.4 MB: load it only the first time "Riordina" is pressed.
 let elk: Promise<ELK> | undefined;
-const getElk = () => (elk ??= import('elkjs/lib/elk.bundled.js').then((m) => new m.default()));
+const getElk = () =>
+  (elk ??= import('elkjs/lib/elk.bundled.js')
+    .then((m) => new m.default())
+    .catch((e: unknown) => {
+      elk = undefined; // try again next time (e.g. back online)
+      throw e;
+    }));
 
 export const DEFAULT_NODE_SIZE = { width: 180, height: 72 };
 
@@ -29,7 +36,13 @@ export async function autoLayout(
       'elk.edgeLabels.inline': 'true',
     },
     children: nodes.map((n) => ({ id: n.id, ...(sizes[n.id] ?? DEFAULT_NODE_SIZE) })),
-    edges: edges.map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] })),
+    // Linking words get their room too, so they don't cover other concepts.
+    edges: edges.map((e) => ({
+      id: e.id,
+      sources: [e.source],
+      targets: [e.target],
+      ...(e.label && { labels: [{ id: `${e.id}-label`, text: e.label, width: labelWidth(e.label), height: 24 }] }),
+    })),
   });
   const positions: Record<string, { x: number; y: number }> = {};
   for (const child of graph.children ?? []) {

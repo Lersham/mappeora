@@ -24,6 +24,19 @@ export const LADDER = {
 
 export const DEFAULT_SIZE = { width: 180, height: 72 };
 
+/**
+ * Rough width of linking words drawn on a ladder line (they are not
+ * measured): enough to keep long ones from running into the next column.
+ */
+export const labelWidth = (text: string, scale = 1) => (16 + 10 * [...text].length) * scale;
+/**
+ * Linking words grow with the reading text size: how much bigger they are
+ * than at the default size, which the numbers above are made for.
+ */
+export const labelScale = (textScale: number) => Math.max(1, textScale / 1.15);
+/** Where linking words start, from the left side of the child's parent. */
+export const LABEL_OFFSET = LADDER.spine + 10;
+
 type Sizes = Record<string, { width: number; height: number } | undefined>;
 
 export interface LadderResult {

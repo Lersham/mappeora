@@ -63,10 +63,38 @@ function keepInExport(node: HTMLElement): boolean {
   return !cls || !['concept-speak', 'concept-toggle', 'react-flow__handle'].some((c) => cls.contains(c));
 }
 
+type Rect = { x: number; y: number; width: number; height: number };
+
+function union(a: Rect, b: Rect): Rect {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return { x, y, width: Math.max(a.x + a.width, b.x + b.width) - x, height: Math.max(a.y + a.height, b.y + b.height) - y };
+}
+
+/** Linking words, in map coordinates: long ones can stick out past the concepts. */
+function labelRects(flow: HTMLElement, viewport: HTMLElement): Rect[] {
+  const m = new DOMMatrixReadOnly(getComputedStyle(viewport).transform);
+  if (!m.a || !m.d) return [];
+  const origin = flow.getBoundingClientRect();
+  return [...flow.querySelectorAll('.react-flow__edge-textwrapper, .ladder-label')]
+    .map((label) => label.getBoundingClientRect())
+    .filter((r) => r.width > 0 && r.height > 0)
+    .map((r) => ({
+      x: (r.left - origin.left - m.e) / m.a,
+      y: (r.top - origin.top - m.f) / m.d,
+      width: r.width / m.a,
+      height: r.height / m.d,
+    }));
+}
+
 /** Renders the whole map (not just the visible area) to a PNG. */
 async function renderMap(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
+  const flow = document.querySelector<HTMLElement>('.react-flow');
+  const el = flow?.querySelector<HTMLElement>('.react-flow__viewport');
+  if (!flow || !el) throw new Error('viewport-not-found');
+  await document.fonts?.ready; // the reading font, not a stand-in
   const shown = nodes.filter((n) => !n.hidden);
-  const bounds = getNodesBounds(shown);
+  const bounds = labelRects(flow, el).reduce(union, getNodesBounds(shown));
   // Small minimums only: a narrow "scaletta" must stay narrow to fill a
   // portrait sheet instead of floating in a wide empty image.
   const width = Math.max(320, Math.ceil(bounds.width + PADDING * 2));
@@ -77,9 +105,6 @@ async function renderMap(nodes: Node[], background: string, simple: boolean): Pr
     x: (width - bounds.width) / 2 - bounds.x,
     y: (height - bounds.height) / 2 - bounds.y,
   };
-  const flow = document.querySelector<HTMLElement>('.react-flow');
-  const el = flow?.querySelector<HTMLElement>('.react-flow__viewport');
-  if (!flow || !el) throw new Error('viewport-not-found');
   flow.classList.toggle('export-simple', simple);
   flow.classList.add('exporting');
   try {
@@ -127,13 +152,56 @@ function crop(img: HTMLImageElement, cssWidth: number, tile: { x: number; y: num
   return canvas.toDataURL('image/jpeg', 0.88);
 }
 
+/**
+ * The PDF's built-in font only knows Western European letters: anything
+ * else (emoji, arrows, typographic quotes) would print as garbage.
+ */
+export function pdfText(text: string): string {
+  return text
+    .replace(/[‘’‚′]/g, "'")
+    .replace(/[“”„″]/g, '"')
+    .replace(/[–—−]/g, '-')
+    .replace(/…/g, '...')
+    .replace(/→/g, '->')
+    .replace(/←/g, '<-')
+    .replace(/€/g, 'EUR')
+    .replace(/[^\u0000-\u00ff]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+type Pdf = InstanceType<typeof import('jspdf').jsPDF>;
+const TITLE_SIZE = 16;
+/** Height of one title line, in mm. */
+const TITLE_LINE = 7;
+
+/** The title on at most two lines (shortened with "..." if longer). */
+function titleLines(doc: Pdf, title: string, width: number): string[] {
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(TITLE_SIZE);
+  const lines: string[] = doc.splitTextToSize(pdfText(title) || 'Mappa', width);
+  if (lines.length <= 2) return lines;
+  let second = lines.slice(1).join(' ');
+  while (second.length > 1 && doc.getTextWidth(`${second}...`) > width) second = second.slice(0, -1);
+  return [lines[0], `${second.trimEnd()}...`];
+}
+
 async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const { jsPDF } = await import('jspdf'); // ~350 KB, only needed here
   const margin = 12;
-  const header = 12;
   const footer = opts.usesPictograms ? 8 : 4;
-  const plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks);
-  const doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper, compress: true });
+  // The header grows with the title: the sheet's way round (and so the
+  // title's room) depends on the header, so this may take a second round.
+  let header = 12;
+  let plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks);
+  let doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper, compress: true });
+  let title = titleLines(doc, opts.title, doc.internal.pageSize.getWidth() - margin * 2 - 40);
+  for (let round = 0; round < 2 && 12 + (title.length - 1) * TITLE_LINE !== header; round++) {
+    header = 12 + (title.length - 1) * TITLE_LINE;
+    plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks);
+    doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper, compress: true });
+    title = titleLines(doc, opts.title, doc.internal.pageSize.getWidth() - margin * 2 - 40);
+  }
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const boxW = pageW - margin * 2;
@@ -145,8 +213,8 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
     if (page > 0) doc.addPage(opts.paper, plan.orientation);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.text(opts.title, margin, margin + 6, { maxWidth: boxW - 40 });
+    doc.setFontSize(TITLE_SIZE);
+    title.forEach((line, i) => doc.text(line, margin, margin + 6 + i * TITLE_LINE));
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     const right = plan.pageCount > 1 ? `${date} · pagina ${page + 1} di ${plan.pageCount}` : date;

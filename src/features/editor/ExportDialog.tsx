@@ -88,7 +88,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
           <span>
             <strong>Versione per la verifica</strong>
             <br />
-            <span className="muted">Sfondo bianco, senza colori né decorazioni.</span>
+            <span className="muted">Sfondo bianco e niente colori: le immagini restano, in grigio.</span>
           </span>
         </label>
       )}

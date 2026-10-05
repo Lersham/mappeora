@@ -70,7 +70,8 @@ function cut(size: number, count: number, breaks: number[] = []): Range[] {
  * Plans portrait sheets for a map of `width` × `height` CSS pixels. Tall
  * maps (a "scaletta") are cut into strips laid out in columns, like a
  * newspaper: 1 to 3 columns per sheet, whichever prints the map largest.
- * With 4 sheets a wide map may instead use a 2×2 grid.
+ * A wide map may instead be cut down the middle too: 2 sheets side by
+ * side, or a 2×2 grid on 4.
  * `breaks` are heights where a cut doesn't split a concept.
  */
 export function planPages(
@@ -111,15 +112,16 @@ export function planPages(
     });
   }
 
-  // A wide map on 4 sheets: a 2×2 poster.
-  if (pages === 4) {
+  // A wide map: cut in two side by side too (2 sheets next to each
+  // other, or a 2×2 poster on 4).
+  if (pages % 2 === 0) {
     const xs = cut(width, 2);
-    const ys = cut(height, 2, breaks);
+    const ys = cut(height, pages / 2, breaks);
     const scale = Math.min(boxW / Math.max(...xs.map((r) => r.length)), boxH / Math.max(...ys.map((r) => r.length)), MAX_SCALE);
     consider({
       orientation: 'portrait',
       scale,
-      pageCount: 4,
+      pageCount: pages,
       tiles: ys.flatMap((y, row) =>
         xs.map((x, col) => ({
           x: x.start,
