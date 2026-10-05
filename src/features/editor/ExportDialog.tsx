@@ -72,7 +72,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
                 </button>
               ))}
             </div>
-            <p className="muted">Fogli verticali. Con più fogli le scritte sono più grandi: si uniscono uno sotto l’altro con lo scotch.</p>
+            <p className="muted">Fogli verticali. Con più fogli le scritte sono più grandi: si uniscono con lo scotch, uno sotto l’altro o uno accanto all’altro.</p>
           </fieldset>
         </>
       )}

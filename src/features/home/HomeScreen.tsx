@@ -99,7 +99,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onOpenSettings, 
       {examplesOpen && <ExamplesDialog onOpen={onOpen} onClose={() => setExamplesOpen(false)} />}
 
       <ul className="map-list">
-        {maps?.map((m) => (
+        {maps?.map(({ title, ...m }) => ({ ...m, title: title.trim() || 'Mappa senza titolo' })).map((m) => (
           <li key={m.id} className="map-card">
             <button type="button" className="map-open" onClick={() => onOpen(m.id)}>
               <span className="map-title">{m.title}</span>

@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { newMap, nodes, type TemplateName } from './helpers';
+import { addConcept, newMap, node, nodes, type TemplateName } from './helpers';
 
 test.describe('Schermata iniziale', () => {
   const templates: [TemplateName, number][] = [
@@ -24,6 +24,16 @@ test.describe('Schermata iniziale', () => {
     await page.reload();
     await page.locator('.map-open', { hasText: 'La fotosintesi delle piante' }).click();
     await expect(nodes(page)).toHaveCount(1);
+  });
+
+  test('ricaricando la pagina dall’editor, subito dopo una modifica, non si perde niente', async ({ page }) => {
+    await newMap(page, 'I vulcani');
+    await addConcept(page, 'I vulcani', 'Lava');
+    await page.locator('.title-input').fill('I vulcani attivi');
+    await page.reload(); // no time for the autosave: only the save on leaving the page
+    await page.locator('.map-open', { hasText: 'I vulcani attivi' }).click();
+    await expect(nodes(page)).toHaveCount(2);
+    await expect(node(page, 'Lava')).toBeVisible();
   });
 
   test('se la mappa è cambiata in un’altra finestra non la sovrascrive: si salva come copia', async ({ page, context }) => {

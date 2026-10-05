@@ -147,7 +147,9 @@ textarea {
   gap: 12px;
 }
 .link-button {
-  padding: 0;
+  /* A link inside a sentence: the touch area grows, the line does not. */
+  padding: 12px 4px;
+  margin: -12px -4px;
   border: 0;
   background: none;
   color: var(--primary);
@@ -343,6 +345,14 @@ textarea {
 }
 .more-grid .big-button {
   min-height: 72px;
+  min-width: 0;
+}
+/* Large text: a long word goes on two lines instead of out of its button. */
+.more-grid .big-button-label {
+  max-width: 100%;
+  text-align: center;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 @media (max-width: 900px) {
   .toolbar .toolbar-extra {
@@ -955,6 +965,12 @@ textarea {
   line-height: 1;
   cursor: pointer;
   z-index: 1;
+}
+/* 32px to look at, 44px to touch. */
+.concept-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
 }
 .concept-toggle.is-collapsed {
   background: var(--primary);

@@ -66,3 +66,27 @@ export function visiblePart<T extends Graph>(map: T): T {
     edges: map.edges.filter((e) => !hidden.has(e.source) && !hidden.has(e.target)),
   };
 }
+
+/**
+ * New places for the concepts hidden in collapsed branches, after a layout
+ * of the visible part moved the concepts they hang from: each branch keeps
+ * its shape and moves with its concept, so it reopens next to it.
+ */
+export function carryHidden(map: Graph & { nodes: { id: string; position: { x: number; y: number } }[] }, moved: Record<string, { x: number; y: number }>): Record<string, { x: number; y: number }> {
+  const { hidden, hiddenBelow } = collapseInfo(map);
+  if (hidden.size === 0) return moved;
+  const children = new Map<string, string[]>();
+  for (const e of spanningTree(map).forward) children.set(e.source, [...(children.get(e.source) ?? []), e.target]);
+  const at = new Map(map.nodes.map((n) => [n.id, n.position]));
+  const result = { ...moved };
+  for (const id of Object.keys(hiddenBelow)) {
+    const [from, to] = [at.get(id), moved[id]];
+    if (!from || !to) continue;
+    const [dx, dy] = [to.x - from.x, to.y - from.y];
+    for (const h of walk(children.get(id) ?? [], children, () => true)) {
+      const p = at.get(h);
+      if (p && hidden.has(h) && !(h in result)) result[h] = { x: p.x + dx, y: p.y + dy };
+    }
+  }
+  return result;
+}

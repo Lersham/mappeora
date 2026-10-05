@@ -35,7 +35,7 @@ import { useDictation } from '../../hooks/useDictation';
 import { autoLayout } from '../../services/layout';
 import { exportMap, saveMapFile } from '../../services/export';
 import { readingOrder } from '../../lib/readingOrder';
-import { collapseInfo, visiblePart } from '../../lib/collapse';
+import { carryHidden, collapseInfo, visiblePart } from '../../lib/collapse';
 import { spanningTree } from '../../lib/tree';
 import { layoutOf, templateInfo } from '../../lib/templates';
 import { NEW_MAP_TITLE } from '../../lib/mapFactory';
@@ -90,6 +90,8 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
   const dictation = useDictation();
   const [arranging, setArranging] = useState(false);
   const [exporting, setExporting] = useState(false);
+  /** Bumped by «Annulla»: an export still running then stops before saving. */
+  const exportRun = useRef(0);
   const [exportError, setExportError] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
@@ -292,7 +294,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
       // Read fresh state: this also runs right after adding concepts.
       const { map: current, sizes: measured } = useMapStore.getState();
       if (!current) return;
-      // Collapsed branches keep their place and are laid out when reopened.
+      // Collapsed branches are not laid out: they move with their concept.
       const part = visiblePart(current);
       const positions = await autoLayout(part.nodes, part.edges, measured);
       // The child may have moved on meanwhile: leave alone another map and
@@ -300,7 +302,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
       const now = useMapStore.getState().map;
       if (!now || now.id !== current.id) return;
       const before = new Map(current.nodes.map((n) => [n.id, n.position]));
-      const fresh = Object.fromEntries(Object.entries(positions).filter(([id]) => now.nodes.find((n) => n.id === id)?.position === before.get(id)));
+      const fresh = Object.fromEntries(Object.entries(carryHidden(current, positions)).filter(([id]) => now.nodes.find((n) => n.id === id)?.position === before.get(id)));
       if (followUp) untracked(() => actions.applyPositions(fresh));
       else actions.applyPositions(fresh);
       // Give React Flow a frame to render the new positions before fitting.
@@ -348,6 +350,8 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
   };
 
   const doExport = async ({ kind, paper, pages, simple, print }: ExportChoice) => {
+    const run = ++exportRun.current;
+    const cancelled = () => exportRun.current !== run;
     setExporting(true);
     setExportError(false);
     try {
@@ -363,15 +367,22 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           simple,
           title: map.title,
           usesPictograms: map.nodes.some((n) => n.image?.kind === 'arasaac'),
+          cancelled,
         });
       }
       // Only this dialog: the child may have opened another meanwhile.
-      setDialog((d) => (d?.kind === 'export' ? null : d));
+      if (!cancelled()) setDialog((d) => (d?.kind === 'export' ? null : d));
     } catch (e) {
-      if (!isCancel(e)) setExportError(true);
+      if (!cancelled() && !isCancel(e)) setExportError(true);
     } finally {
-      setExporting(false);
+      if (!cancelled()) setExporting(false);
     }
+  };
+  const closeExport = () => {
+    exportRun.current++;
+    setExporting(false);
+    setExportError(false);
+    setDialog(null);
   };
 
   const startReview = (mode: ReviewMode) => {
@@ -635,7 +646,7 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           return edge ? <LinkWordDialog edge={edge} onClose={() => setDialog(null)} /> : null;
         })()}
       {dialog?.kind === 'export' && (
-        <ExportDialog busy={exporting} error={exportError} onExport={doExport} onClose={() => (setExportError(false), setDialog(null))} />
+        <ExportDialog busy={exporting} error={exportError} onExport={doExport} onClose={closeExport} />
       )}
       {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}

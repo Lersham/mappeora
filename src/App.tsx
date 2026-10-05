@@ -116,6 +116,9 @@ export default function App() {
 
   const back = async () => {
     void stop();
+    // Android's Back can leave while the title is still being typed: never an empty one.
+    const open = useMapStore.getState();
+    if (open.map && !open.map.title.trim()) open.setTitle(open.map.nodes[0]?.label.trim() || NEW_MAP_TITLE);
     // The list must show the latest title, and nothing may be lost unnoticed.
     if (!(await flushAutosave())) {
       const why =

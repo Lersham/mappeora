@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collapseInfo, visiblePart } from './collapse';
+import { carryHidden, collapseInfo, visiblePart } from './collapse';
 import type { MapEdge, MapNode } from '../types/map';
 
 const node = (id: string, collapsed = false): MapNode => ({ id, label: id, position: { x: 0, y: 0 }, ...(collapsed && { collapsed }) });
@@ -54,5 +54,15 @@ describe('collapse', () => {
     const part = visiblePart({ nodes, edges: [edge('A', 'B'), edge('B', 'D')] });
     expect(part.nodes.map((n) => n.id)).toEqual(['A', 'B']);
     expect(part.edges.map((e) => e.id)).toEqual(['A-B']);
+  });
+
+  it('a layout of what is on screen moves a collapsed branch with its concept, keeping its shape', () => {
+    const at = (id: string, x: number, y: number, collapsed = false): MapNode => ({ ...node(id, collapsed), position: { x, y } });
+    const nodes = [at('A', 0, 0), at('B', 0, 100, true), at('D', 50, 200), at('E', 50, 300), at('C', 300, 100), at('F', 300, 200), at('G', 300, 300)];
+    const moved = carryHidden({ nodes, edges }, { A: { x: 0, y: 0 }, B: { x: -100, y: 150 }, C: { x: 200, y: 150 }, F: { x: 200, y: 250 }, G: { x: 200, y: 350 } });
+    expect(moved.D).toEqual({ x: -50, y: 250 });
+    expect(moved.E).toEqual({ x: -50, y: 350 });
+    // G is on screen through F: it goes where the layout put it
+    expect(moved.G).toEqual({ x: 200, y: 350 });
   });
 });

@@ -35,6 +35,8 @@ export interface ExportOptions {
   title: string;
   /** Adds the ARASAAC credit, required by the pictograms' licence. */
   usesPictograms: boolean;
+  /** True once «Annulla» was pressed: the file is then never handed over. */
+  cancelled?: () => boolean;
 }
 
 interface RenderedMap {
@@ -248,9 +250,11 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
 
 export async function exportMap(nodes: Node[], background: string, opts: ExportOptions): Promise<void> {
   const img = await renderMap(nodes, background, opts.simple);
+  if (opts.cancelled?.()) return;
   const base = `${slug(opts.title) || 'mappa'}${opts.simple ? '-verifica' : ''}`;
   if (opts.format === 'png') return shareFile(img.dataUrl, `${base}.png`, opts.title);
   const doc = await buildPdf(img, opts);
+  if (opts.cancelled?.()) return;
   if (opts.print && !isNative()) return printPdf(doc.output('blob'));
   return shareFile(doc.output('datauristring'), `${base}.pdf`, opts.title);
 }
