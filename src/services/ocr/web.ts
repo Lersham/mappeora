@@ -1,6 +1,6 @@
 import type { Worker } from 'tesseract.js';
 import { flattenPage } from '../../lib/ocrImage';
-import { confidentText, type OcrPage } from '../../lib/ocrText';
+import { confidentText, sureLetters, type OcrPage } from '../../lib/ocrText';
 import type { PickedPhoto } from '../photo';
 import { OcrDownloadError, PhotoDecodeError, type OcrService } from './types';
 
@@ -11,11 +11,19 @@ import { OcrDownloadError, PhotoDecodeError, type OcrService } from './types';
 const STALL_MS = 120_000;
 
 /**
- * Page confidence (0–100) below which the photo is read a second time,
- * evened out (see ocrImage.ts). Clean photos score above it and take one
- * pass; shadows, a hand or the table around the page score below.
+ * Page confidence (0–100) below which the photo is read again in other ways.
+ * Clean photos score above it and take one pass; shadows, a hand, the table
+ * around the page or a curved package score below.
  */
 const SURE = 90;
+
+/**
+ * Tesseract's ways of turning the photo black and white before reading:
+ * one threshold for the whole page (its default), or one for each part of
+ * it (Sauvola), which keeps the lines on a curved, unevenly lit package.
+ */
+const WHOLE_PAGE = '0';
+const EACH_PART = '2';
 
 /**
  * Tesseract.js (WebAssembly) runs in the browser: the photo never leaves
@@ -94,15 +102,26 @@ export class WebOcr implements OcrService {
       const stop = () => this.discard(pending);
       signal?.addEventListener('abort', stop, { once: true });
       try {
-        const read = async (canvas: HTMLCanvasElement, part: [number, number]): Promise<OcrPage & { confidence?: number }> => {
+        const read = async (canvas: HTMLCanvasElement, part: [number, number], threshold = WHOLE_PAGE): Promise<OcrPage & { confidence?: number }> => {
           this.reading = part;
-          return (await untilAborted(worker.recognize(canvas, {}, { text: true, blocks: true }), signal)).data;
+          if (threshold !== WHOLE_PAGE) await untilAborted(worker.setParameters({ thresholding_method: threshold }), signal);
+          try {
+            return (await untilAborted(worker.recognize(canvas, {}, { text: true, blocks: true }), signal)).data;
+          } finally {
+            if (threshold !== WHOLE_PAGE) await worker.setParameters({ thresholding_method: WHOLE_PAGE }).catch(() => {});
+          }
         };
-        let page = await read(image, [0.3, 0.8]);
-        if (page.confidence !== undefined && page.confidence < SURE) {
-          const second = await read(evenOut(image), [0.8, 1]);
-          if ((second.confidence ?? 0) > page.confidence) page = second;
-        }
+        const unsure = (p: { confidence?: number }) => p.confidence !== undefined && p.confidence < SURE;
+        // Each further reading only if the best so far is unsure; the one
+        // that reads more words for sure wins (the first one on a tie).
+        let page = await read(image, [0.3, 0.6]);
+        const tryAlso = async (next: () => Promise<OcrPage & { confidence?: number }>) => {
+          if (!unsure(page)) return;
+          const other = await next();
+          if (sureLetters(other) > sureLetters(page)) page = other;
+        };
+        await tryAlso(() => read(evenOut(image), [0.6, 0.8]));
+        await tryAlso(() => read(image, [0.8, 1], EACH_PART));
         return confidentText(page);
       } catch (e) {
         if (!signal?.aborted) this.discard(pending);

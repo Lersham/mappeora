@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanOcrText, confidentText, selectionToConcepts, sentences, tokenize } from './ocrText';
+import { cleanOcrText, confidentText, selectionToConcepts, sentences, sureLetters, tokenize } from './ocrText';
 
 describe('cleanOcrText', () => {
   it('joins hyphenated words and lines of the same paragraph, keeps paragraphs', () => {
@@ -110,5 +110,61 @@ describe('confidentText', () => {
   it('uses the plain text when the engine gives no lines', () => {
     expect(confidentText({ text: 'La fotosintesi' })).toBe('La fotosintesi');
     expect(confidentText({ text: 'La fotosintesi', blocks: null })).toBe('La fotosintesi');
+  });
+
+  it('drops the doubtful words at the ends of a line and the marks that are not words', () => {
+    const words = (...w: [string, number][]) => ({
+      text: w.map(([t]) => t).join(' ') + '\n',
+      confidence: 80,
+      words: w.map(([text, confidence]) => ({ text, confidence })),
+    });
+    const page = {
+      text: 'tutto',
+      blocks: [
+        {
+          paragraphs: [
+            {
+              lines: [
+                words(['|', 92], ['prodotto', 95], ['nel', 96], ['WC', 90], ['“amaltire', 6], ['i', 45], [':', 57], [':', 0]),
+                // Inside the line a doubtful word is a real word read badly: it stays.
+                words(['N', 19], ['il', 96], ['ciclo', 41], ["dell'acqua", 93], ['—', 88]),
+                words(['ar', 30], ['Hi', 0]),
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    expect(confidentText(page)).toBe("prodotto nel WC\nil ciclo dell'acqua\n");
+  });
+});
+
+describe('sureLetters', () => {
+  it('counts the letters of the words read for sure', () => {
+    const page = {
+      text: '',
+      blocks: [
+        {
+          paragraphs: [
+            {
+              lines: [
+                {
+                  text: "l'acqua 1 bolle |",
+                  confidence: 70,
+                  words: [
+                    { text: "l'acqua", confidence: 90 },
+                    { text: '1', confidence: 95 },
+                    { text: 'bolle', confidence: 40 },
+                    { text: '|', confidence: 99 },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    expect(sureLetters(page)).toBe(6);
+    expect(sureLetters({ text: 'testo' })).toBe(0);
   });
 });

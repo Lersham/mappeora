@@ -30,17 +30,45 @@ export function cleanOcrText(raw: string): string {
 }
 
 /** What Tesseract reports about a page it read (only the parts used here). */
+export interface OcrWord {
+  text: string;
+  confidence: number;
+}
+
 export interface OcrPage {
   text: string;
-  blocks?: { paragraphs: { lines: { text: string; confidence: number }[] }[] }[] | null;
+  blocks?: { paragraphs: { lines: (OcrWord & { words?: OcrWord[] })[] }[] }[] | null;
 }
 
 /** Lines the engine is less sure of (0–100) are mostly specks and pictures read as letters. */
 const MIN_LINE_CONFIDENCE = 50;
 
 /**
- * The text of a page without the lines the engine is unsure of, one blank
- * line between paragraphs as in Tesseract's own text.
+ * Words the engine is this unsure of, at the start or end of a line, are
+ * mostly the table or the edge of the box read as letters («| prodotto
+ * nel WC i :»). Inside a line they are kept: there they are real words
+ * read with an error, and dropping them would leave a gap.
+ */
+const MIN_EDGE_CONFIDENCE = 50;
+
+/** «|», «—)», «;»: no letter or digit, a mark on the page and not a word. */
+const SIGN = /[\p{L}\p{N}]/u;
+
+/** The words of a line without the doubtful ones at its ends. */
+function trimLine(line: OcrWord & { words?: OcrWord[] }): string {
+  const end = line.text.endsWith('\n') ? '' : '\n';
+  if (!line.words) return line.text + end;
+  const words = line.words.filter((w) => SIGN.test(w.text));
+  let a = 0;
+  let b = words.length;
+  while (a < b && words[a].confidence < MIN_EDGE_CONFIDENCE) a++;
+  while (b > a && words[b - 1].confidence < MIN_EDGE_CONFIDENCE) b--;
+  return a < b ? words.slice(a, b).map((w) => w.text).join(' ') + '\n' : '';
+}
+
+/**
+ * The text of a page without the lines and edge words the engine is unsure
+ * of, one blank line between paragraphs as in Tesseract's own text.
  */
 export function confidentText(page: OcrPage): string {
   if (!page.blocks) return page.text;
@@ -49,11 +77,27 @@ export function confidentText(page: OcrPage): string {
     .map((p) =>
       p.lines
         .filter((l) => l.confidence >= MIN_LINE_CONFIDENCE)
-        .map((l) => (l.text.endsWith('\n') ? l.text : l.text + '\n'))
+        .map(trimLine)
         .join(''),
     )
     .filter((p) => p.length > 0)
     .join('\n');
+}
+
+/** Words read with this confidence (0–100) are almost always right. */
+const SURE_WORD = 80;
+
+/**
+ * How much of a page was read for sure: the letters in the words the engine
+ * is sure of. Compares two readings of the same photo: the one that reads
+ * more text well wins, even if it is less sure of the specks around it.
+ */
+export function sureLetters(page: OcrPage): number {
+  let letters = 0;
+  for (const line of page.blocks?.flatMap((b) => b.paragraphs).flatMap((p) => p.lines) ?? []) {
+    for (const w of line.words ?? [line]) if (w.confidence >= SURE_WORD) letters += w.text.match(/\p{L}/gu)?.length ?? 0;
+  }
+  return letters;
 }
 
 export interface Token {
