@@ -29,6 +29,33 @@ export function cleanOcrText(raw: string): string {
   );
 }
 
+/** What Tesseract reports about a page it read (only the parts used here). */
+export interface OcrPage {
+  text: string;
+  blocks?: { paragraphs: { lines: { text: string; confidence: number }[] }[] }[] | null;
+}
+
+/** Lines the engine is less sure of (0–100) are mostly specks and pictures read as letters. */
+const MIN_LINE_CONFIDENCE = 50;
+
+/**
+ * The text of a page without the lines the engine is unsure of, one blank
+ * line between paragraphs as in Tesseract's own text.
+ */
+export function confidentText(page: OcrPage): string {
+  if (!page.blocks) return page.text;
+  return page.blocks
+    .flatMap((b) => b.paragraphs)
+    .map((p) =>
+      p.lines
+        .filter((l) => l.confidence >= MIN_LINE_CONFIDENCE)
+        .map((l) => (l.text.endsWith('\n') ? l.text : l.text + '\n'))
+        .join(''),
+    )
+    .filter((p) => p.length > 0)
+    .join('\n');
+}
+
 export interface Token {
   /** Position among *word* tokens only (-1 for spaces and punctuation). */
   word: number;

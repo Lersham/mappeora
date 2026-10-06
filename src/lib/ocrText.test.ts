@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanOcrText, selectionToConcepts, sentences, tokenize } from './ocrText';
+import { cleanOcrText, confidentText, selectionToConcepts, sentences, tokenize } from './ocrText';
 
 describe('cleanOcrText', () => {
   it('joins hyphenated words and lines of the same paragraph, keeps paragraphs', () => {
@@ -89,5 +89,26 @@ describe('sentences', () => {
       'Nel 753 a.C. nasce Roma, ecc. e poi.',
       'Fine',
     ]);
+  });
+});
+
+describe('confidentText', () => {
+  const line = (text: string, confidence: number) => ({ text, confidence });
+
+  it('drops the lines the engine is unsure of and keeps the paragraphs', () => {
+    const page = {
+      text: 'tutto',
+      blocks: [
+        { paragraphs: [{ lines: [line('La fotosintesi\n', 93), line('~ ;i ,:\n', 21)] }] },
+        { paragraphs: [{ lines: [line('{ill \n', 30)] }, { lines: [line('Le piante\n', 88), line('usano la luce.', 75)] }] },
+      ],
+    };
+    expect(confidentText(page)).toBe('La fotosintesi\n\nLe piante\nusano la luce.\n');
+    expect(cleanOcrText(confidentText(page))).toBe('La fotosintesi\n\nLe piante usano la luce.');
+  });
+
+  it('uses the plain text when the engine gives no lines', () => {
+    expect(confidentText({ text: 'La fotosintesi' })).toBe('La fotosintesi');
+    expect(confidentText({ text: 'La fotosintesi', blocks: null })).toBe('La fotosintesi');
   });
 });
