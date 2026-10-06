@@ -14,12 +14,14 @@ interface Props {
   onCreate(): void;
   /** A new map that opens on «Dal libro», from the welcome. */
   onStartFromBook(): void;
+  /** A new map with the step-by-step guide («Impara facendo»). */
+  onStartTutorial(): void;
   onOpenSettings(): void;
   /** Something that went wrong opening or creating a map. */
   error?: string | null;
 }
 
-export function HomeScreen({ onOpen, onCreate, onStartFromBook, onOpenSettings, error }: Props) {
+export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial, onOpenSettings, error }: Props) {
   const [maps, setMaps] = useState<MapSummary[] | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [examplesOpen, setExamplesOpen] = useState(false);
@@ -79,6 +81,13 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onOpenSettings, 
         <BigButton icon="➕" label="Nuova mappa" variant="primary" className="home-new" onClick={onCreate} />
         <BigButton icon="📂" label="Apri file" className="home-new" onClick={() => void importFile()} />
         <BigButton icon="📚" label="Esempi" className="home-new" onClick={() => setExamplesOpen(true)} />
+        <BigButton
+          icon="🎓"
+          label="Impara facendo"
+          title="Costruisci la tua prima mappa passo passo, con una guida"
+          className="home-new"
+          onClick={onStartTutorial}
+        />
       </div>
       {[error, importError, listError].filter(Boolean).map((message) => (
         <p key={message} className="field-error" role="alert">

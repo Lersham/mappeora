@@ -46,6 +46,8 @@ import { motion } from '../../lib/motion';
 import { MAP_ARIA_LABELS, edgeAriaLabel, spokenLabel } from './a11yLabels';
 import { SaveProblemNotice } from './SaveProblemNotice';
 import { OptionCard } from '../../components/OptionCard';
+import { TutorialCoach } from '../tutorial/TutorialCoach';
+import { TUTORIAL_STEPS } from '../tutorial/steps';
 
 const nodeTypes = { concept: ConceptNode };
 
@@ -75,9 +77,11 @@ interface Props {
   onOpenSettings(): void;
   /** Opens straight on a tool, e.g. «Dal libro» from the welcome. */
   initialDialog?: 'photo';
+  /** «Impara facendo»: a guide below the map, one step at a time. */
+  tutorial?: boolean;
 }
 
-function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
+function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const map = useMapStore((s) => s.map)!;
   const selectedId = useMapStore((s) => s.selectedId);
   const sizes = useMapStore((s) => s.sizes);
@@ -95,6 +99,10 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
   const [exportError, setExportError] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
+  const [tutorialStep, setTutorialStep] = useState<number | null>(tutorial ? 0 : null);
+  const tutorialTarget = tutorialStep === null ? undefined : TUTORIAL_STEPS[tutorialStep]?.target;
+  /** The button the tutorial is asking for stands out. */
+  const target = (name: typeof tutorialTarget) => (name && tutorialTarget === name ? 'tutorial-target' : undefined);
   // Libera and 5 W fill an A4 sheet by themselves, unless the child chose
   // to place the concepts by hand.
   const sheetTemplate = templateInfo(map.template).layout === 'foglio';
@@ -600,16 +608,24 @@ function Editor({ onBack, onOpenSettings, initialDialog }: Props) {
           {current.text}
         </p>
       )}
+      {!review.active && tutorialStep !== null && (
+        <TutorialCoach
+          key={tutorialStep}
+          index={tutorialStep}
+          onNext={() => setTutorialStep((i) => (i === null || i + 1 >= TUTORIAL_STEPS.length ? null : i + 1))}
+          onClose={() => setTutorialStep(null)}
+        />
+      )}
       {review.active ? (
         <ReviewBar onRepeat={() => current && void reader.readSteps([current])} onOverview={overview} onExit={exitReview} />
       ) : (
         <nav className="toolbar" aria-label="Strumenti">
-          <BigButton icon="➕" label="Concetto" variant="primary" onClick={() => addConcept()} />
-          <BigButton icon="🎤" label="Detta" onClick={dictate} disabled={dictation.listening} />
+          <BigButton icon="➕" label="Concetto" variant="primary" className={target('concetto')} onClick={() => addConcept()} />
+          <BigButton icon="🎤" label="Detta" className={target('detta')} onClick={dictate} disabled={dictation.listening} />
           {reader.active ? (
             <BigButton icon="⏹️" label="Stop" onClick={() => void reader.stop()} />
           ) : (
-            <BigButton icon="🔊" label="Leggi" onClick={reader.readMap} />
+            <BigButton icon="🔊" label="Leggi" className={target('leggi')} onClick={reader.readMap} />
           )}
           <BigButton icon="🧠" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
           {moreTools.map(({ key, ...t }) => (

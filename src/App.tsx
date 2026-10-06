@@ -20,6 +20,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { SpeechProblemNotice } from './components/SpeechProblemNotice';
 import { illustrationUrl } from './services/illustrations';
 import type { ConceptMap } from './types/map';
+import { TUTORIAL_TITLE } from './features/tutorial/steps';
 
 /** Saves into the map the illustrations of older maps, so they work offline too. */
 async function embedOldImages(map: ConceptMap) {
@@ -78,6 +79,8 @@ export default function App() {
   const [homeError, setHomeError] = useState<string | null>(null);
   // The welcome's «Provalo adesso» opens the new map straight on «Dal libro».
   const [startDialog, setStartDialog] = useState<'photo' | undefined>();
+  // «Impara facendo» guides the child through the new map.
+  const [tutorial, setTutorial] = useState(false);
   const { stop } = useReadAloud();
 
   const open = async (id: string) => {
@@ -90,6 +93,7 @@ export default function App() {
         return;
       }
       setStartDialog(undefined);
+      setTutorial(false);
       // Voice notes ("Spiega") were removed: drop any left in older maps.
       const map = { ...stored, nodes: stored.nodes.map(({ audio: _audio, ...n }: typeof stored.nodes[number] & { audio?: unknown }) => n) };
       showMap(map);
@@ -99,7 +103,7 @@ export default function App() {
     }
   };
 
-  const create = async (title: string, template: MapTemplate, dialog?: 'photo') => {
+  const create = async (title: string, template: MapTemplate, dialog?: 'photo', guided = false) => {
     setHomeError(null);
     const map = createMap(title, template);
     try {
@@ -111,6 +115,7 @@ export default function App() {
     }
     setNewMapOpen(false);
     setStartDialog(dialog);
+    setTutorial(guided);
     showMap(map);
   };
 
@@ -170,12 +175,13 @@ export default function App() {
       }}
     >
       {hasMap ? (
-        <MapEditor onBack={back} onOpenSettings={() => setSettingsOpen(true)} initialDialog={startDialog} />
+        <MapEditor onBack={back} onOpenSettings={() => setSettingsOpen(true)} initialDialog={startDialog} tutorial={tutorial} />
       ) : (
         <HomeScreen
           onOpen={open}
           onCreate={() => setNewMapOpen(true)}
           onStartFromBook={() => void create(NEW_MAP_TITLE, 'libera', 'photo')}
+          onStartTutorial={() => void create(TUTORIAL_TITLE, 'libera', undefined, true)}
           onOpenSettings={() => setSettingsOpen(true)}
           error={homeError}
         />

@@ -7,6 +7,7 @@ import { collapseInfo } from '../lib/collapse';
 import { fromOutline, type OutlineRow } from '../lib/outline';
 import { spanningTree } from '../lib/tree';
 import { DEFAULT_SIZE } from '../lib/ladder';
+import { NEW_CONCEPT_LABEL } from '../lib/mapFactory';
 
 type Size = { width: number; height: number };
 
@@ -100,7 +101,7 @@ export const useMapStore = create<MapState>()(
 
       select: (selectedId) => set({ selectedId }),
 
-      addChild: (parentId, label = 'Nuovo concetto') => {
+      addChild: (parentId, label = NEW_CONCEPT_LABEL) => {
         const id = newId();
         set((s) =>
           edit(s, (map) => {
