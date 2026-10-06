@@ -449,6 +449,32 @@ textarea {
 .ladder-label:disabled {
   cursor: default;
 }
+/* A line with no linking words yet: a «+» a finger can find. */
+.link-add {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Above the concepts' connection dots, whose wide touch area reaches it. */
+  z-index: 1001;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: all;
+  cursor: pointer;
+}
+.link-add::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+}
 /* "Foglio" maps: connection points a concept's role doesn't use. */
 .react-flow__handle.handle-hidden {
   opacity: 0;

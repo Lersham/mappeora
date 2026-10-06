@@ -45,7 +45,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Le parole che collegano',
-    text: 'Tocca la linea tra i due riquadri e scegli come sono legati, per esempio «serve per» o «causa». Così la mappa si legge come una frase.',
+    text: 'Tocca il «+» sulla linea tra i due riquadri (o la linea stessa) e scegli come sono legati, per esempio «serve per» o «causa». Così la mappa si legge come una frase.',
     done: (now, start) =>
       now.map.edges.some((e) => !!e.label?.trim() && start.map.edges.find((s) => s.id === e.id)?.label !== e.label),
   },

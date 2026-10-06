@@ -30,13 +30,16 @@ const SPEECH_STUB = () => {
   // `voiceschanged` event a moment later.
   const voiceListeners = new Set<() => void>();
   const voices = [{ voiceURI: 'it-test', name: 'Italiano (test)', lang: 'it-IT', default: true, localService: true }];
+  // `__googleVoice`: Chrome's online Italian voice is there too; with
+  // `__googleFails` it cannot reach the internet.
+  const google = { voiceURI: 'Google italiano', name: 'Google italiano', lang: 'it-IT', default: false, localService: false };
   const synth = {
     speaking: false,
     pending: false,
     paused: false,
     onvoiceschanged: null,
     getVoices() {
-      if (!w.__voicesLate) return voices;
+      if (!w.__voicesLate) return w.__googleVoice ? [...voices, google] : voices;
       if (w.__voicesLate === true) {
         w.__voicesLate = 'loading';
         setTimeout(() => {
@@ -49,6 +52,10 @@ const SPEECH_STUB = () => {
     speak(u: Utterance) {
       spoken.push(u.text);
       voicesUsed.push(u.voice?.voiceURI ?? '');
+      if (w.__googleFails && u.voice === google) {
+        setTimeout(() => u.onerror?.({ error: 'network' } as SpeechSynthesisErrorEvent), 0);
+        return;
+      }
       current = u;
       const words = [...u.text.matchAll(/\S+/g)];
       let i = 0;
@@ -220,6 +227,11 @@ export function slowVoice(page: Page, msPerWord = 400) {
 }
 
 /** The voice of each thing read aloud ('' = the default one). */
+/** Chrome's «Google italiano» is among the voices; `offline`: it cannot speak. */
+export function googleVoice(page: Page, { offline = false } = {}) {
+  return page.evaluate((offline) => Object.assign(window, { __googleVoice: true, __googleFails: offline }), offline);
+}
+
 export function voicesUsed(page: Page): Promise<string[]> {
   return page.evaluate(() => [...(window as unknown as { __voicesUsed: string[] }).__voicesUsed]);
 }

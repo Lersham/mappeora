@@ -2,6 +2,7 @@ import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/
 import { LADDER, labelScale } from '../../lib/ladder';
 import { useSettings } from '../../store/settingsStore';
 import { roundedPath } from '../../lib/sheetLayout';
+import { LinkAdd } from './LinkAdd';
 
 export type BusEdgeData = { points: { x: number; y: number }[]; onEdit?: () => void };
 export type BusFlowEdge = Edge<BusEdgeData, 'bus'>;
@@ -33,7 +34,7 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
         className="react-flow__edge-interaction"
         fill="none"
         stroke="transparent"
-        strokeWidth={interactionWidth ?? 32}
+        strokeWidth={interactionWidth ?? 40}
       />
       {label && (
         <EdgeLabelRenderer>
@@ -48,6 +49,7 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
           </button>
         </EdgeLabelRenderer>
       )}
+      {!label && <LinkAdd x={targetX} y={(last.y + targetY) / 2} onEdit={data?.onEdit} />}
     </>
   );
 }

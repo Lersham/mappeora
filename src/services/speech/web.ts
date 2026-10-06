@@ -1,4 +1,4 @@
-import { DEFAULT_LANG, type ListenOptions, type SpeakOptions, type SpeechService, type Voice } from './types';
+import { DEFAULT_LANG, preferredVoice, type ListenOptions, type SpeakOptions, type SpeechService, type Voice } from './types';
 
 // The Web Speech recognition API is still prefixed in Chrome/Safari and
 // missing from TypeScript's DOM lib, so we describe the bits we use.
@@ -23,13 +23,19 @@ function recognitionCtor(): RecognitionCtor | undefined {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition;
 }
 
+/** A browser with no voices at all is only waited for once. */
+let waitedForVoices = false;
+
 /** Voices load asynchronously in Chrome: wait for `voiceschanged` once. */
 function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   const synth = window.speechSynthesis;
   const voices = synth.getVoices();
-  if (voices.length > 0) return Promise.resolve(voices);
+  if (voices.length > 0 || waitedForVoices) return Promise.resolve(voices);
   return new Promise((resolve) => {
-    const done = () => resolve(synth.getVoices());
+    const done = () => {
+      waitedForVoices = true;
+      resolve(synth.getVoices());
+    };
     synth.addEventListener('voiceschanged', done, { once: true });
     setTimeout(done, 1500);
   });
@@ -47,7 +53,7 @@ export class WebSpeechService implements SpeechService {
     const prefix = lang.slice(0, 2);
     return (await loadVoices())
       .filter((v) => v.lang.replace('_', '-').startsWith(prefix))
-      .map((v) => ({ id: v.voiceURI, name: v.name, lang: v.lang }));
+      .map((v) => ({ id: v.voiceURI, name: v.name, lang: v.lang, localService: v.localService }));
   }
 
   async speak(text: string, options: SpeakOptions = {}): Promise<void> {
@@ -58,11 +64,13 @@ export class WebSpeechService implements SpeechService {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = options.lang ?? DEFAULT_LANG;
     utterance.rate = options.rate ?? 1;
-    if (options.voiceId) {
-      const voice = (await loadVoices()).find((v) => v.voiceURI === options.voiceId);
-      if (voice) utterance.voice = voice;
-      if (mine !== this.generation) return;
-    }
+    const voices = await loadVoices();
+    if (mine !== this.generation) return;
+    const chosen = options.voiceId ? voices.find((v) => v.voiceURI === options.voiceId) : undefined;
+    // With no voice chosen, the most natural one there is («Google italiano»).
+    const preferred = chosen ? undefined : preferredVoice(voices, utterance.lang, navigator.onLine);
+    const voice = chosen ?? preferred;
+    if (voice) utterance.voice = voice;
     return new Promise((resolve) => {
       utterance.onboundary = (e) => {
         if (e.name !== 'word' || !options.onWord) return;
@@ -71,7 +79,15 @@ export class WebSpeechService implements SpeechService {
         options.onWord(e.charIndex, end);
       };
       utterance.onend = () => resolve();
-      utterance.onerror = () => resolve();
+      utterance.onerror = (e) => {
+        // Google's voices speak from the internet: when it is not there,
+        // the browser's own voice says it instead.
+        if (preferred && !preferred.localService && e.error !== 'interrupted' && e.error !== 'canceled' && mine === this.generation) {
+          utterance.voice = null;
+          utterance.onerror = () => resolve();
+          synth.speak(utterance);
+        } else resolve();
+      };
       synth.speak(utterance);
     });
   }

@@ -1,5 +1,7 @@
 import { BaseEdge, EdgeLabelRenderer, useInternalNode, type Edge, type EdgeProps, type InternalNode } from '@xyflow/react';
 
+import { LinkAdd } from './LinkAdd';
+
 export type FreeEdgeData = { onEdit?: () => void };
 export type FreeFlowEdge = Edge<FreeEdgeData, 'free'>;
 
@@ -45,6 +47,7 @@ export function FreeEdge({ id, source, target, label, data, interactionWidth }: 
           </button>
         </EdgeLabelRenderer>
       )}
+      {!label && <LinkAdd x={mid.x} y={mid.y} onEdit={data?.onEdit} />}
     </>
   );
 }

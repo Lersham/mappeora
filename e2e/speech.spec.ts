@@ -1,4 +1,4 @@
-import { test, expect, holdMic, lateVoices, micError, micsOpen, say, slowVoice, spoken, voicesUsed } from './fixtures';
+import { test, expect, googleVoice, holdMic, lateVoices, micError, micsOpen, say, slowVoice, spoken, voicesUsed } from './fixtures';
 import { newMap, sampleMap, toolbar } from './helpers';
 
 test.describe('Voce', () => {
@@ -102,5 +102,27 @@ test.describe('Voce', () => {
     await expect(settings).toHaveCount(0);
     await toolbar(page, 'Leggi');
     await expect.poll(() => voicesUsed(page)).toEqual(['it-test']);
+  });
+
+  test('senza una voce scelta legge con «Google italiano», se c’è', async ({ page }) => {
+    await sampleMap(page);
+    await googleVoice(page);
+    await toolbar(page, 'Aspetto');
+    const settings = page.getByRole('dialog', { name: 'Aspetto e voce' });
+    await expect(settings.getByRole('combobox', { name: 'Voce', exact: true })).toHaveValue('');
+    await expect(settings.getByRole('option', { name: 'Predefinita (Google italiano)' })).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await toolbar(page, 'Leggi');
+    await expect.poll(async () => (await voicesUsed(page))[0]).toBe('Google italiano');
+  });
+
+  test('se «Google italiano» non ha internet, la frase la dice la voce del dispositivo', async ({ page }) => {
+    await sampleMap(page);
+    await googleVoice(page, { offline: true });
+    await toolbar(page, 'Leggi');
+    await expect.poll(async () => (await voicesUsed(page)).slice(0, 2)).toEqual(['Google italiano', '']);
+    await expect.poll(async () => (await spoken(page)).length).toBeGreaterThan(3);
+    const said = await spoken(page);
+    expect(said[1]).toBe(said[0]);
   });
 });

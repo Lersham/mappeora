@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSettings, type FontChoice, type ThemeChoice } from '../../store/settingsStore';
-import { speech, type Voice } from '../../services/speech';
+import { preferredVoice, speech, type Voice } from '../../services/speech';
 import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { Dialog } from '../../components/Dialog';
@@ -24,6 +24,7 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
   const s = useSettings();
   const [voices, setVoices] = useState<Voice[]>([]);
   const { readText } = useReadAloud();
+  const automatic = preferredVoice(voices, undefined, navigator.onLine);
 
   useEffect(() => {
     void speech().getVoices().then(setVoices, () => setVoices([]));
@@ -113,7 +114,7 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
         <label className="setting">
           <span>Voce</span>
           <select value={s.voiceId ?? ''} onChange={(e) => s.update({ voiceId: e.target.value || undefined })}>
-            <option value="">Predefinita</option>
+            <option value="">{automatic ? `Predefinita (${automatic.name})` : 'Predefinita'}</option>
             {voices.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}

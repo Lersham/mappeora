@@ -1,6 +1,7 @@
 import { BaseEdge, EdgeLabelRenderer, useInternalNode, type Edge, type EdgeProps } from '@xyflow/react';
 import { LADDER, labelScale } from '../../lib/ladder';
 import { useSettings } from '../../store/settingsStore';
+import { LinkAdd } from './LinkAdd';
 
 export type LadderEdgeData = { onEdit?: () => void };
 export type LadderFlowEdge = Edge<LadderEdgeData, 'ladder'>;
@@ -32,6 +33,8 @@ export function LadderEdge({ id, target, sourceX, sourceY, targetX, targetY, lab
           </button>
         </EdgeLabelRenderer>
       )}
+      {/* On the line down, level with the child's top: clear of its connection dot. */}
+      {!label && <LinkAdd x={sourceX} y={targetY - childHeight / 2} onEdit={data?.onEdit} />}
     </>
   );
 }

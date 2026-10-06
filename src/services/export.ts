@@ -65,7 +65,7 @@ export function safeBreaks(spans: { top: number; bottom: number }[]): number[] {
 /** Interactive bits that must never end up on paper. */
 function keepInExport(node: HTMLElement): boolean {
   const cls = node.classList;
-  return !cls || !['concept-speak', 'concept-toggle', 'react-flow__handle'].some((c) => cls.contains(c));
+  return !cls || !['concept-speak', 'concept-toggle', 'link-add', 'react-flow__handle'].some((c) => cls.contains(c));
 }
 
 type Rect = { x: number; y: number; width: number; height: number };

@@ -194,7 +194,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     if (secret) labels.set(secret, '?');
     return map.edges.map((e) => {
       const ariaLabel = edgeAriaLabel(labels.get(e.source) ?? '', labels.get(e.target) ?? '', e.label);
-      const base = { id: e.id, source: e.source, target: e.target, label: e.label, ariaLabel, interactionWidth: 32, className: 'concept-edge' };
+      const base = { id: e.id, source: e.source, target: e.target, label: e.label, ariaLabel, interactionWidth: 40, className: 'concept-edge' };
       const kind = shown?.edges[e.id];
       if (kind?.kind === 'bus') {
         return { ...base, type: 'bus', sourceHandle: 's-bottom', targetHandle: 't-top', data: { points: kind.points, onEdit: onEdit(e.id) } };
@@ -206,6 +206,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       return {
         ...base,
         type: 'tree',
+        data: { onEdit: onEdit(e.id) },
         ...(shown && { sourceHandle: 's-spine', targetHandle: 't-left' }), // a cross-link on a sheet
         labelBgPadding: [8, 4] as [number, number],
         labelBgBorderRadius: 6,

@@ -4,6 +4,7 @@ import { WebSpeechService } from './web';
 import { NativeSpeechService } from './native';
 
 export type { SpeechService, Voice, SpeakOptions, ListenOptions } from './types';
+export { preferredVoice } from './types';
 
 let instance: SpeechService | undefined;
 
