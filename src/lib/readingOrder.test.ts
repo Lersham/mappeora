@@ -6,14 +6,14 @@ const node = (id: string, label = id): MapNode => ({ id, label, position: { x: 0
 const edge = (source: string, target: string, label?: string): MapEdge => ({ id: `${source}-${target}`, source, target, label });
 
 describe('readingOrder', () => {
-  it('reads from the root, breadth first, prefixing linking words', () => {
+  it('reads from the root, breadth first, as propositions where there are linking words', () => {
     const steps = readingOrder({
       nodes: [node('c', 'ossigeno'), node('a', 'acqua'), node('b', 'idrogeno')],
       edges: [edge('a', 'b', 'è formata da'), edge('a', 'c')],
     });
     expect(steps).toEqual([
       { nodeId: 'a', text: 'acqua' },
-      { nodeId: 'b', text: 'è formata da: idrogeno' },
+      { nodeId: 'b', text: 'acqua è formata da idrogeno' },
       { nodeId: 'c', text: 'ossigeno' },
     ]);
   });
@@ -27,7 +27,16 @@ describe('readingOrder', () => {
       },
       { depthFirst: true },
     );
-    expect(steps.map((s) => s.text)).toEqual(['acqua', 'è formata da: idrogeno', 'atomo', 'ossigeno']);
+    expect(steps.map((s) => s.text)).toEqual(['acqua', 'acqua è formata da idrogeno', 'atomo', 'ossigeno']);
+  });
+
+  it('puts a concept on two lines on one, and always ends with the concept read', () => {
+    const steps = readingOrder({
+      nodes: [node('a', 'La Rivoluzione francese\n1789 – 1799'), node('b', 'Le cause')],
+      edges: [edge('a', 'b', '  nasce da ')],
+    });
+    expect(steps[1].text).toBe('La Rivoluzione francese 1789 – 1799 nasce da Le cause');
+    expect(steps[1].text.endsWith('Le cause')).toBe(true);
   });
 
   it('includes disconnected nodes and survives cycles', () => {

@@ -40,7 +40,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Dagli un nome',
-    text: 'Tocca due volte «Nuovo concetto» e scrivi un’idea che c’entra. Per esempio: «Luce e calore».',
+    text: 'Il riquadro nuovo è già pronto: scrivi un’idea che c’entra, per esempio «Luce e calore», e premi Invio. Per cambiare un nome più tardi, tocca due volte il riquadro.',
     done: (now) => now.map.nodes.length > 1 && !now.map.nodes.some((n) => n.label === NEW_CONCEPT_LABEL),
   },
   {

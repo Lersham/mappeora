@@ -3,13 +3,19 @@ import { ladderLayout } from './ladder';
 
 export interface ReadingStep {
   nodeId: string;
-  /** Text spoken for this step, e.g. "Acqua. È formata da: idrogeno". */
+  /**
+   * Text spoken for this step. With linking words the whole proposition,
+   * as a concept map is meant to be read: "Acqua è formata da Idrogeno".
+   * It always ends with the concept's own name (see useReadAloud: offset).
+   */
   text: string;
 }
 
-const step = (node: MapNode, linkWords?: string): ReadingStep => ({
+const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim();
+
+const step = (node: MapNode, linkWords?: string, from?: MapNode): ReadingStep => ({
   nodeId: node.id,
-  text: `${linkWords ? `${linkWords}: ` : ''}${node.label}`,
+  text: linkWords?.trim() ? `${from ? `${oneLine(from.label)} ` : ''}${oneLine(linkWords)} ${node.label}` : node.label,
 });
 
 /**
@@ -23,8 +29,11 @@ export function readingOrder(map: Pick<ConceptMap, 'nodes' | 'edges'>, opts: { d
   if (opts.depthFirst) {
     const { order, treeEdges } = ladderLayout(map.nodes, map.edges);
     const byId = new Map(map.nodes.map((n) => [n.id, n]));
-    const incoming = new Map(map.edges.filter((e) => treeEdges.has(e.id)).map((e) => [e.target, e.label]));
-    return order.map((id) => step(byId.get(id)!, incoming.get(id)));
+    const incoming = new Map(map.edges.filter((e) => treeEdges.has(e.id)).map((e) => [e.target, e]));
+    return order.map((id) => {
+      const via = incoming.get(id);
+      return step(byId.get(id)!, via?.label, via && byId.get(via.source));
+    });
   }
 
   const byId = new Map(map.nodes.map((n) => [n.id, n]));
@@ -41,7 +50,7 @@ export function readingOrder(map: Pick<ConceptMap, 'nodes' | 'edges'>, opts: { d
       if (visited.has(node.id)) continue;
       visited.add(node.id);
       const incoming = map.edges.find((e) => e.target === node.id && visited.has(e.source));
-      steps.push(step(node, incoming?.label));
+      steps.push(step(node, incoming?.label, incoming && byId.get(incoming.source)));
       for (const edge of map.edges) {
         if (edge.source !== node.id) continue;
         const child = byId.get(edge.target);

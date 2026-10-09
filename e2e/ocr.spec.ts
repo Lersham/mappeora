@@ -119,3 +119,12 @@ async function choosePage(page: import('@playwright/test').Page) {
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'),
   });
 }
+
+test('dopo aver letto la foto, Esc chiude ancora «Dal libro»', async ({ page }) => {
+  await fakeOcr(page, 'Le piante producono ossigeno.');
+  await newMap(page, 'Le piante');
+  await toolbar(page, 'Dal libro');
+  const dialog = await photographPage(page);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+});

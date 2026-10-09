@@ -1,5 +1,6 @@
-import type { Worker } from 'tesseract.js';
+import type { PSM, Worker } from 'tesseract.js';
 import { flattenPage } from '../../lib/ocrImage';
+import { skewAngle, STRAIGHT_ENOUGH } from '../../lib/deskew';
 import { confidentText, sureLetters, type OcrPage } from '../../lib/ocrText';
 import type { PickedPhoto } from '../photo';
 import { OcrDownloadError, PhotoDecodeError, type OcrService } from './types';
@@ -24,6 +25,14 @@ const SURE = 90;
  */
 const WHOLE_PAGE = '0';
 const EACH_PART = '2';
+
+/**
+ * How Tesseract finds the text on the page: on its own, columns and
+ * headings included (3), or as one block of lines (6, its usual). A page in
+ * two columns read as one block mixes the lines of the two.
+ */
+const FIND_LAYOUT = '3' as PSM.AUTO;
+const ONE_BLOCK = '6' as PSM.SINGLE_BLOCK;
 
 /**
  * Tesseract.js (WebAssembly) runs in the browser: the photo never leaves
@@ -95,33 +104,37 @@ export class WebOcr implements OcrService {
     this.progress = report;
     try {
       // A photo that does not open must not cost a (re)download of the engine.
-      const image = await downscale(photo.webPath);
+      const image = straighten(await downscale(photo.webPath));
       const pending = this.getWorker();
       // Cancelled while downloading: the download goes on, ready for next time.
       const worker = await untilAborted(pending, signal);
       const stop = () => this.discard(pending);
       signal?.addEventListener('abort', stop, { once: true });
       try {
-        const read = async (canvas: HTMLCanvasElement, part: [number, number], threshold = WHOLE_PAGE): Promise<OcrPage & { confidence?: number }> => {
+        const read = async (
+          canvas: HTMLCanvasElement,
+          part: [number, number],
+          threshold: string,
+          layout: PSM,
+        ): Promise<OcrPage & { confidence?: number }> => {
           this.reading = part;
-          if (threshold !== WHOLE_PAGE) await untilAborted(worker.setParameters({ thresholding_method: threshold }), signal);
-          try {
-            return (await untilAborted(worker.recognize(canvas, {}, { text: true, blocks: true }), signal)).data;
-          } finally {
-            if (threshold !== WHOLE_PAGE) await worker.setParameters({ thresholding_method: WHOLE_PAGE }).catch(() => {});
-          }
+          await untilAborted(worker.setParameters({ thresholding_method: threshold, tessedit_pageseg_mode: layout }), signal);
+          return (await untilAborted(worker.recognize(canvas, {}, { text: true, blocks: true }), signal)).data;
         };
         const unsure = (p: { confidence?: number }) => p.confidence !== undefined && p.confidence < SURE;
         // Each further reading only if the best so far is unsure; the one
         // that reads more words for sure wins (the first one on a tie).
-        let page = await read(image, [0.3, 0.6]);
+        // First the page as a page (columns, headings), each part with its
+        // own threshold. If unsure: evened out, as one block (best on a page
+        // half in shadow); then one block, each part with its own threshold.
+        let page = await read(image, [0.3, 0.6], EACH_PART, FIND_LAYOUT);
         const tryAlso = async (next: () => Promise<OcrPage & { confidence?: number }>) => {
           if (!unsure(page)) return;
           const other = await next();
           if (sureLetters(other) > sureLetters(page)) page = other;
         };
-        await tryAlso(() => read(evenOut(image), [0.6, 0.8]));
-        await tryAlso(() => read(image, [0.8, 1], EACH_PART));
+        await tryAlso(() => read(evenOut(image), [0.6, 0.8], WHOLE_PAGE, ONE_BLOCK));
+        await tryAlso(() => read(image, [0.8, 1], EACH_PART, ONE_BLOCK));
         return confidentText(page);
       } catch (e) {
         if (!signal?.aborted) this.discard(pending);
@@ -171,6 +184,44 @@ async function downscale(src: string): Promise<HTMLCanvasElement> {
   canvas.height = Math.round(img.naturalHeight * scale);
   canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
   return canvas;
+}
+
+/** Sample size for measuring the tilt: enough for the lines, quick to scan. */
+const TILT_SAMPLE = 800;
+
+/**
+ * The page turned level, if the photo was taken askew (see lib/deskew.ts).
+ * The corners that come into view are white, like paper.
+ */
+function straighten(photo: HTMLCanvasElement): HTMLCanvasElement {
+  const { width: W, height: H } = photo;
+  const k = Math.min(1, TILT_SAMPLE / Math.max(W, H));
+  const [w, h] = [Math.max(1, Math.round(W * k)), Math.max(1, Math.round(H * k))];
+  const sample = document.createElement('canvas');
+  sample.width = w;
+  sample.height = h;
+  const ctx = sample.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(photo, 0, 0, w, h);
+  const rgba = ctx.getImageData(0, 0, w, h).data;
+  const gray = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) gray[i] = 0.299 * rgba[i * 4] + 0.587 * rgba[i * 4 + 1] + 0.114 * rgba[i * 4 + 2];
+  const degrees = skewAngle(gray, w, h);
+  if (Math.abs(degrees) < STRAIGHT_ENOUGH) return photo;
+  const a = (degrees * Math.PI) / 180;
+  const [cos, sin] = [Math.abs(Math.cos(a)), Math.abs(Math.sin(a))];
+  // Turned, the page needs a bigger canvas; it then goes back within MAX_SIDE.
+  const fit = Math.min(1, MAX_SIDE / Math.max(W * cos + H * sin, H * cos + W * sin));
+  const out = document.createElement('canvas');
+  out.width = Math.round((W * cos + H * sin) * fit);
+  out.height = Math.round((H * cos + W * sin) * fit);
+  const o = out.getContext('2d')!;
+  o.fillStyle = '#ffffff';
+  o.fillRect(0, 0, out.width, out.height);
+  o.translate(out.width / 2, out.height / 2);
+  o.rotate(-a);
+  o.scale(fit, fit);
+  o.drawImage(photo, -W / 2, -H / 2);
+  return out;
 }
 
 /** The photo with even lighting and full contrast, on a new canvas. */

@@ -88,6 +88,25 @@ Limite: l'OCR sul dispositivo legge bene il testo stampato, male la scrittura a 
 | 🎓 **Impara facendo**: pulsante nella schermata iniziale. Crea «La mia prima mappa» e una scheda sotto la mappa guida sette passi da fare davvero: idea principale, nuovo concetto, nome, parola di collegamento, «Leggi», «Detta». Il pulsante da premere è evidenziato. Ogni passo si può ascoltare o saltare, e appena è fatto compare «Avanti» | `src/features/tutorial/`, `src/features/editor/MapEditor.tsx` |
 | 🖍️ **Evidenziatore in «Dal libro»**: invece di toccare le parole una per una, ci si passa sopra il dito come sul libro. Parole vicine diventano un solo concetto; passare su parole già scelte le toglie. Su e giù il testo scorre come sempre. Senza AI: le parole le sceglie lo studente | `src/features/ocr/PhotoTextDialog.tsx` |
 
+## Fase 6: dopo l'assessment di ottobre 2026
+
+| Funzione | Dove |
+|---|---|
+| 💾 **Salva tutte le mappe**: un solo file `.mappeora` con tutte le mappe del dispositivo (formato `mappeora-archivio`). «Apri file» lo riconosce e rimette le mappe che mancano, senza doppioni e senza mai sovrascrivere: una mappa più nuova nel file torna accanto a quella che c'è, con «(dalla copia)». Un promemoria nella schermata iniziale chiede una copia quando le mappe sono almeno tre (o una ha una settimana) e poi ogni due settimane se qualcosa è cambiato; «Più tardi» lo rimanda di una settimana. Su iPhone e iPad, se Mappeora non è nella schermata Home, un avviso spiega come aggiungerla: Safari può cancellare i dati di un sito dopo 7 giorni senza visite | `src/services/backup.ts`, `src/lib/mapFile.ts`, `src/features/home/HomeScreen.tsx` |
+| ✍️ **Concetto nuovo già pronto per scrivere**: dopo «Concetto» il riquadro è aperto, con il testo selezionato. Mentre si scrive, **Tab** crea un concetto sotto e **Maiusc+Tab** uno accanto (come nella Scaletta) | `src/features/editor/ConceptNode.tsx`, `src/features/editor/MapEditor.tsx` |
+| 🗣️ **Lettura in frasi**: con le parole di collegamento si legge la proposizione intera («L'acqua è formata da idrogeno»), anche nella didascalia dell'Interrogazione | `src/lib/readingOrder.ts` |
+| 🔊 **Evidenziazione anche senza eventi della voce**: alcune voci (le voci online «Google» di Chrome) non dicono a che parola sono; l'evidenziazione segue allora una stima del tempo di ogni parola, finché la voce non ne segnala una vera | `src/services/speech/web.ts` |
+| 🔍 **Mappa leggibile sul telefono**: toccando un concetto il cui testo sullo schermo è sotto i 12 px, il suo ramo si avvicina (o il concetto stesso, se il ramo non ci sta). Aspetta un attimo, così il doppio tocco per rinominare funziona ancora. Anche un concetto nuovo si avvicina, per vedere cosa si scrive | `src/features/editor/MapEditor.tsx` |
+| 🌈 **Ogni ramo il suo colore di linea** (mappe Libera e 5 W): un ramo messo sotto un altro per riempire il foglio resta riconoscibile. Nella versione per la verifica le linee tornano nere | `src/lib/sheetLayout.ts`, `src/features/editor/branchColor.ts`, `src/styles/theme.css` |
+| 📝 **Approfondimenti**: una nota più lunga su un concetto (date, dettagli, esempi), da scrivere o dettare e da ascoltare. Il 📝 sul concetto la apre; all'Interrogazione è un «Suggerimento» da leggere. Nel PDF va in un foglio in fondo (si può togliere), mai nella versione per la verifica | `src/features/editor/NoteDialog.tsx`, `src/services/export.ts` |
+| 🔒 **Concetti bloccati sui touch screen**: su telefono e tablet un dito che parte da un concetto muove o ingrandisce la mappa e non trascina mai il concetto; un tocco lo seleziona comunque. Il pulsante 🔒/🔓 accanto allo zoom li libera per spostarli (e «Sposta» li libera da solo); la scelta resta sul dispositivo. Con i concetti bloccati anche le linee lasciano spostare la mappa su una fascia più ampia. Con il mouse si parte liberi, come prima | `src/features/editor/MapEditor.tsx` |
+| 🧹 **Mappa più pulita**: i pallini per collegare compaiono sul concetto scelto (e sotto il mouse, e ovunque mentre si traccia una linea); il «+» delle parole di collegamento è pieno sulle linee del concetto scelto e tenue sulle altre | `src/styles/app.css`, `src/features/editor/LinkAdd.tsx` |
+| 📷 **«Dal libro» più robusto (web)**: la foto viene raddrizzata prima della lettura (fino a ±20°); la prima lettura trova da sola colonne e titoli. Con 36 foto di prova (3 pagine × 12 condizioni) l'errore sui caratteri è sceso dal 23% a meno del 2% in 8 condizioni su 12; restano difficili le foto mosse | `src/lib/deskew.ts`, `src/services/ocr/web.ts` |
+| ⚡ **Mappe grandi fluide**: le etichette delle linee non cercano più il loro contenitore nel DOM a ogni fotogramma. Con 316 concetti il trascinamento passa da circa 14 a oltre 50 fotogrammi al secondo | `src/features/editor/EdgeLabel.tsx`, `src/features/editor/MapEditor.tsx` |
+| Piccole correzioni: Esc chiude un dialogo anche quando il pulsante che aveva il focus è sparito; «Immagine» non va più a capo nel menu Altro; i cursori di «Aspetto» mostrano il valore; un file che non si riesce a leggere ora lo dice | `src/components/Dialog.tsx`, `src/features/accessibility/SettingsPanel.tsx`, `src/services/openFile.ts` |
+
+La prova con studenti veri e le verifiche sui dispositivi sono in [docs/prova-con-studenti.md](docs/prova-con-studenti.md).
+
 ## Architettura
 
 ```
@@ -156,7 +175,7 @@ La chiave di firma non è mai nel repository (che è pubblico): si crea con `bas
 
 ### Test end-to-end
 
-In `e2e/` ci sono 51 test che usano l'app come farebbe uno studente: su un **computer** (1280×860) e su un **telefono** (Pixel 7), quindi poco più di 100 esecuzioni (alcuni test valgono solo per il telefono). Ogni test riparte da un browser vuoto. Controllano:
+In `e2e/` ci sono circa 90 test che usano l'app come farebbe uno studente: su un **computer** (1280×860) e su un **telefono** (Pixel 7), quindi circa 180 esecuzioni (alcuni test valgono solo per il computer o per il telefono). Ogni test riparte da un browser vuoto. Controllano:
 - creare mappe da ogni modello, salvataggio automatico, cancellazione, mappe di esempio;
 - aggiungere, rinominare, annullare ed eliminare concetti; parole di collegamento; rami comprimibili; disposizione a foglio A4 senza sovrapposizioni; trascinamento per riordinare;
 - immagini: ricerca delle illustrazioni, Google Immagini, incolla, foto dalla galleria;

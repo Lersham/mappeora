@@ -3,7 +3,7 @@ import { BaseEdge, EdgeText, getBezierPath, type Edge, type EdgeProps } from '@x
 import { useSettings } from '../../store/settingsStore';
 import { LinkAdd } from './LinkAdd';
 
-export type TreeEdgeData = { onEdit?: () => void };
+export type TreeEdgeData = { onEdit?: () => void; near?: boolean };
 export type TreeFlowEdge = Edge<TreeEdgeData, 'tree'>;
 
 /**
@@ -33,7 +33,7 @@ export function TreeEdge({ id, label, labelBgPadding, labelBgBorderRadius, inter
           labelBgBorderRadius={labelBgBorderRadius}
         />
       )}
-      {!label && <LinkAdd x={labelX} y={labelY} onEdit={data?.onEdit} />}
+      {!label && <LinkAdd x={labelX} y={labelY} onEdit={data?.onEdit} near={data?.near} />}
     </>
   );
 }

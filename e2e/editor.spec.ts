@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures';
-import { addConcept, boxes, newMap, node, nodes, overlapping, rename, sampleMap, settled, showAll, tapLink, toolbar } from './helpers';
+import { test, expect, spoken } from './fixtures';
+import { addConcept, boxes, newMap, node, nodes, onScreen, overlapping, rename, sampleMap, settled, showAll, tapLink, toolbar } from './helpers';
 
 test.describe('Editor', () => {
   test('aggiunge, rinomina, annulla, ripete ed elimina concetti', async ({ page }) => {
@@ -160,5 +160,109 @@ test.describe('Editor', () => {
     await page.getByRole('button', { name: 'Annulla' }).click();
     await expect(nodes(page)).toHaveCount(2);
     await expect(page.locator('.react-flow__edge')).toHaveCount(1);
+  });
+});
+
+test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
+  test('un concetto nuovo è subito pronto; Tab ne fa uno sotto, Maiusc+Tab uno accanto', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'la tastiera fisica si prova sul computer');
+    await newMap(page, 'Gli animali');
+    await node(page, 'Gli animali').click();
+    await page.getByRole('button', { name: 'Concetto', exact: true }).click();
+    const input = page.getByRole('textbox', { name: 'Testo del concetto' });
+    await expect(input).toBeFocused();
+    await page.keyboard.type('Vertebrati');
+    await page.keyboard.press('Tab');
+    await expect(input).toBeFocused();
+    await page.keyboard.type('Mammiferi');
+    await page.keyboard.press('Shift+Tab');
+    await expect(input).toBeFocused();
+    await page.keyboard.type('Uccelli');
+    await page.keyboard.press('Enter');
+    await expect(input).toHaveCount(0);
+    await settled(page);
+
+    await page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Leggi', exact: true }).click();
+    await expect.poll(() => spoken(page)).toEqual(['Gli animali', 'Vertebrati', 'Mammiferi', 'Uccelli']);
+    const b = await boxes(page);
+    const at = (label: string) => b.find((x) => x.label === label)!;
+    // «Mammiferi» and «Uccelli» are both under «Vertebrati»
+    expect(at('Uccelli').x).toBeCloseTo(at('Mammiferi').x, 0);
+    expect(at('Mammiferi').x).toBeGreaterThan(at('Vertebrati').x);
+  });
+
+  test('ogni ramo ha le linee del suo colore; i pallini per collegare solo sul concetto scelto', async ({ page, isMobile }) => {
+    await sampleMap(page);
+    // On a phone the concepts start locked, with no dots at all: free them first.
+    if (isMobile) await page.getByRole('button', { name: /^Concetti bloccati/ }).click();
+    const colours = await page.locator('.react-flow__edge-path.branch-line').evaluateAll((paths) => [
+      ...new Set(paths.map((p) => [...p.classList].find((c) => /^branch-\d$/.test(c)))),
+    ]);
+    expect(colours.sort()).toEqual(['branch-0', 'branch-1', 'branch-2']);
+
+    await (await onScreen(page, node(page, 'Vapore'))).click();
+    const handleOpacity = (label: string) =>
+      page
+        .locator('.react-flow__node', { has: page.locator('.concept-label', { hasText: label }) })
+        .locator('.react-flow__handle:not(.handle-hidden)')
+        .first()
+        .evaluate((h) => getComputedStyle(h).opacity);
+    await expect.poll(() => handleOpacity('Vapore')).toBe('1');
+    await expect.poll(() => handleOpacity('Neve')).toBe('0');
+  });
+
+  test('sul telefono, toccando un concetto di una mappa vista da lontano, il suo ramo si avvicina', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'sul computer la mappa d’esempio si legge già');
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Esempi', exact: true }).click();
+    await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
+    await expect(nodes(page)).toHaveCount(37);
+    await showAll(page);
+    const onScreenPx = (label: string) =>
+      node(page, label)
+        .locator('.concept-label')
+        .evaluate((el) => (parseFloat(getComputedStyle(el).fontSize) * el.getBoundingClientRect().height) / (el as HTMLElement).offsetHeight);
+    expect(await onScreenPx('Le cause')).toBeLessThan(12);
+    await node(page, 'Le cause').click();
+    await expect.poll(() => onScreenPx('Le cause'), { timeout: 5000 }).toBeGreaterThanOrEqual(12);
+    await expect(node(page, 'Le cause')).toBeInViewport();
+  });
+});
+
+test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
+  test('bloccati di partenza: il dito su un concetto muove la mappa; 🔓 li libera, e la scelta resta', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'il blocco di partenza vale per i touch screen');
+    await sampleMap(page);
+    const lock = page.getByRole('button', { name: /^Concetti bloccati/ });
+    await expect(lock).toBeVisible();
+    await expect(page.locator('.react-flow__node.draggable')).toHaveCount(0);
+
+    // One finger from «Calore del sole» downwards: the whole map follows, nothing changes order.
+    const before = await boxes(page);
+    const at = (b: typeof before, label: string) => b.find((x) => x.label === label)!;
+    const start = at(before, 'Calore del sole');
+    const [x, y] = [start.x + start.w / 2, start.y + start.h / 2];
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', points: { x: number; y: number }[]) =>
+      cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+    await touch('touchStart', [{ x, y }]);
+    for (let i = 1; i <= 8; i++) await touch('touchMove', [{ x: x + i * 5, y: y + i * 12 }]);
+    await touch('touchEnd', []);
+    await settled(page);
+    const after = await boxes(page);
+    expect(at(after, 'Calore del sole').y - at(before, 'Calore del sole').y).toBeGreaterThan(50);
+    for (const b of before) {
+      expect(at(after, b.label).x - at(after, 'Calore del sole').x, b.label).toBeCloseTo(b.x - start.x, 0);
+      expect(at(after, b.label).y - at(after, 'Calore del sole').y, b.label).toBeCloseTo(b.y - start.y, 0);
+    }
+
+    await lock.click();
+    await expect(page.getByRole('alert')).toContainText('Ora puoi spostare i concetti');
+    await expect(page.getByRole('button', { name: /^Concetti liberi/ })).toBeVisible();
+    await expect(page.locator('.react-flow__node.draggable')).toHaveCount(9);
+    // Remembered on the device, for every map.
+    await page.reload();
+    await page.locator('.map-open').first().click();
+    await expect(page.getByRole('button', { name: /^Concetti liberi/ })).toBeVisible();
   });
 });

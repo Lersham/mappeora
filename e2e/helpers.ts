@@ -26,11 +26,17 @@ export const node = (page: Page, text: string | RegExp): Locator =>
 
 export const nodes = (page: Page): Locator => page.locator('.concept-node');
 
-/** Adds a concept under `parent` and renames it. */
+/** Adds a concept under `parent` and names it: a new concept opens ready for typing. */
 export async function addConcept(page: Page, parent: string, label: string) {
   await (await onScreen(page, node(page, parent))).click();
   await page.getByRole('button', { name: 'Concetto', exact: true }).click();
-  await rename(page, 'Nuovo concetto', label);
+  const input = page.getByRole('textbox', { name: 'Testo del concetto' });
+  await expect(input).toBeFocused();
+  await input.fill(label);
+  await input.press('Enter');
+  await expect(node(page, label)).toBeVisible();
+  // The new concept slides into place and the view follows it: wait for both.
+  await settled(page);
 }
 
 export async function rename(page: Page, from: string, to: string) {

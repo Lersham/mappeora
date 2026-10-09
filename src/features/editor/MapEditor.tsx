@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps 
 import {
   Background,
   type EdgeTypes,
+  ControlButton,
   Controls,
   ReactFlow,
   ReactFlowProvider,
@@ -13,7 +14,8 @@ import {
 import { useStore } from 'zustand';
 import { beginStep, endStep, mapHistory, untracked, useMapStore } from '../../store/mapStore';
 import { reviewVisibility, useReview, type ReviewMode } from '../../store/reviewStore';
-import { ConceptNode, type ConceptFlowNode } from './ConceptNode';
+import { ConceptNode, type ConceptActions, type ConceptFlowNode } from './ConceptNode';
+import { NoteDialog } from './NoteDialog';
 import { FreeEdge } from './FreeEdge';
 import { LadderEdge } from './LadderEdge';
 import { BusEdge } from './BusEdge';
@@ -51,6 +53,30 @@ import { TUTORIAL_STEPS } from '../tutorial/steps';
 
 const nodeTypes = { concept: ConceptNode };
 
+/** Names smaller than this on screen (px) are brought closer when tapped. */
+const READABLE_PX = 12;
+/** …to this size, comfortable to read on a phone. */
+const COMFORT_PX = 16;
+const MAX_READ_ZOOM = 1.2;
+
+const LOCK_KEY = 'mappeora-concetti-bloccati';
+
+/**
+ * On a touch screen the concepts start locked: a finger that lands on one
+ * while moving or zooming the map must not drag it away. With a mouse the
+ * difference is clear (drag the empty sheet to move, the wheel to zoom), so
+ * there they start free. The child's choice is remembered on the device.
+ */
+function lockedAtStart(): boolean {
+  try {
+    const saved = localStorage.getItem(LOCK_KEY);
+    if (saved !== null) return saved === '1';
+  } catch {
+    // Storage blocked: fall back to the device.
+  }
+  return window.matchMedia?.('(pointer: coarse)').matches ?? false;
+}
+
 /** Where a new concept goes when none is selected: under the main one. */
 function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined {
   const visible = map.nodes.filter((n) => !hidden.has(n.id));
@@ -70,6 +96,7 @@ type DialogState =
   | { kind: 'photo' }
   | { kind: 'outline' }
   | { kind: 'more' }
+  | { kind: 'note'; nodeId: string }
   | null;
 
 interface Props {
@@ -98,6 +125,45 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const exportRun = useRef(0);
   const [exportError, setExportError] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // The browser scrolls whatever hides a field being typed in, even boxes
+  // that can't scroll for the child (the map): the view then no longer
+  // matches what React Flow thinks it shows. Put them back; reveal() moves
+  // the view the right way.
+  const canvasRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const back = (e: Event) => {
+      const el = e.target;
+      if (!(el instanceof Element) || !canvas.contains(el)) return;
+      if (el.scrollTop || el.scrollLeft) {
+        el.scrollTop = 0;
+        el.scrollLeft = 0;
+      }
+    };
+    canvas.addEventListener('scroll', back, true);
+    return () => canvas.removeEventListener('scroll', back, true);
+  }, []);
+  /** A line is being drawn from a concept: every connection point shows. */
+  const [connecting, setConnecting] = useState(false);
+  /** Concepts locked: touching them selects, dragging moves the map, never the concept. */
+  const [locked, setLockedState] = useState(lockedAtStart);
+  const setLocked = (value: boolean, say = true) => {
+    setLockedState(value);
+    try {
+      localStorage.setItem(LOCK_KEY, value ? '1' : '0');
+    } catch {
+      // Not remembered: the next visit starts from the device's default.
+    }
+    if (say) showNotice(value ? 'Concetti bloccati: puoi muovere e ingrandire la mappa senza spostarli.' : 'Ora puoi spostare i concetti trascinandoli. Tocca 🔒 per bloccarli di nuovo.');
+  };
+  const noticeTimer = useRef<number | undefined>(undefined);
+  /** A short message that goes away by itself. */
+  const showNotice = (text: string) => {
+    setNotice(text);
+    window.clearTimeout(noticeTimer.current);
+    noticeTimer.current = window.setTimeout(() => setNotice((now) => (now === text ? null : now)), 5000);
+  };
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
   const [tutorialStep, setTutorialStep] = useState<number | null>(tutorial ? 0 : null);
   const tutorialTarget = tutorialStep === null ? undefined : TUTORIAL_STEPS[tutorialStep]?.target;
@@ -114,11 +180,19 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // A link back to the main concept doesn't give a «−» that would hide nothing.
   const parents = useMemo(() => new Set(spanningTree(map).forward.map((e) => e.source)), [map.nodes, map.edges]);
 
+  const dragging = useRef(false);
+  // While a concept is in hand the lines stay as they were: the new sheet
+  // is worked out once it is dropped.
+  const held = useRef<SheetResult | null>(null);
+  const [dragTick, setDragTick] = useState(0);
+
   // "Foglio": where every visible concept should be. Anchored to the main
   // concept, so dragging it moves the whole map.
   const scale = labelScale(useSettings((s) => s.textScale));
   const sheet = useMemo(() => {
     if (!sheetMode) return null;
+    // Not worked out again at every frame of a drag: nothing would show it.
+    if (dragging.current && held.current) return held.current;
     const part = visiblePart(map);
     const targets = new Set(part.edges.map((e) => e.target));
     const roots = part.nodes.filter((n) => !targets.has(n.id));
@@ -127,20 +201,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       undefined,
     );
     return sheetLayout(part.nodes, part.edges, sizes, first?.position, scale);
-  }, [sheetMode, map, sizes, scale]);
+  }, [sheetMode, map, sizes, scale, dragTick]);
 
   // Keep the sheet in order after every change (adding, deleting,
   // collapsing, dropping a dragged concept). Not an edit by the child, so
   // it stays out of the undo history.
-  const dragging = useRef(false);
-  // While a concept is in hand the lines stay as they were: the new sheet
-  // is worked out once it is dropped.
-  const held = useRef<SheetResult | null>(null);
   const shown = held.current ?? sheet;
   // A drop on a sheet is recorded once the sheet has put the concept in its
   // place: a concept that snaps back leaves no empty undo step.
   const dropPending = useRef(false);
-  const [dragTick, setDragTick] = useState(0);
   useEffect(() => {
     if (dragging.current) return;
     const finishDrop = () => {
@@ -157,12 +226,44 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     finishDrop();
   }, [sheet, dragTick, review.active]);
 
+  // What a concept can ask of the editor: one object for all of them, so a
+  // change elsewhere (a drag, a selection) doesn't re-render every concept.
+  const latest = useRef({ toggleInPlace: (_id: string) => {}, addNear: (_id: string, _where: 'child' | 'sibling') => {} });
+  const conceptActions = useMemo<ConceptActions>(
+    () => ({
+      toggle: (id) => latest.current.toggleInPlace(id),
+      addNear: (id, where) => latest.current.addNear(id, where),
+      openNote: (id) => setDialog({ kind: 'note', nodeId: id }),
+    }),
+    [],
+  );
+
   // The store holds our document model; React Flow nodes are derived from it.
   // At «Indovina» the concept to guess has no name, not even for a screen reader.
+  // A concept whose inputs did not change keeps the same object: during a
+  // drag only the concept in hand is new, and only it renders again.
   const secret = map.nodes.find((n) => reviewVisibility(review, n.id) === 'mystery')?.id;
-  const nodes = useMemo<ConceptFlowNode[]>(
-    () =>
-      map.nodes.map((n) => ({
+  const flowCache = useRef(new Map<string, { key: unknown[]; node: ConceptFlowNode }>());
+  const nodes = useMemo<ConceptFlowNode[]>(() => {
+    const next = new Map<string, { key: unknown[]; node: ConceptFlowNode }>();
+    const result = map.nodes.map((n) => {
+      const key = [
+        n,
+        n.id === secret,
+        !review.active && n.id === selectedId,
+        collapse.hidden.has(n.id) || reviewVisibility(review, n.id) === 'hidden',
+        sizes[n.id],
+        layout,
+        shown?.roles[n.id],
+        parents.has(n.id),
+        collapse.hiddenBelow[n.id] ?? 0,
+      ];
+      const before = flowCache.current.get(n.id);
+      if (before && before.key.every((v, i) => v === key[i])) {
+        next.set(n.id, before);
+        return before.node;
+      }
+      const node: ConceptFlowNode = {
         id: n.id,
         type: 'concept',
         ariaLabel: n.id === secret ? 'Concetto nascosto' : spokenLabel(n.label),
@@ -180,11 +281,16 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           hasChildren: parents.has(n.id),
           collapsed: n.collapsed,
           hiddenBelow: collapse.hiddenBelow[n.id] ?? 0,
-          onToggle: () => toggleInPlace(n.id),
+          hasNote: !!n.note?.trim(),
+          actions: conceptActions,
         },
-      })),
-    [map.nodes, selectedId, sizes, review, layout, collapse, parents, shown, secret],
-  );
+      };
+      next.set(n.id, { key, node });
+      return node;
+    });
+    flowCache.current = next;
+    return result;
+  }, [map.nodes, selectedId, sizes, review, layout, collapse, parents, shown, secret, conceptActions]);
   // The links' spoken names need the concepts' names, not their positions:
   // a string that stays the same while a concept is dragged.
   const nodeNames = useMemo(() => JSON.stringify(map.nodes.map((n) => [n.id, n.label])), [map.nodes]);
@@ -194,25 +300,35 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     if (secret) labels.set(secret, '?');
     return map.edges.map((e) => {
       const ariaLabel = edgeAriaLabel(labels.get(e.source) ?? '', labels.get(e.target) ?? '', e.label);
-      const base = { id: e.id, source: e.source, target: e.target, label: e.label, ariaLabel, interactionWidth: 40, className: 'concept-edge' };
+      // A line blocks moving the map where a finger lands on it: narrower
+      // while the concepts are locked (its «+» and words stay easy to tap).
+      const base = { id: e.id, source: e.source, target: e.target, label: e.label, ariaLabel, interactionWidth: locked ? 16 : 40, className: 'concept-edge' };
+      // The «+» for linking words stands out on the lines of the concept in hand.
+      const near = !review.active && (e.source === selectedId || e.target === selectedId);
       const kind = shown?.edges[e.id];
       if (kind?.kind === 'bus') {
-        return { ...base, type: 'bus', sourceHandle: 's-bottom', targetHandle: 't-top', data: { points: kind.points, onEdit: onEdit(e.id) } };
+        return {
+          ...base,
+          type: 'bus',
+          sourceHandle: 's-bottom',
+          targetHandle: 't-top',
+          data: { points: kind.points, own: kind.own, branch: kind.branch, onEdit: onEdit(e.id), near },
+        };
       }
       if (kind?.kind === 'ladder') {
-        return { ...base, type: 'ladder', sourceHandle: 's-spine', targetHandle: 't-left', data: { onEdit: onEdit(e.id) } };
+        return { ...base, type: 'ladder', sourceHandle: 's-spine', targetHandle: 't-left', data: { branch: kind.branch, onEdit: onEdit(e.id), near } };
       }
-      if (sheetTemplate && !shown) return { ...base, type: 'free', data: { onEdit: onEdit(e.id) } }; // placed by hand
+      if (sheetTemplate && !shown) return { ...base, type: 'free', data: { onEdit: onEdit(e.id), near } }; // placed by hand
       return {
         ...base,
         type: 'tree',
-        data: { onEdit: onEdit(e.id) },
+        data: { onEdit: onEdit(e.id), near },
         ...(shown && { sourceHandle: 's-spine', targetHandle: 't-left' }), // a cross-link on a sheet
         labelBgPadding: [8, 4] as [number, number],
         labelBgBorderRadius: 6,
       };
     });
-  }, [map.edges, nodeNames, shown, sheetTemplate, review.active, secret]);
+  }, [map.edges, nodeNames, shown, sheetTemplate, review.active, secret, selectedId, locked]);
 
   const onNodesChange = useCallback((changes: NodeChange<ConceptFlowNode>[]) => {
     const s = useMapStore.getState();
@@ -246,11 +362,20 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     return mainConcept(current, hidden)?.id ?? null;
   };
 
+  /** Size on screen (px) of a concept's name at the current zoom, and at zoom 1. */
+  const textOnScreen = (id: string) => {
+    const at = `.react-flow__node[data-id="${CSS.escape(id)}"]`;
+    const label = document.querySelector(`${at} .concept-label, ${at} .concept-input`);
+    const px = (label && parseFloat(getComputedStyle(label).fontSize)) || 18;
+    return { px, onScreen: px * getZoom() };
+  };
+
   /**
    * A new concept can land outside the visible part of the map: once the
-   * layout has placed it, move the view just enough to show it.
+   * layout has placed it, move the view just enough to show it. One about
+   * to be written also comes close enough to read what is typed.
    */
-  const reveal = (id: string) =>
+  const reveal = (id: string, { readable = false } = {}) =>
     setTimeout(() => {
       const n = getInternalNode(id);
       const box = document.querySelector('.react-flow')?.getBoundingClientRect();
@@ -258,13 +383,93 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       const { x, y, zoom } = getViewport();
       const { width = 180, height = 72 } = n.measured;
       const p = n.internals.positionAbsolute;
+      const text = textOnScreen(id);
+      const tooSmall = readable && text.onScreen < READABLE_PX;
       const [left, top] = [p.x * zoom + x, p.y * zoom + y];
       const m = 24;
-      if (left >= m && top >= m && left + width * zoom <= box.width - m && top + height * zoom <= box.height - m) return;
-      void setCenter(p.x + width / 2, p.y + height / 2, { zoom, duration: motion(300) });
+      if (!tooSmall && left >= m && top >= m && left + width * zoom <= box.width - m && top + height * zoom <= box.height - m) return;
+      const z = tooSmall ? Math.min(MAX_READ_ZOOM, COMFORT_PX / text.px) : zoom;
+      void setCenter(p.x + width / 2, p.y + height / 2, { zoom: z, duration: motion(300) });
     }, 150);
 
-  const addConcept = (label?: string) => reveal(actions.addChild(parentForNew(), label));
+  /** The concepts of `id`'s branch: on a sheet, from the branch's first concept down. */
+  const branchOf = (id: string): string[] => {
+    const current = useMapStore.getState().map;
+    if (!current) return [id];
+    const below = new Map<string, string[]>();
+    const above = new Map<string, string>();
+    for (const e of spanningTree(current).forward) {
+      if (above.has(e.target)) continue;
+      above.set(e.target, e.source);
+      below.set(e.source, [...(below.get(e.source) ?? []), e.target]);
+    }
+    let head = id;
+    if (shown) {
+      while (shown.roles[head] === 'item' && above.has(head)) head = above.get(head)!;
+      if (shown.roles[head] === 'root') return [head];
+    }
+    const out: string[] = [];
+    const visit = (n: string) => {
+      if (out.includes(n)) return;
+      out.push(n);
+      // Without a sheet: the concept and the ones right under it.
+      if (!shown && n !== id) return;
+      for (const c of below.get(n) ?? []) visit(c);
+    };
+    visit(head);
+    return out;
+  };
+
+  /**
+   * On a map seen from afar (a phone, a long map) the names are too small
+   * to read: a tap on a concept brings its branch close, or just the
+   * concept if the branch is too long for the screen. It waits a moment,
+   * so that a double tap (to rename) still lands on the same concept.
+   */
+  const closer = useRef<number | undefined>(undefined);
+  const cancelCloser = () => window.clearTimeout(closer.current);
+  const bringCloser = (id: string) => {
+    cancelCloser();
+    closer.current = window.setTimeout(() => {
+      if (useReview.getState().active || dragging.current) return;
+      const text = textOnScreen(id);
+      const box = document.querySelector('.react-flow')?.getBoundingClientRect();
+      if (text.onScreen >= READABLE_PX || !box) return;
+      const want = Math.min(MAX_READ_ZOOM, COMFORT_PX / text.px);
+      const boxes = branchOf(id).flatMap((b) => {
+        const n = getInternalNode(b);
+        if (!n || n.hidden) return [];
+        const { width = 180, height = 72 } = n.measured;
+        return [{ id: b, x: n.internals.positionAbsolute.x, y: n.internals.positionAbsolute.y, width, height }];
+      });
+      const self = boxes.find((b) => b.id === id);
+      if (!self) return;
+      const left = Math.min(...boxes.map((b) => b.x));
+      const top = Math.min(...boxes.map((b) => b.y));
+      const right = Math.max(...boxes.map((b) => b.x + b.width));
+      const bottom = Math.max(...boxes.map((b) => b.y + b.height));
+      const pad = 24;
+      const fit = Math.min(MAX_READ_ZOOM, (box.width - pad * 2) / (right - left), (box.height - pad * 2) / (bottom - top));
+      if (fit >= want) void setCenter((left + right) / 2, (top + bottom) / 2, { zoom: fit, duration: motion(400) });
+      else void setCenter(self.x + self.width / 2, self.y + self.height / 2, { zoom: want, duration: motion(400) });
+    }, 350);
+  };
+
+  /** From the toolbar (or Tab) a concept opens ready for typing; a dictated one already has its name. */
+  const addConcept = (label?: string, parent = parentForNew()) => {
+    cancelCloser();
+    const id = actions.addChild(parent, label);
+    if (label === undefined) actions.startEditing(id);
+    reveal(id, { readable: label === undefined });
+  };
+
+  /** Tab while writing a concept: one under it. Maiusc+Tab: one next to it. */
+  const addNear = (id: string, where: 'child' | 'sibling') => {
+    const current = useMapStore.getState().map;
+    if (!current) return;
+    const parent = where === 'sibling' ? spanningTree(current).forward.find((e) => e.target === id)?.source : undefined;
+    addConcept(undefined, parent ?? id);
+  };
 
   /**
    * Opening or closing a branch rearranges the sheet: move the view so the
@@ -281,6 +486,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       void setViewport({ x: x - (after.x - before.x) * zoom, y: y - (after.y - before.y) * zoom, zoom }, { duration: motion(200) });
     }, 150);
   };
+
+  latest.current = { toggleInPlace, addNear };
 
   const tidy = async () => {
     // A "foglio" map is always in order: just show all of it. One placed by
@@ -358,7 +565,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     afterBulkEdit();
   };
 
-  const doExport = async ({ kind, paper, pages, simple, print }: ExportChoice) => {
+  const doExport = async ({ kind, paper, pages, simple, print, notes }: ExportChoice) => {
     const run = ++exportRun.current;
     const cancelled = () => exportRun.current !== run;
     setExporting(true);
@@ -377,6 +584,13 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           title: map.title,
           usesPictograms: map.nodes.some((n) => n.image?.kind === 'arasaac'),
           cancelled,
+          // In the order the map is read, as on screen.
+          notes: notes
+            ? readingOrder(visiblePart(map), { depthFirst: sheetTemplate }).flatMap(({ nodeId }) => {
+                const n = map.nodes.find((x) => x.id === nodeId);
+                return n?.note?.trim() ? [{ label: n.label, note: n.note.trim() }] : [];
+              })
+            : undefined,
         });
       }
       // Only this dialog: the child may have opened another meanwhile.
@@ -455,6 +669,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       useReview.getState().exit();
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
       endStep();
+      window.clearTimeout(closer.current);
+      window.clearTimeout(noticeTimer.current);
     },
     [],
   );
@@ -511,7 +727,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           icon: '✋',
           label: 'Sposta',
           title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
-          onClick: () => actions.setFreeLayout(true),
+          onClick: () => {
+            actions.setFreeLayout(true);
+            // «Sposta» is asking to move concepts: they can't stay locked.
+            if (locked) setLocked(false, false);
+          },
         }
       : {
           key: 'layout',
@@ -527,7 +747,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   ];
 
   return (
-    <div className={`editor${review.active ? ' is-reviewing' : ''}`}>
+    <div className={`editor${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}`}>
       <header className="topbar">
         <BigButton icon="⬅️" label="Mappe" onClick={onBack} />
         <input
@@ -554,7 +774,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         )}
       </header>
 
-      <div className="canvas">
+      <div className="canvas" ref={canvasRef}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -564,6 +784,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onEdgesChange={onEdgesChange}
           onConnect={({ source, target }) => actions.connect(source, target)}
           onNodeDragStart={() => {
+            cancelCloser();
             dragging.current = true;
             held.current = sheet;
             beginStep();
@@ -576,15 +797,22 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
               setDragTick((t) => t + 1); // a dropped concept may have changed place in the list
             } else endStep();
           }}
-          onPaneClick={() => actions.select(null)}
+          onPaneClick={() => {
+            cancelCloser();
+            actions.select(null);
+          }}
           onNodeClick={(_, node) => {
-            if (review.mode !== 'interrogazione' || !review.active) return;
+            if (!review.active) return bringCloser(node.id);
+            if (review.mode !== 'interrogazione') return;
             const i = review.order[node.id];
             if (i !== undefined) review.goTo(i);
           }}
+          onNodeDoubleClick={cancelCloser}
+          onConnectStart={() => setConnecting(true)}
+          onConnectEnd={() => setConnecting(false)}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
-          nodesDraggable={editing}
-          nodesConnectable={editing}
+          nodesDraggable={editing && !locked}
+          nodesConnectable={editing && !locked}
           elementsSelectable={editing}
           // Our own handler (above): one undo step, and never behind a dialog.
           deleteKeyCode={null}
@@ -600,7 +828,19 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           ariaLabelConfig={MAP_ARIA_LABELS}
         >
           <Background gap={24} />
-          <Controls showInteractive={false} />
+          <Controls showInteractive={false}>
+            {editing && (
+              <ControlButton
+                className="lock-button"
+                onClick={() => setLocked(!locked)}
+                aria-pressed={locked}
+                aria-label={locked ? 'Concetti bloccati: tocca per poterli spostare' : 'Concetti liberi: tocca per bloccarli'}
+                title={locked ? 'Concetti bloccati: tocca per poterli spostare' : 'Concetti liberi: tocca per bloccarli'}
+              >
+                {locked ? '🔒' : '🔓'}
+              </ControlButton>
+            )}
+          </Controls>
         </ReactFlow>
       </div>
 
@@ -663,9 +903,20 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           return edge ? <LinkWordDialog edge={edge} onClose={() => setDialog(null)} /> : null;
         })()}
       {dialog?.kind === 'export' && (
-        <ExportDialog busy={exporting} error={exportError} onExport={doExport} onClose={closeExport} />
+        <ExportDialog
+          busy={exporting}
+          hasNotes={visiblePart(map).nodes.some((n) => n.note?.trim())}
+          error={exportError}
+          onExport={doExport}
+          onClose={closeExport}
+        />
       )}
       {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'note' &&
+        (() => {
+          const node = map.nodes.find((n) => n.id === dialog.nodeId);
+          return node ? <NoteDialog node={node} readOnly={review.active} onClose={() => setDialog(null)} /> : null;
+        })()}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'outline' && (
         <OutlineDialog

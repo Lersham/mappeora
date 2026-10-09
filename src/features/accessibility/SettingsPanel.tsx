@@ -21,6 +21,12 @@ const THEMES: { value: ThemeChoice; label: string }[] = [
 
 const SAMPLE = 'La fotosintesi trasforma la luce in energia.';
 
+/** The voice's speed in words, then as a number. */
+function rateName(rate: number): string {
+  const word = rate < 0.85 ? 'lenta' : rate > 1.15 ? 'veloce' : 'normale';
+  return `${word} (${rate.toLocaleString('it-IT', { maximumFractionDigits: 2 })}×)`;
+}
+
 export function SettingsPanel({ onClose }: { onClose(): void }) {
   const s = useSettings();
   const [voices, setVoices] = useState<Voice[]>([]);
@@ -69,7 +75,9 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
       </fieldset>
 
       <label className="setting">
-        <span>Grandezza testo</span>
+        <span>
+          Grandezza testo: <span className="setting-value">{Math.round(s.textScale * 100)}%</span>
+        </span>
         <input
           type="range"
           min={0.9}
@@ -100,7 +108,9 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
       </label>
 
       <label className="setting">
-        <span>Velocità della voce</span>
+        <span>
+          Velocità della voce: <span className="setting-value">{rateName(s.speechRate)}</span>
+        </span>
         <input
           type="range"
           min={0.5}
