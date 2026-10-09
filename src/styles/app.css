@@ -648,9 +648,10 @@ textarea {
 }
 .concept-note-mark {
   position: absolute;
-  /* Outside the corner, so a concept can still be grabbed near its edge. */
-  top: -24px;
-  left: -24px;
+  /* On the right, below 🔊 and clear of «−»: the top-left corner is where
+     the line and its «+» come in. */
+  top: 22px;
+  right: -36px;
   width: 34px;
   height: 34px;
   padding: 0;
