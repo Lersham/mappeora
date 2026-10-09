@@ -1,4 +1,4 @@
-package it.mappeora.app;
+package it.mappami.app;
 
 import com.getcapacitor.BridgeActivity;
 

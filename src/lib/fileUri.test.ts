@@ -3,8 +3,8 @@ import { toFileUri } from './fileUri';
 
 describe('toFileUri', () => {
   it('adds the file:// scheme to plain Android paths', () => {
-    expect(toFileUri('/data/user/0/it.mappeora.app/cache/IMG_1.jpg')).toBe(
-      'file:///data/user/0/it.mappeora.app/cache/IMG_1.jpg',
+    expect(toFileUri('/data/user/0/it.mappami.app/cache/IMG_1.jpg')).toBe(
+      'file:///data/user/0/it.mappami.app/cache/IMG_1.jpg',
     );
   });
 

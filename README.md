@@ -114,7 +114,7 @@ Restano col vecchio nome solo cose che l'utente non vede e che, cambiate, farebb
 
 - chiavi di salvataggio (`mappeora-settings`, `mappeora-welcome`…) e nome del database (`mappeora` in IndexedDB e SQLite): cambiarle **cancellerebbe le mappe** già salvate;
 - il formato dentro il file (`"format": "mappeora"`): non si vede, e cambiarlo renderebbe i file nuovi illeggibili per chi non ha ancora aggiornato l'app;
-- l'identificativo dell'app `it.mappeora.app` (Android e iOS), il plugin `MappeoraOcr`, i secret `MAPPEORA_*` di GitHub;
+- il plugin `MappeoraOcr` e i secret `MAPPEORA_*` di GitHub. L'identificativo dell'app invece è già **`it.mappami.app`** (Android e iOS): cambiato prima della pubblicazione su Google Play, dopo non sarebbe più possibile;
 - l'indirizzo **mappeora.vercel.app**: va cambiato su Vercel (nome del progetto o dominio), non nel codice.
 
 ## Architettura

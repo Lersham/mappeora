@@ -6,10 +6,10 @@ apply plugin: 'com.android.application'
 def releaseKeystore = System.getenv('MAPPEORA_KEYSTORE_FILE')
 
 android {
-    namespace = "it.mappeora.app"
+    namespace = "it.mappami.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "it.mappeora.app"
+        applicationId "it.mappami.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Google Play wants a higher versionCode for every upload: CI passes its run number.
