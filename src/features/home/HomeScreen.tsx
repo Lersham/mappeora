@@ -116,15 +116,11 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
 
       <div className="home-actions">
         <BigButton icon="➕" label="Nuova mappa" variant="primary" className="home-new" onClick={onCreate} />
-        <BigButton icon="📂" label="Apri file" className="home-new" onClick={() => void importFile()} />
-        <BigButton icon="📚" label="Esempi" className="home-new" onClick={() => setExamplesOpen(true)} />
-        <BigButton
-          icon="🎓"
-          label="Impara facendo"
-          title="Costruisci la tua prima mappa passo passo, con una guida"
-          className="home-new"
-          onClick={onStartTutorial}
-        />
+        <div className="home-more">
+          <BigButton icon="📂" label="Apri file" onClick={() => void importFile()} />
+          <BigButton icon="📚" label="Esempi" onClick={() => setExamplesOpen(true)} />
+          <BigButton icon="🎓" label="Impara facendo" title="Costruisci la tua prima mappa passo passo, con una guida" onClick={onStartTutorial} />
+        </div>
       </div>
       {[error, importError, listError].filter(Boolean).map((message) => (
         <p key={message} className="field-error" role="alert">

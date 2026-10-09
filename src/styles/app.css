@@ -143,8 +143,19 @@ textarea {
 }
 .home-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+/* «Nuova mappa» is the one big button. The others share a row, so on a phone
+   the maps stay in sight; a button goes to a new line only when one of its
+   words would not fit (large text), never cutting a word. */
+.home-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.home-more .big-button {
+  flex: 1 1 0;
+  min-width: min-content;
 }
 .link-button {
   /* A link inside a sentence: the touch area grows, the line does not. */
@@ -156,11 +167,6 @@ textarea {
   font: inherit;
   text-decoration: underline;
   cursor: pointer;
-}
-@media (max-width: 520px) {
-  .home-actions {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 .home-new {
   width: 100%;
