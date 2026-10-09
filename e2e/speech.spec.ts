@@ -101,7 +101,11 @@ test.describe('Voce', () => {
     await page.keyboard.press('Escape');
     await expect(settings).toHaveCount(0);
     await toolbar(page, 'Leggi');
-    await expect.poll(() => voicesUsed(page)).toEqual(['it-test']);
+    // Every sentence of the map with the chosen voice (how many have been read by now depends on timing).
+    await expect.poll(async () => {
+      const used = await voicesUsed(page);
+      return used.length > 0 && used.every((v) => v === 'it-test');
+    }).toBe(true);
   });
 
   test('senza una voce scelta legge con «Google italiano», se c’è', async ({ page }) => {

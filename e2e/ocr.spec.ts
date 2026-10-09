@@ -128,3 +128,25 @@ test('dopo aver letto la foto, Esc chiude ancora «Dal libro»', async ({ page }
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
 });
+
+test('su un telefono lento il clic che arriva dopo un tocco non riaccende la parola appena spenta', async ({ page }) => {
+  await fakeOcr(page, 'Le piante producono ossigeno.');
+  await newMap(page, 'Le piante');
+  await toolbar(page, 'Dal libro');
+  const dialog = await photographPage(page);
+  const word = dialog.getByRole('button', { name: 'ossigeno', exact: true });
+  await word.click();
+  await expect(word).toHaveAttribute('aria-pressed', 'true');
+  // A tap to rub it out: pointerdown and pointerup now, the click 300 ms later.
+  await word.evaluate(async (el) => {
+    el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType: 'touch' }));
+    window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch' }));
+    await new Promise((r) => setTimeout(r, 300));
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+  });
+  await expect(word).toHaveAttribute('aria-pressed', 'false');
+  // The keyboard still toggles.
+  await word.focus();
+  await page.keyboard.press('Enter');
+  await expect(word).toHaveAttribute('aria-pressed', 'true');
+});
