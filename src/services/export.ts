@@ -182,28 +182,51 @@ export function pdfText(text: string): string {
 }
 
 type Pdf = InstanceType<typeof import('jspdf').jsPDF>;
-const TITLE_SIZE = 16;
 /** Height of one title line, in mm. */
 const TITLE_LINE = 7;
 /** Bold as in the app's headings: Lexend has 600, the others take their 700. */
 const TITLE_WEIGHT = 600;
-const DATE_SIZE = 10;
+
+interface TextStyle {
+  weight: number;
+  /** In pt. */
+  size: number;
+  /** Between baselines, in mm. */
+  gap: number;
+}
+const TITLE: TextStyle = { weight: TITLE_WEIGHT, size: 16, gap: TITLE_LINE };
+const DATE: TextStyle = { weight: 400, size: 10, gap: 0 };
+const NOTES_HEADING = 'Approfondimenti';
+
+/** Words on lines at most `width` wide; a longer word (a web address) is cut where it must. */
+export function wrapText(text: string, width: number, measure: (text: string) => number): string[] {
+  const lines: string[] = [];
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const last = lines.length - 1;
+    if (last >= 0 && measure(`${lines[last]} ${word}`) <= width) {
+      lines[last] += ` ${word}`;
+      continue;
+    }
+    let rest = [...word]; // never half an emoji
+    while (rest.length > 1 && measure(rest.join('')) > width) {
+      let n = rest.length - 1;
+      while (n > 1 && measure(rest.slice(0, n).join('')) > width) n--;
+      lines.push(rest.slice(0, n).join(''));
+      rest = rest.slice(n);
+    }
+    lines.push(rest.join(''));
+  }
+  return lines;
+}
 
 /** The title on at most two lines, `width` wide (shortened with "…" if longer). */
 export function titleLines(title: string, width: number, measure: (text: string) => number): string[] {
-  const lines: string[] = [];
-  for (const word of title.split(/\s+/).filter(Boolean)) {
-    const last = lines.length - 1;
-    if (last >= 0 && measure(`${lines[last]} ${word}`) <= width) lines[last] += ` ${word}`;
-    else lines.push(word);
-  }
+  const lines = wrapText(title, width, measure);
   if (lines.length === 0) return ['Mappa'];
-  return (lines.length > 2 ? [lines[0], lines.slice(1).join(' ')] : lines).map((line) => {
-    if (measure(line) <= width) return line;
-    const chars = [...line]; // never half an emoji
-    while (chars.length > 1 && measure(`${chars.join('').trimEnd()}…`) > width) chars.pop();
-    return `${chars.join('').trimEnd()}…`;
-  });
+  if (lines.length <= 2) return lines;
+  const second = [...lines.slice(1).join(' ')];
+  while (second.length > 1 && measure(`${second.join('').trimEnd()}…`) > width) second.pop();
+  return [lines[0], `${second.join('').trimEnd()}…`];
 }
 
 /** Text drawn as a picture is sharp on paper at this density (about 300 dpi). */
@@ -213,13 +236,16 @@ const MM_PER_PT = 25.4 / 72;
 interface Lettering {
   /** Width of the text, in mm. */
   width(text: string, weight: number, size: number): number;
+  /** Distance between lines of running text, in mm, as on screen («righe più distanziate»). */
+  line(size: number): number;
   /** Lines `gap` mm apart as a picture `w`×`h` mm, the first baseline `ascent` mm from its top. */
   draw(lines: string[], weight: number, size: number, gap: number): { dataUrl: string; w: number; h: number; ascent: number };
 }
 
 /**
- * jsPDF only has its own fonts: the header is drawn as a picture in the
- * child's reading font, spacing and capitals, like the map below it.
+ * jsPDF only has its own fonts: the words (header, «Approfondimenti») are
+ * drawn as pictures in the child's reading font, spacing and capitals, like
+ * the map.
  */
 async function lettering(texts: string[]): Promise<Lettering> {
   const root = document.documentElement;
@@ -228,6 +254,7 @@ async function lettering(texts: string[]): Promise<Lettering> {
   const em = (name: string) => parseFloat(css.getPropertyValue(name)) || 0; // "normal" → 0
   const letters = em('--letter-spacing');
   const words = em('--word-spacing');
+  const lineHeight = em('--line-height') || 1.4;
   const cased = (text: string) => (root.dataset.uppercase === 'true' ? text.toLocaleUpperCase('it-IT') : text);
   const ctx = document.createElement('canvas').getContext('2d')!;
   const style = (weight: number, size: number) => {
@@ -247,11 +274,12 @@ async function lettering(texts: string[]): Promise<Lettering> {
       style(weight, size);
       return ctx.measureText(cased(text)).width / PX_PER_MM;
     },
+    line: (size) => size * MM_PER_PT * lineHeight,
     draw(lines, weight, size, gap) {
       const text = lines.map(cased);
       const px = style(weight, size);
       const { fontBoundingBoxAscent: up = px, fontBoundingBoxDescent: down = px / 3 } = ctx.measureText(text[0]);
-      ctx.canvas.width = Math.ceil(Math.max(...text.map((t) => ctx.measureText(t).width)));
+      ctx.canvas.width = Math.max(1, Math.ceil(Math.max(...text.map((t) => ctx.measureText(t).width))));
       ctx.canvas.height = Math.ceil(up + down + gap * PX_PER_MM * (text.length - 1));
       style(weight, size); // resizing the canvas resets it
       text.forEach((t, i) => ctx.fillText(t, 0, up + i * gap * PX_PER_MM));
@@ -260,17 +288,30 @@ async function lettering(texts: string[]): Promise<Lettering> {
   };
 }
 
+/**
+ * Lines in the reading font (a picture), the first baseline at `baseline`.
+ * The same words go underneath as invisible text: the PDF can still be
+ * searched, and read aloud by a PDF reader.
+ */
+function put(doc: Pdf, write: Lettering, lines: string[], s: TextStyle, x: number, baseline: number, align: 'left' | 'right' = 'left') {
+  const art = write.draw(lines, s.weight, s.size, s.gap);
+  doc.addImage(art.dataUrl, 'PNG', align === 'right' ? x - art.w : x, baseline - art.ascent, art.w, art.h);
+  doc.setFont('helvetica', s.weight >= 600 ? 'bold' : 'normal');
+  doc.setFontSize(s.size);
+  lines.forEach((line, i) => doc.text(pdfText(line), x, baseline + i * s.gap, { renderingMode: 'invisible', align }));
+}
+
 async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const { jsPDF } = await import('jspdf'); // ~350 KB, only needed here
   const margin = 12;
   const footer = opts.usesPictograms ? 8 : 4;
   const date = new Date().toLocaleDateString('it-IT');
   const pageLabel = (page: number, count: number) => (count > 1 ? `${date} · pagina ${page + 1} di ${count}` : date);
-  const write = await lettering([opts.title, pageLabel(0, 2)]);
+  const write = await lettering([opts.title, pageLabel(0, 2), NOTES_HEADING, ...(opts.notes ?? []).flatMap((n) => [n.label, n.note])]);
   // The title stops before the widest date on its right ("pagina 4 di 4").
-  const dateRoom = write.width(pageLabel(opts.pages - 1, opts.pages), 400, DATE_SIZE) + 6;
+  const dateRoom = write.width(pageLabel(opts.pages - 1, opts.pages), DATE.weight, DATE.size) + 6;
   const fitTitle = (doc: Pdf) =>
-    titleLines(opts.title, doc.internal.pageSize.getWidth() - margin * 2 - dateRoom, (t) => write.width(t, TITLE_WEIGHT, TITLE_SIZE));
+    titleLines(opts.title, doc.internal.pageSize.getWidth() - margin * 2 - dateRoom, (t) => write.width(t, TITLE.weight, TITLE.size));
   // The header grows with the title: the sheet's way round (and so the
   // title's room) depends on the header, so this may take a second round.
   let header = 12;
@@ -288,18 +329,12 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const boxW = pageW - margin * 2;
   const whole = plan.tiles.length === 1;
   const full = await loadImage(img.dataUrl);
-  const titleArt = write.draw(title, TITLE_WEIGHT, TITLE_SIZE, TITLE_LINE);
   const baseline = margin + 6;
 
   for (let page = 0; page < plan.pageCount; page++) {
     if (page > 0) doc.addPage(opts.paper, plan.orientation);
-    doc.addImage(titleArt.dataUrl, 'PNG', margin, baseline - titleArt.ascent, titleArt.w, titleArt.h, 'title');
-    // The real words too, invisible: the PDF can still be searched and read aloud.
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(TITLE_SIZE);
-    title.forEach((line, i) => doc.text(pdfText(line), margin, baseline + i * TITLE_LINE, { renderingMode: 'invisible' }));
-    const right = write.draw([pageLabel(page, plan.pageCount)], 400, DATE_SIZE, 0);
-    doc.addImage(right.dataUrl, 'PNG', pageW - margin - right.w, baseline - right.ascent, right.w, right.h);
+    put(doc, write, title, TITLE, margin, baseline); // the same picture on every sheet: jsPDF keeps one copy
+    put(doc, write, [pageLabel(page, plan.pageCount)], DATE, pageW - margin, baseline, 'right');
 
     for (const tile of plan.tiles.filter((t) => t.page === page)) {
       const w = tile.w * plan.scale;
@@ -319,50 +354,47 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
       doc.text(ARASAAC_CREDIT, margin, pageH - margin + 2, { maxWidth: boxW });
     }
   }
-  if (!opts.simple && opts.notes?.length) addNotes(doc, opts.notes, opts.paper, plan.orientation, title, margin);
+  if (!opts.simple && opts.notes?.length) addNotes(doc, write, opts.notes, opts.title, opts.paper, plan.orientation, margin);
   return doc;
 }
 
 /** «Approfondimenti»: each concept's note, in reading order, after the map. */
-function addNotes(doc: Pdf, notes: { label: string; note: string }[], paper: Paper, orientation: 'portrait' | 'landscape', title: string[], margin: number) {
+function addNotes(doc: Pdf, write: Lettering, notes: { label: string; note: string }[], title: string, paper: Paper, orientation: 'portrait' | 'landscape', margin: number) {
   doc.addPage(paper, orientation);
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  const width = pageW - margin * 2;
-  let y = margin + 6;
-  doc.setTextColor(0);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(TITLE_SIZE);
-  doc.text(pdfText(`Approfondimenti - ${title.join(' ')}`).slice(0, 120), margin, y, { maxWidth: width });
-  y += TITLE_LINE + 4;
-  for (const { label, note } of notes) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    const head: string[] = doc.splitTextToSize(pdfText(label) || '-', width);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    const body: string[] = doc.splitTextToSize(pdfText(note), width);
-    const needed = head.length * 5.5 + body.length * 5 + 6;
-    if (y + Math.min(needed, 40) > pageH - margin) {
-      doc.addPage(paper, orientation);
-      y = margin + 6;
-    }
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    for (const line of head) {
-      doc.text(line, margin, y);
-      y += 5.5;
-    }
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    for (const line of body) {
-      if (y > pageH - margin) {
+  const width = doc.internal.pageSize.getWidth() - margin * 2;
+  const top = margin + 6;
+  const bottom = doc.internal.pageSize.getHeight() - margin;
+  const head: TextStyle = { weight: TITLE_WEIGHT, size: 12, gap: write.line(12) };
+  const body: TextStyle = { weight: 400, size: 11, gap: write.line(11) };
+  const measure = (s: TextStyle) => (text: string) => write.width(text, s.weight, s.size);
+
+  const heading = titleLines(`${NOTES_HEADING} – ${title}`, width, measure(TITLE));
+  put(doc, write, heading, TITLE, margin, top);
+  let y = top + heading.length * TITLE_LINE + 4;
+  /** Lines one below the other, going on to a new sheet when this one is full. */
+  const block = (lines: string[], s: TextStyle) => {
+    for (let i = 0; i < lines.length; ) {
+      if (y > bottom) {
         doc.addPage(paper, orientation);
-        y = margin + 6;
+        y = top;
       }
-      doc.text(line, margin, y);
-      y += 5;
+      const part = lines.slice(i, i + Math.floor((bottom - y) / s.gap) + 1);
+      put(doc, write, part, s, margin, y);
+      y += part.length * s.gap;
+      i += part.length;
     }
+  };
+
+  for (const { label, note } of notes) {
+    const name = wrapText(label, width, measure(head));
+    // The child's own line breaks stay.
+    const text = note.split('\n').flatMap((p) => wrapText(p, width, measure(body)));
+    if (y + Math.min(name.length * head.gap + text.length * body.gap + 6, 40) > bottom) {
+      doc.addPage(paper, orientation);
+      y = top;
+    }
+    block(name.length > 0 ? name : ['-'], head);
+    block(text, body);
     y += 6;
   }
 }
