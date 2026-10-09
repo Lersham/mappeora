@@ -5,6 +5,8 @@ import '@fontsource/lexend/400.css';
 import '@fontsource/lexend/600.css';
 import '@fontsource/atkinson-hyperlegible/400.css';
 import '@fontsource/atkinson-hyperlegible/700.css';
+import '@fontsource/opendyslexic/400.css';
+import '@fontsource/opendyslexic/700.css';
 // React Flow's base styles first, so our theme can override them.
 import '@xyflow/react/dist/style.css';
 import './styles/theme.css';

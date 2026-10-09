@@ -33,6 +33,7 @@
 }
 
 [data-font='atkinson'] { --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif; }
+[data-font='opendyslexic'] { --font-body: 'OpenDyslexic', system-ui, sans-serif; }
 [data-font='sistema'] { --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
 
 [data-spacing='normal'] {

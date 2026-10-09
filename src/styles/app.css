@@ -806,6 +806,7 @@ textarea {
 }
 .font-lexend { font-family: 'Lexend', sans-serif; }
 .font-atkinson { font-family: 'Atkinson Hyperlegible', sans-serif; }
+.font-opendyslexic { font-family: 'OpenDyslexic', sans-serif; }
 .font-sistema { font-family: system-ui, sans-serif; }
 .swatch.theme-crema { background: #fdf8ec; color: #1f2430; }
 .swatch.theme-bianco { background: #ffffff; color: #1f2430; }

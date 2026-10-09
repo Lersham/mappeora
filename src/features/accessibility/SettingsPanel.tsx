@@ -8,6 +8,7 @@ import { Dialog } from '../../components/Dialog';
 const FONTS: { value: FontChoice; label: string }[] = [
   { value: 'lexend', label: 'Lexend' },
   { value: 'atkinson', label: 'Atkinson' },
+  { value: 'opendyslexic', label: 'OpenDyslexic' },
   { value: 'sistema', label: 'Sistema' },
 ];
 
