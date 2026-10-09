@@ -548,6 +548,17 @@ textarea {
   opacity: 1;
   pointer-events: all;
 }
+/* Locked concepts draw no lines either: no dots at all. */
+.is-locked .react-flow__node .react-flow__handle:not(.handle-hidden) {
+  opacity: 0;
+  pointer-events: none;
+}
+.react-flow__controls-button.lock-button {
+  font-size: 1.05rem;
+}
+.react-flow__controls-button.lock-button[aria-pressed='false'] {
+  background: color-mix(in srgb, var(--highlight) 45%, var(--surface));
+}
 .react-flow__handle {
   width: 16px;
   height: 16px;

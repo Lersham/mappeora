@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps 
 import {
   Background,
   type EdgeTypes,
+  ControlButton,
   Controls,
   ReactFlow,
   ReactFlowProvider,
@@ -57,6 +58,24 @@ const READABLE_PX = 12;
 /** …to this size, comfortable to read on a phone. */
 const COMFORT_PX = 16;
 const MAX_READ_ZOOM = 1.2;
+
+const LOCK_KEY = 'mappeora-concetti-bloccati';
+
+/**
+ * On a touch screen the concepts start locked: a finger that lands on one
+ * while moving or zooming the map must not drag it away. With a mouse the
+ * difference is clear (drag the empty sheet to move, the wheel to zoom), so
+ * there they start free. The child's choice is remembered on the device.
+ */
+function lockedAtStart(): boolean {
+  try {
+    const saved = localStorage.getItem(LOCK_KEY);
+    if (saved !== null) return saved === '1';
+  } catch {
+    // Storage blocked: fall back to the device.
+  }
+  return window.matchMedia?.('(pointer: coarse)').matches ?? false;
+}
 
 /** Where a new concept goes when none is selected: under the main one. */
 function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined {
@@ -127,6 +146,24 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   }, []);
   /** A line is being drawn from a concept: every connection point shows. */
   const [connecting, setConnecting] = useState(false);
+  /** Concepts locked: touching them selects, dragging moves the map, never the concept. */
+  const [locked, setLockedState] = useState(lockedAtStart);
+  const setLocked = (value: boolean, say = true) => {
+    setLockedState(value);
+    try {
+      localStorage.setItem(LOCK_KEY, value ? '1' : '0');
+    } catch {
+      // Not remembered: the next visit starts from the device's default.
+    }
+    if (say) showNotice(value ? 'Concetti bloccati: puoi muovere e ingrandire la mappa senza spostarli.' : 'Ora puoi spostare i concetti trascinandoli. Tocca 🔒 per bloccarli di nuovo.');
+  };
+  const noticeTimer = useRef<number | undefined>(undefined);
+  /** A short message that goes away by itself. */
+  const showNotice = (text: string) => {
+    setNotice(text);
+    window.clearTimeout(noticeTimer.current);
+    noticeTimer.current = window.setTimeout(() => setNotice((now) => (now === text ? null : now)), 5000);
+  };
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
   const [tutorialStep, setTutorialStep] = useState<number | null>(tutorial ? 0 : null);
   const tutorialTarget = tutorialStep === null ? undefined : TUTORIAL_STEPS[tutorialStep]?.target;
@@ -263,7 +300,9 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     if (secret) labels.set(secret, '?');
     return map.edges.map((e) => {
       const ariaLabel = edgeAriaLabel(labels.get(e.source) ?? '', labels.get(e.target) ?? '', e.label);
-      const base = { id: e.id, source: e.source, target: e.target, label: e.label, ariaLabel, interactionWidth: 40, className: 'concept-edge' };
+      // A line blocks moving the map where a finger lands on it: narrower
+      // while the concepts are locked (its «+» and words stay easy to tap).
+      const base = { id: e.id, source: e.source, target: e.target, label: e.label, ariaLabel, interactionWidth: locked ? 16 : 40, className: 'concept-edge' };
       // The «+» for linking words stands out on the lines of the concept in hand.
       const near = !review.active && (e.source === selectedId || e.target === selectedId);
       const kind = shown?.edges[e.id];
@@ -289,7 +328,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         labelBgBorderRadius: 6,
       };
     });
-  }, [map.edges, nodeNames, shown, sheetTemplate, review.active, secret, selectedId]);
+  }, [map.edges, nodeNames, shown, sheetTemplate, review.active, secret, selectedId, locked]);
 
   const onNodesChange = useCallback((changes: NodeChange<ConceptFlowNode>[]) => {
     const s = useMapStore.getState();
@@ -631,6 +670,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
       endStep();
       window.clearTimeout(closer.current);
+      window.clearTimeout(noticeTimer.current);
     },
     [],
   );
@@ -687,7 +727,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           icon: '✋',
           label: 'Sposta',
           title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
-          onClick: () => actions.setFreeLayout(true),
+          onClick: () => {
+            actions.setFreeLayout(true);
+            // «Sposta» is asking to move concepts: they can't stay locked.
+            if (locked) setLocked(false, false);
+          },
         }
       : {
           key: 'layout',
@@ -703,7 +747,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   ];
 
   return (
-    <div className={`editor${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}`}>
+    <div className={`editor${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}`}>
       <header className="topbar">
         <BigButton icon="⬅️" label="Mappe" onClick={onBack} />
         <input
@@ -767,8 +811,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onConnectStart={() => setConnecting(true)}
           onConnectEnd={() => setConnecting(false)}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
-          nodesDraggable={editing}
-          nodesConnectable={editing}
+          nodesDraggable={editing && !locked}
+          nodesConnectable={editing && !locked}
           elementsSelectable={editing}
           // Our own handler (above): one undo step, and never behind a dialog.
           deleteKeyCode={null}
@@ -784,7 +828,19 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           ariaLabelConfig={MAP_ARIA_LABELS}
         >
           <Background gap={24} />
-          <Controls showInteractive={false} />
+          <Controls showInteractive={false}>
+            {editing && (
+              <ControlButton
+                className="lock-button"
+                onClick={() => setLocked(!locked)}
+                aria-pressed={locked}
+                aria-label={locked ? 'Concetti bloccati: tocca per poterli spostare' : 'Concetti liberi: tocca per bloccarli'}
+                title={locked ? 'Concetti bloccati: tocca per poterli spostare' : 'Concetti liberi: tocca per bloccarli'}
+              >
+                {locked ? '🔒' : '🔓'}
+              </ControlButton>
+            )}
+          </Controls>
         </ReactFlow>
       </div>
 
