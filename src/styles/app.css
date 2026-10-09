@@ -410,6 +410,13 @@ textarea {
   font-size: 0.75rem;
   line-height: 1.25;
 }
+.title-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  cursor: text;
+}
 .title-input {
   flex: 1;
   min-width: 0;
@@ -420,9 +427,26 @@ textarea {
   border-radius: 12px;
   background: transparent;
 }
+/* Where the field can be as wide as its words, the pencil sits right after
+   the title; elsewhere at the end of the field. */
+@supports (field-sizing: content) {
+  .title-input {
+    flex: 0 1 auto;
+    field-sizing: content;
+    min-width: 4ch;
+  }
+}
 .title-input:hover,
 .title-input:focus {
   border-color: var(--border);
+}
+.title-edit-icon {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+/* While the title is being written the field shows itself: no pencil. */
+.title-input:focus + .title-edit-icon {
+  visibility: hidden;
 }
 .canvas {
   min-height: 0;
@@ -447,6 +471,22 @@ textarea {
 }
 .toolbar .big-button {
   flex: 1 0 auto;
+}
+/* Where the whole toolbar fits, its tools come in groups: the first is the
+   phone's bar, the others are what «Altro» holds. A hairline between them. */
+@media (min-width: 901px) {
+  .toolbar .group-start {
+    position: relative;
+    margin-left: 9px;
+  }
+  .toolbar .group-start::before {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 10px;
+    bottom: 10px;
+    border-left: 1px solid var(--line);
+  }
 }
 /* «Altro» only exists where the whole toolbar does not fit. */
 .toolbar .toolbar-more {
@@ -518,9 +558,11 @@ textarea {
     font-size: min(0.75rem, 3.4vw);
     letter-spacing: normal;
   }
-  .title-input {
+  .title-field {
     order: 1;
     flex-basis: 100%;
+  }
+  .title-input {
     padding: 2px 10px;
     font-size: 1.05rem;
   }
@@ -818,6 +860,32 @@ textarea {
   /* The dialog itself takes the focus only so Tab starts inside it. */
   outline: none;
 }
+/* Phones: a menu opened from the bottom bar («Altro», «Ripassa») comes up
+   from the bottom, where the thumb already is. */
+@media (max-width: 560px) {
+  .overlay.is-sheet {
+    place-items: end center;
+    padding: 0;
+  }
+  .overlay.is-sheet > .overlay-card {
+    width: 100%;
+    max-height: calc(100% - 48px);
+    border-radius: 20px 20px 0 0;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    animation: sheet-up 0.18s ease-out;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overlay.is-sheet > .overlay-card {
+    animation: none;
+  }
+}
 .overlay-card {
   width: min(520px, 100%);
   max-height: 100%;
@@ -912,6 +980,8 @@ textarea {
 .swatch.theme-scuro { background: #1d2129; color: #f1ede4; }
 .setting {
   display: grid;
+  /* Large text: a field must not push the dialog wider than the screen. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   margin-bottom: 16px;
 }
@@ -1110,8 +1180,8 @@ textarea {
   gap: 10px;
 }
 .template-card {
+  position: relative;
   display: flex;
-  align-items: flex-start;
   border: 2px solid var(--border);
   border-radius: 16px;
   background: var(--surface);
@@ -1120,12 +1190,17 @@ textarea {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
 }
+/* The picture sits beside the name and the description gets the whole width
+   underneath: fewer lines to read. 🔊 stays in the top corner. */
 .template-pick,
 .review-option {
   flex: 1;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(44px, auto) auto;
+  align-content: start;
   column-gap: 10px;
+  row-gap: 4px;
   align-items: center;
   padding: 12px;
   border: none;
@@ -1134,21 +1209,31 @@ textarea {
   cursor: pointer;
 }
 .template-icon {
-  grid-row: span 2;
-  font-size: 2rem;
+  font-size: 1.6rem;
+  line-height: 1;
 }
 .template-name {
   font-weight: 600;
+  /* Clear of the 🔊 in the corner. */
+  margin-right: 46px;
+}
+/* Large text: a long word («Interrogazione») goes on two lines instead of
+   out of its card. */
+.template-name,
+.template-desc {
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 .template-desc {
+  grid-column: 1 / -1;
   font-size: 0.85rem;
   color: var(--muted);
   line-height: 1.4;
 }
 /* A choice with a 🔊 beside it. */
 .option-card {
+  position: relative;
   display: flex;
-  align-items: center;
   margin-bottom: 10px;
   border: 2px solid var(--border);
   border-radius: 16px;
@@ -1160,6 +1245,12 @@ textarea {
 .option-card.is-selected {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+.template-card > .icon-button,
+.option-card > .icon-button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
 }
 .listenable {
   display: flex;

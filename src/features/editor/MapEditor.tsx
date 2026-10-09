@@ -718,8 +718,17 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const editing = !review.active;
 
   // On a phone only the main tools fit: these go in «Altro» (see .toolbar-more).
+  // On a computer they are in groups ('group-start'): what goes into the map,
+  // where it stays or leaves it, the map as a whole.
   const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
-    { key: 'outline', icon: 'outline', label: 'Scaletta', title: 'Scrivi la mappa come un elenco puntato', onClick: () => setDialog({ kind: 'outline' }) },
+    {
+      key: 'outline',
+      icon: 'outline',
+      label: 'Scaletta',
+      title: 'Scrivi la mappa come un elenco puntato',
+      className: 'group-start',
+      onClick: () => setDialog({ kind: 'outline' }),
+    },
     { key: 'photo', icon: 'camera', label: 'Dal libro', onClick: () => setDialog({ kind: 'photo' }) },
     { key: 'image', icon: 'image', label: 'Immagine', onClick: () => setDialog({ kind: 'style' }), disabled: !selectedNode },
     sheetMode
@@ -728,6 +737,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           icon: 'hand',
           label: 'Sposta',
           title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
+          className: 'group-start',
           onClick: () => {
             actions.setFreeLayout(true);
             // «Sposta» is asking to move concepts: they can't stay locked.
@@ -739,11 +749,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           icon: 'tidy',
           label: 'Riordina',
           title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4.' : undefined,
+          className: 'group-start',
           onClick: () => void tidy(),
           disabled: arranging,
         },
     { key: 'delete', icon: 'trash', label: 'Elimina', variant: 'danger', onClick: () => selectedNode && actions.removeNodes([selectedNode.id]), disabled: !selectedNode },
-    { key: 'save', icon: 'save', label: 'Salva', onClick: () => setDialog({ kind: 'export' }) },
+    { key: 'save', icon: 'save', label: 'Salva', className: 'group-start', onClick: () => setDialog({ kind: 'export' }) },
     { key: 'settings', icon: 'palette', label: 'Aspetto', onClick: onOpenSettings },
   ];
 
@@ -751,20 +762,24 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     <div className={`editor${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}`}>
       <header className="topbar">
         <BigButton icon="back" label="Mappe" onClick={onBack} />
-        <input
-          className="title-input"
-          value={map.title}
-          maxLength={1000}
-          aria-label="Titolo della mappa"
-          readOnly={!editing}
-          // The whole title is one undo step, not one per letter.
-          onFocus={() => editing && beginStep()}
-          onBlur={() => {
-            if (!map.title.trim()) actions.setTitle(map.nodes[0]?.label.trim() || NEW_MAP_TITLE);
-            endStep();
-          }}
-          onChange={(e) => actions.setTitle(e.target.value)}
-        />
+        {/* The pencil says the title can be changed: there is no hover on a tablet. */}
+        <label className="title-field">
+          <input
+            className="title-input"
+            value={map.title}
+            maxLength={1000}
+            aria-label="Titolo della mappa"
+            readOnly={!editing}
+            // The whole title is one undo step, not one per letter.
+            onFocus={() => editing && beginStep()}
+            onBlur={() => {
+              if (!map.title.trim()) actions.setTitle(map.nodes[0]?.label.trim() || NEW_MAP_TITLE);
+              endStep();
+            }}
+            onChange={(e) => actions.setTitle(e.target.value)}
+          />
+          {editing && <Icon name="edit" className="title-edit-icon" />}
+        </label>
         {editing ? (
           <>
             <BigButton icon="undo" label="Annulla" disabled={!canUndo} onClick={() => mapHistory().undo()} />
@@ -870,8 +885,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             <BigButton icon="speak" label="Leggi" className={target('leggi')} onClick={reader.readMap} />
           )}
           <BigButton icon="brain" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
-          {moreTools.map(({ key, ...t }) => (
-            <BigButton key={key} {...t} className="toolbar-extra" />
+          {moreTools.map(({ key, className = '', ...t }) => (
+            <BigButton key={key} {...t} className={`toolbar-extra ${className}`} />
           ))}
           <BigButton icon="menu" label="Altro" className="toolbar-more" aria-haspopup="dialog" onClick={() => setDialog({ kind: 'more' })} />
         </nav>
@@ -929,9 +944,9 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         />
       )}
       {dialog?.kind === 'more' && (
-        <Dialog title="Altro" onClose={() => setDialog(null)} className="more-tools">
+        <Dialog title="Altro" onClose={() => setDialog(null)} className="more-tools" sheet>
           <div className="more-grid">
-            {moreTools.map(({ key, onClick, ...t }) => (
+            {moreTools.map(({ key, onClick, className: _group, ...t }) => (
               <BigButton
                 key={key}
                 {...t}
@@ -953,7 +968,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
 function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): void; onClose(): void }) {
   return (
-    <Dialog title="Ripassa" onClose={onClose} className="review-start">
+    <Dialog title="Ripassa" onClose={onClose} className="review-start" sheet>
       <OptionCard icon="👣" name="Un passo alla volta" description="La mappa appare un concetto alla volta, letto ad alta voce." onClick={() => onStart('passo')} />
       <OptionCard icon="🙈" name="Indovina" description="Il concetto è nascosto: prova a ricordarlo, poi premi «Scopri»." onClick={() => onStart('quiz')} />
       <OptionCard

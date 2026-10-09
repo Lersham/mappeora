@@ -21,6 +21,7 @@ test.describe('Schermata iniziale', () => {
     await page.locator('.title-input').fill('La fotosintesi delle piante');
     await page.getByRole('button', { name: 'Mappe' }).click();
     await expect(page.locator('.map-title')).toHaveText(['La fotosintesi delle piante']);
+    await expect(page.locator('.map-date')).toHaveText(['Oggi']);
     await page.reload();
     await page.locator('.map-open', { hasText: 'La fotosintesi delle piante' }).click();
     await expect(nodes(page)).toHaveCount(1);

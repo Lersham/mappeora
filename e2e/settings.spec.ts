@@ -1,3 +1,4 @@
+import type { Locator } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { newMap, node, rename } from './helpers';
 
@@ -51,6 +52,28 @@ test('Testo grande in stampatello: le parole lunghe di un concetto non vanno a c
       return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
     });
   expect(words).toBe(1);
+});
+
+test('Testo grande, OpenDyslexic e spaziatura ampia: le finestre di scelta restano dentro lo schermo', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('mappeora-settings')) {
+      const state = { font: 'opendyslexic', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
+      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+    }
+  });
+  // Measured with the real font, not the one shown while it loads.
+  const fits = async (dialog: Locator) => {
+    await expect(dialog).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    return dialog.locator('.overlay-card').evaluate((card) => card.scrollWidth <= card.clientWidth + 1);
+  };
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Nuova mappa' }).click();
+  const create = page.getByRole('dialog', { name: 'Nuova mappa' });
+  expect(await fits(create)).toBe(true);
+  await create.getByRole('button', { name: 'Crea' }).click();
+  await page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Ripassa', exact: true }).click();
+  expect(await fits(page.getByRole('dialog', { name: 'Ripassa' }))).toBe(true);
 });
 
 test('Aspetto: i cursori dicono quanto valgono', async ({ page }) => {
