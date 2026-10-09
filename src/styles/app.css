@@ -388,7 +388,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: max(6px, env(safe-area-inset-top)) 8px 6px;
+  padding: max(2px, env(safe-area-inset-top)) 8px 2px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
@@ -397,10 +397,13 @@ textarea {
 .review-bar .big-button:not(.primary) {
   background: transparent;
 }
+/* The word beside its icon: the top bar is one thin row, and the height it
+   leaves goes to the map (a tablet held sideways has little of it). */
 .topbar .big-button {
-  min-height: 48px;
-  padding: 4px 10px;
-  gap: 2px;
+  flex-direction: row;
+  min-height: 44px;
+  padding: 2px 12px;
+  gap: 6px;
 }
 .topbar .big-button-icon {
   font-size: 1.3rem;
@@ -409,6 +412,9 @@ textarea {
 .toolbar .big-button-label {
   font-size: 0.75rem;
   line-height: 1.25;
+}
+.topbar .big-button-label {
+  font-size: 0.85rem;
 }
 .title-field {
   flex: 1;
@@ -422,7 +428,7 @@ textarea {
   min-width: 0;
   font-size: 1.15rem;
   font-weight: 600;
-  padding: 6px 10px;
+  padding: 2px 10px;
   border: 2px solid transparent;
   border-radius: 12px;
   background: transparent;
@@ -541,15 +547,18 @@ textarea {
   .topbar {
     flex-wrap: wrap;
     row-gap: 0;
+    padding-block: max(6px, env(safe-area-inset-top)) 6px;
   }
   .topbar > .big-button:first-child {
     margin-right: auto;
   }
-  /* «Mappe», «Annulla» and «Ripeti» stay on one row with large text too. */
+  /* «Mappe», «Annulla» and «Ripeti» stay on one row with large text too:
+     each word under its icon. */
   .topbar .big-button {
+    flex-direction: column;
     min-width: 0;
-    min-height: 44px;
     padding: 2px 8px;
+    gap: 2px;
   }
   .topbar .big-button-icon {
     font-size: min(1.3rem, 6.5vw);
@@ -563,7 +572,6 @@ textarea {
     flex-basis: 100%;
   }
   .title-input {
-    padding: 2px 10px;
     font-size: 1.05rem;
   }
 }

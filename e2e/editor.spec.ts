@@ -277,6 +277,16 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await showAll(page);
     expect(await onScreenPx('Le cause')).toBeLessThan(12);
   });
+
+  test('sullo schermo largo la barra in alto è una riga sottile: ogni parola accanto alla sua icona', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'sul telefono il titolo ha una riga sua');
+    await newMap(page, 'I vulcani');
+    expect((await page.locator('.topbar').boundingBox())!.height).toBeLessThanOrEqual(52);
+    const back = page.locator('.topbar').getByRole('button', { name: 'Mappe' });
+    const [icon, word] = [(await back.locator('.big-button-icon').boundingBox())!, (await back.locator('.big-button-label').boundingBox())!];
+    expect(icon.x + icon.width).toBeLessThanOrEqual(word.x);
+    expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  });
 });
 
 test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
