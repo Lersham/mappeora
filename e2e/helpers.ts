@@ -187,3 +187,56 @@ export async function highlight(page: Page, from: Locator, to: Locator) {
   await touch('touchEnd', end.x, end.y);
   await cdp.detach();
 }
+
+/**
+ * What a child would see as badly drawn, outside the map itself: a word
+ * broken on two lines, a button over another, something that scrolls
+ * sideways or goes out of the screen, words cut without «…».
+ */
+export function drawnBadly(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const out: string[] = [];
+    const inMap = (el: Element) => !!el.closest('.react-flow__viewport, .react-flow__renderer, .sr-only');
+    const shown = (el: Element) => {
+      const s = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return s.visibility !== 'hidden' && s.display !== 'none' && +s.opacity > 0 && r.width > 0 && r.height > 0;
+    };
+    const what = (el: Element) => `${el.tagName.toLowerCase()}.${[...el.classList].join('.')} «${((el as HTMLInputElement).value ?? el.textContent ?? '').trim().slice(0, 30)}»`;
+    const text = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let t = text.nextNode(); t; t = text.nextNode()) {
+      const host = t.parentElement;
+      if (!host || inMap(host) || !shown(host)) continue;
+      for (const m of t.textContent!.matchAll(/\S{2,}/g)) {
+        const range = document.createRange();
+        range.setStart(t, m.index);
+        range.setEnd(t, m.index + m[0].length);
+        if (new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top))).size > 1) out.push(`parola spezzata: ${m[0]} in ${what(host)}`);
+      }
+    }
+    const all = [...document.querySelectorAll('body *')].filter((el) => !inMap(el) && !el.matches('.react-flow, .canvas, svg *') && shown(el));
+    for (const el of all) {
+      const s = getComputedStyle(el);
+      const cut = el.scrollWidth > el.clientWidth + 1;
+      if (cut && (s.overflowX === 'auto' || s.overflowX === 'scroll')) out.push(`scorre di lato: ${what(el)}`);
+      const field = el.matches('input:not([type=range], [type=checkbox], [type=radio], [type=file]), textarea');
+      if (cut && (field || s.overflowX === 'hidden' || s.overflowX === 'clip') && s.textOverflow !== 'ellipsis' && (el.textContent || (el as HTMLInputElement).value))
+        out.push(`tagliato: ${what(el)}`);
+      const r = el.getBoundingClientRect();
+      if (r.right > innerWidth + 1 || r.left < -1) {
+        let p = el.parentElement;
+        while (p && p !== document.body && getComputedStyle(p).overflowX === 'visible') p = p.parentElement;
+        if (!p || p === document.body) out.push(`fuori dallo schermo: ${what(el)}`);
+      }
+    }
+    // Side by side in the same row or group (a window over the map, the 🔊 in
+    // the corner of a choice cover them on purpose).
+    const placed = (el: Element) => ['absolute', 'fixed'].includes(getComputedStyle(el).position);
+    const buttons = all.filter((el) => el.matches('button') && !placed(el)).map((el) => [el, el.getBoundingClientRect()] as const);
+    for (const [i, [a, p]] of buttons.entries())
+      for (const [b, q] of buttons.slice(i + 1))
+        if (a.parentElement === b.parentElement && p.left < q.right - 2 && q.left < p.right - 2 && p.top < q.bottom - 2 && q.top < p.bottom - 2)
+          out.push(`uno sopra l'altro: ${what(a)} / ${what(b)}`);
+    return out;
+  });
+}

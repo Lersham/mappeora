@@ -1,6 +1,6 @@
 import type { Locator } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { newMap, node, rename } from './helpers';
+import { drawnBadly, newMap, node, rename, toolbar } from './helpers';
 
 test('Aspetto: carattere, sfondo e maiuscolo si applicano e restano dopo aver ricaricato', async ({ page }) => {
   await page.goto('/');
@@ -74,6 +74,69 @@ test('Testo grande, OpenDyslexic e spaziatura ampia: le finestre di scelta resta
   await create.getByRole('button', { name: 'Crea' }).click();
   await page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Ripassa', exact: true }).click();
   expect(await fits(page.getByRole('dialog', { name: 'Ripassa' }))).toBe(true);
+});
+
+test('Testo grande, OpenDyslexic e spaziatura ampia: in nessuna schermata parole spezzate, tagliate o pulsanti uno sopra l’altro', async ({
+  page,
+  isMobile,
+}) => {
+  test.slow();
+  // On a computer: the size of a tablet held sideways, where it was seen.
+  if (!isMobile) await page.setViewportSize({ width: 1024, height: 768 });
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('mappeora-settings')) {
+      const state = { font: 'opendyslexic', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
+      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+    }
+  });
+  const looks = async (where: string) => {
+    await page.evaluate(() => document.fonts.ready);
+    // Windows slide in: measured where they stop.
+    await expect.poll(() => drawnBadly(page), { message: where, intervals: [300, 300, 500] }).toEqual([]);
+  };
+  const close = async (name: string) => {
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name })).toHaveCount(0);
+  };
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Esempi', exact: true }).click();
+  await looks('Esempi');
+  await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
+  await expect(page.locator('.concept-node')).toHaveCount(37);
+  await looks('la mappa');
+  const bar = page.getByRole('navigation', { name: 'Strumenti' });
+  if (await bar.getByRole('button', { name: 'Altro', exact: true }).isVisible()) {
+    await bar.getByRole('button', { name: 'Altro', exact: true }).click();
+    await looks('Altro');
+    await close('Altro');
+  }
+  for (const [tool, dialog] of [
+    ['Ripassa', 'Ripassa'],
+    ['Salva', 'Salva, esporta o stampa'],
+    ['Scaletta', 'Scaletta'],
+    ['Aspetto', 'Aspetto e voce'],
+  ]) {
+    await toolbar(page, tool);
+    await expect(page.getByRole('dialog', { name: dialog })).toBeVisible();
+    await looks(dialog);
+    await close(dialog);
+  }
+  await page.locator('.react-flow__edge').first().locator('.react-flow__edge-interaction').last().dispatchEvent('click');
+  await looks('Parola di collegamento');
+  await close('Parola di collegamento');
+  await toolbar(page, 'Ripassa');
+  await page.getByRole('button', { name: /^Interrogazione/ }).click();
+  await looks('Interrogazione');
+
+  await page.goto('/');
+  await looks('le mie mappe');
+  await page.getByRole('button', { name: 'Nuova mappa' }).click();
+  await looks('Nuova mappa');
+  await close('Nuova mappa');
+  await page.getByRole('button', { name: 'Impara facendo' }).click();
+  await expect(page.getByText('Passo 1 di')).toBeVisible();
+  await looks('Impara facendo');
 });
 
 test('Aspetto: i cursori dicono quanto valgono', async ({ page }) => {

@@ -35,6 +35,7 @@ import { Dialog } from '../../components/Dialog';
 import { DictationOverlay } from '../../components/DictationOverlay';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { useDictation } from '../../hooks/useDictation';
+import { useCrowded } from '../../hooks/useCrowded';
 import { autoLayout } from '../../services/layout';
 import { exportMap, saveMapFile } from '../../services/export';
 import { readingOrder } from '../../lib/readingOrder';
@@ -766,8 +767,9 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   const editing = !review.active;
 
-  // On a phone only the main tools fit: these go in «Altro» (see .toolbar-more).
-  // On a computer they are in groups ('group-start'): what goes into the map,
+  const [toolbarRef, crowded] = useCrowded();
+  // Where they do not all fit (a phone, large text): these go in «Altro» (see .toolbar-more).
+  // Where they all fit they are in groups ('group-start'): what goes into the map,
   // where it stays or leaves it, the map as a whole.
   const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
     {
@@ -934,7 +936,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       {review.active ? (
         <ReviewBar onRepeat={() => current && void reader.readSteps([current])} onOverview={overview} onExit={exitReview} />
       ) : (
-        <nav className="toolbar" aria-label="Strumenti">
+        <nav ref={toolbarRef} className={`toolbar${crowded ? ' is-crowded' : ''}`} aria-label="Strumenti">
           <BigButton icon="plus" label="Concetto" variant="primary" className={target('concetto')} onClick={() => addConcept()} />
           <BigButton icon="mic" label="Detta" className={target('detta')} onClick={dictate} disabled={dictation.listening} />
           {reader.active ? (

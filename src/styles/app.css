@@ -114,7 +114,8 @@ textarea {
 /* ---------- Home ---------- */
 
 .home {
-  max-width: 720px;
+  /* Wider with larger text, like the windows: the same words per line. */
+  max-width: calc(720px * var(--text-scale) / 1.15);
   margin: 0 auto;
   padding: max(16px, env(safe-area-inset-top)) 16px 32px;
 }
@@ -301,7 +302,7 @@ textarea {
   cursor: pointer;
 }
 .map-title {
-  font-size: 1.15rem;
+  font-size: min(1.15rem, 6.5vw);
   font-weight: 600;
   /* Only a word longer than the whole card is broken. */
   max-width: 100%;
@@ -432,6 +433,8 @@ textarea {
   border: 2px solid transparent;
   border-radius: 12px;
   background: transparent;
+  /* A long title ends with «…», never with half a letter. */
+  text-overflow: ellipsis;
 }
 /* Where the field can be as wide as its words, the pencil sits right after
    the title; elsewhere at the end of the field. */
@@ -480,67 +483,69 @@ textarea {
 }
 /* Where the whole toolbar fits, its tools come in groups: the first is the
    phone's bar, the others are what «Altro» holds. A hairline between them. */
-@media (min-width: 901px) {
-  .toolbar .group-start {
-    position: relative;
-    margin-left: 9px;
-  }
-  .toolbar .group-start::before {
-    content: '';
-    position: absolute;
-    left: -7px;
-    top: 10px;
-    bottom: 10px;
-    border-left: 1px solid var(--line);
-  }
+.toolbar .group-start {
+  position: relative;
+  margin-left: 9px;
 }
-/* «Altro» only exists where the whole toolbar does not fit. */
+.toolbar .group-start::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 10px;
+  bottom: 10px;
+  border-left: 1px solid var(--line);
+}
+/* «Altro» only exists where the whole toolbar does not fit: on a phone, or
+   with large text on a tablet (measured: see useCrowded). Never a bar cut
+   at the edge of the screen. */
 .toolbar .toolbar-more {
   display: none;
 }
 .more-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
+/* As wide as its word at least: with large text fewer buttons per row,
+   never «Scale-tta». */
 .more-grid .big-button {
+  flex: 1 1 96px;
+  min-width: max-content;
   min-height: 72px;
+  padding-inline: 8px;
+}
+.toolbar.is-crowded .toolbar-extra {
+  display: none;
+}
+.toolbar.is-crowded .toolbar-more {
+  display: inline-flex;
+}
+/* Each button as wide as its word, the room left shared: «Concetto» and
+   «Ripassa» are whole, not «Conce…». */
+.toolbar.is-crowded .big-button,
+.review-bar .big-button {
+  flex: 1 1 auto;
   min-width: 0;
-  /* The room goes to the word: «Immagine» must not break in two. */
-  padding-inline: 4px;
+  padding: 6px 2px;
 }
-/* Large text: a long word goes on two lines instead of out of its button. */
-.more-grid .big-button-label {
+/* Five buttons share the width: with large text the words must still
+   fit inside their button. */
+.toolbar.is-crowded .big-button-icon,
+.review-bar .big-button-icon {
+  font-size: min(1.5rem, 7vw);
+}
+.toolbar.is-crowded .big-button-label,
+.review-bar .big-button-label {
   max-width: 100%;
-  text-align: center;
-  overflow-wrap: break-word;
-  hyphens: auto;
-}
-@media (max-width: 900px) {
-  .toolbar .toolbar-extra {
-    display: none;
-  }
-  .toolbar .toolbar-more {
-    display: inline-flex;
-  }
-  .toolbar .big-button {
-    flex: 1 1 0;
-    min-width: 0;
-    padding: 6px 2px;
-  }
-  /* Five buttons share the width: with large text the words must still
-     fit inside their button. */
-  .toolbar .big-button-icon {
-    font-size: min(1.5rem, 7vw);
-  }
-  .toolbar .big-button-label {
-    max-width: 100%;
-    font-size: min(0.75rem, 3.1vw);
-    letter-spacing: normal;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+  font-size: min(0.75rem, 3vw);
+  letter-spacing: normal;
+  line-height: 1.25;
+  /* Cut only at the side, with «…»: OpenDyslexic's letters reach above
+     and below their line and must not be cut there. */
+  overflow-x: clip;
+  overflow-y: visible;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* Phones: the title gets a line of its own instead of being cut short. */
 @media (max-width: 560px) {
@@ -766,8 +771,13 @@ textarea {
   hyphens: auto;
 }
 .concept-input {
-  width: 100%;
+  /* Its words have at least the room the name had (the frame goes into
+     the concept's padding), and it is as tall as they are: a word that
+     goes on the next line is not hidden under the edge. */
+  width: calc(100% + 32px);
+  margin-inline: -16px;
   min-width: 160px;
+  field-sizing: content;
   border: 2px solid var(--primary);
   border-radius: 8px;
   padding: 4px 6px;
@@ -895,7 +905,9 @@ textarea {
   }
 }
 .overlay-card {
-  width: min(520px, 100%);
+  /* Larger text, wider window: the same words per line, not a long narrow
+     column with the screen empty around it. */
+  width: min(calc(520px * var(--text-scale) / 1.15), 100%);
   max-height: 100%;
   overflow-y: auto;
   padding: 24px;
@@ -994,9 +1006,16 @@ textarea {
   margin-bottom: 16px;
 }
 .setting.toggle {
-  grid-template-columns: auto 1fr;
+  /* minmax(0, …): with large text «STAMPATELLO MAIUSCOLO» wraps inside the
+     window instead of widening it. */
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 12px;
+}
+/* On a phone with large text its longest word («STAMPATELLO») still fits. */
+.setting.toggle > span {
+  font-size: min(1em, 5.5vw);
+  overflow-wrap: break-word;
 }
 .setting input[type='checkbox'] {
   width: 28px;
@@ -1023,7 +1042,8 @@ textarea {
   padding: 12px 16px;
   border-radius: 12px;
   background: var(--bg);
-  font-size: 1.1rem;
+  font-size: min(1.1rem, 5.5vw);
+  overflow-wrap: break-word;
 }
 .dialog-actions {
   display: flex;
@@ -1036,7 +1056,9 @@ textarea {
 
 .dialog-title {
   margin: 0 0 16px;
-  font-size: 1.4rem;
+  /* On a phone with large text «collegamento» still fits the window. */
+  font-size: min(1.4rem, 7vw);
+  overflow-wrap: break-word;
 }
 .overlay-card > .dialog-actions {
   /* Keep "Crea" / "Fatto" reachable in long dialogs on small screens. */
@@ -1072,6 +1094,7 @@ textarea {
   border-radius: 12px;
   background: var(--bg);
   font-size: 1.05rem;
+  text-overflow: ellipsis;
 }
 .search-row {
   display: flex;
@@ -1180,7 +1203,7 @@ textarea {
 
 /* New map: template picker */
 .new-map-dialog {
-  width: min(640px, 100%);
+  width: min(calc(640px * var(--text-scale) / 1.15), 100%);
 }
 .template-grid {
   display: grid;
@@ -1198,42 +1221,48 @@ textarea {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
 }
-/* The picture sits beside the name and the description gets the whole width
-   underneath: fewer lines to read. 🔊 stays in the top corner. */
+/* The picture and the name are read as one line, and the description gets
+   the whole width underneath: fewer lines to read. They flow like text, so
+   with large text a long name goes under the picture, where it has the
+   whole width, instead of being broken in two («stampar-e»). */
 .template-pick,
 .review-option {
   flex: 1;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-rows: minmax(44px, auto) auto;
-  align-content: start;
-  column-gap: 10px;
-  row-gap: 4px;
-  align-items: center;
+  display: block;
   padding: 12px;
   border: none;
   background: none;
   text-align: left;
   cursor: pointer;
 }
+/* Room for the 🔊 in the top corner: only the first lines go round it. */
+.template-pick::before,
+.review-option::before {
+  content: '';
+  float: right;
+  width: 46px;
+  height: 46px;
+}
 .template-icon {
+  /* As a block in the line, it lets the name go to the next line. */
+  display: inline-block;
+  margin-right: 10px;
   font-size: 1.6rem;
   line-height: 1;
+  vertical-align: middle;
 }
 .template-name {
   font-weight: 600;
-  /* Clear of the 🔊 in the corner. */
-  margin-right: 46px;
+  vertical-align: middle;
 }
-/* Large text: a long word («Interrogazione») goes on two lines instead of
-   out of its card. */
+/* Only a word longer than the whole card is broken. */
 .template-name,
 .template-desc {
   overflow-wrap: break-word;
-  hyphens: auto;
 }
 .template-desc {
-  grid-column: 1 / -1;
+  display: block;
+  margin-top: 6px;
   font-size: 0.85rem;
   color: var(--muted);
   line-height: 1.4;
@@ -1341,16 +1370,12 @@ textarea {
 .review-bar {
   align-items: center;
 }
-.review-bar .big-button {
-  flex: 1 1 0;
-  min-width: 0;
-}
 .review-progress {
   flex: none;
   min-width: 64px;
   text-align: center;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: min(1.1rem, 4.5vw);
 }
 .concept-node.review-current {
   box-shadow: 0 0 0 6px var(--highlight);
@@ -1366,7 +1391,7 @@ textarea {
   padding: 12px 16px;
   border-top: 2px solid var(--border);
   background: var(--surface);
-  font-size: 1.5rem;
+  font-size: min(1.5rem, 7.5vw);
   font-weight: 700;
   text-align: center;
   overflow-wrap: anywhere;
@@ -1430,7 +1455,7 @@ textarea {
 /* ---------- Dal libro (OCR) ---------- */
 
 .photo-text {
-  width: min(760px, 100%);
+  width: min(calc(760px * var(--text-scale) / 1.15), 100%);
 }
 .small {
   font-size: 0.85rem;
@@ -1560,7 +1585,7 @@ textarea {
 /* ---------- Scaletta (outline) ---------- */
 
 .outline-dialog {
-  width: min(640px, 100%);
+  width: min(calc(800px * var(--text-scale) / 1.15), 100%);
 }
 .outline-list {
   list-style: none;
@@ -1580,20 +1605,28 @@ textarea {
 }
 .outline-bullet {
   flex: none;
-  width: 16px;
+  width: 1em;
   color: var(--muted);
   text-align: center;
 }
 .outline-input {
   /* Grows with flex; when a deep line leaves too little room the buttons
      go to a second line instead of squeezing the text. */
-  flex: 1 1 7rem;
+  flex: 1 1 13ch;
   width: 0;
-  min-width: 7rem;
+  min-width: min(13ch, 100%);
   min-height: 48px;
   padding: 8px 10px;
+  /* A long concept goes on more lines: all of it can be read. */
+  resize: none;
+  overflow: hidden;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+  field-sizing: content;
 }
-.outline-tools-start {
+.outline-tools {
+  display: flex;
+  gap: 4px;
   margin-left: auto;
 }
 .outline-tool {
@@ -1635,7 +1668,7 @@ textarea {
 /* ---------- Benvenuto ---------- */
 
 .welcome {
-  max-width: 520px;
+  max-width: calc(520px * var(--text-scale) / 1.15);
 }
 .welcome-page {
   display: flex;
@@ -1747,11 +1780,11 @@ textarea {
   .tutorial-actions {
     grid-column: 1;
     grid-row: auto;
+    flex-wrap: wrap;
     margin-top: 4px;
   }
   .tutorial-actions .big-button {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 1 0 auto;
     min-height: 48px;
     flex-direction: row;
     gap: 6px;
