@@ -12,7 +12,7 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 
 ## Provare l'app
 
-- **Web / PWA**: https://mapp-ami.vercel.app (il vecchio indirizzo mappeora.vercel.app non è più attivo). Si aggiorna da solo a ogni push sul branch. Dal browser del tablet: menu → "Aggiungi a schermata Home".
+- **Web / PWA**: https://mapp-ami.vercel.app. Si aggiorna da solo a ogni push sul branch. Dal browser del tablet: menu → "Aggiungi a schermata Home".
 - **Android**: APK di debug da installare a mano (sul dispositivo va permessa l'installazione da "origini sconosciute"). Per crearlo serve l'Android SDK con JDK 21:
   ```bash
   npm run setup:android  # una volta per macchina/sessione: SDK in /opt/android-sdk (~650 MB)
