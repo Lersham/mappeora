@@ -119,6 +119,20 @@ textarea {
   gap: 8px;
   margin-left: auto;
 }
+/* «Come funziona» and «Aspetto» are used now and then: smaller than the
+   buttons that start a map, still with an icon and a word. */
+.home-header-tools .big-button {
+  min-height: 44px;
+  padding: 4px 10px;
+  gap: 0;
+}
+.home-header-tools .big-button-icon {
+  font-size: 1.1rem;
+}
+.home-header-tools .big-button-label {
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
 @media (max-width: 520px) {
   .home-brand {
     font-size: 1.2rem;
@@ -131,13 +145,13 @@ textarea {
     font-size: 1.4rem;
   }
   .home-header-tools .big-button {
-    padding: 6px 8px;
+    padding: 4px 8px;
   }
   .home-header-tools .big-button-icon {
-    font-size: min(1.4rem, 7vw);
+    font-size: min(1.1rem, 5.5vw);
   }
   .home-header-tools .big-button-label {
-    font-size: min(0.8rem, 3.4vw);
+    font-size: min(0.75rem, 3.2vw);
     letter-spacing: normal;
   }
 }
