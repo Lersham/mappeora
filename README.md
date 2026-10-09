@@ -3,7 +3,7 @@
 App per creare **mappe concettuali** in modo semplice, pensata per bambini con DSA e per tutti gli studenti.
 Legge le mappe ad alta voce e permette di crearle dettando.
 
-Prima si chiamava **Mappeora**. Per non perdere installazioni, file e dati salvati restano con il vecchio nome l'indirizzo web, l'ID dell'app (`it.mappeora.app`), l'estensione dei file `.mappeora` e i nomi interni.
+Prima si chiamava **Mappeora**. Per non perdere installazioni, file e dati salvati restano con il vecchio nome l'ID dell'app (`it.mappeora.app`), l'estensione dei file `.mappeora` e i nomi interni. Il sito è passato a https://mapp-ami.vercel.app: le mappe salvate nel browser sul vecchio indirizzo restano legate a quell'indirizzo e si spostano con «Salva tutte le mappe» e poi «Apri file».
 
 Un'unica base di codice (React + TypeScript) viene pubblicata come:
 
@@ -12,7 +12,7 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 
 ## Provare l'app
 
-- **Web / PWA**: https://mappeora.vercel.app. Si aggiorna da solo a ogni push sul branch. Dal browser del tablet: menu → "Aggiungi a schermata Home".
+- **Web / PWA**: https://mapp-ami.vercel.app. Si aggiorna da solo a ogni push sul branch. Dal browser del tablet: menu → "Aggiungi a schermata Home".
 - **Android**: APK di debug da installare a mano (sul dispositivo va permessa l'installazione da "origini sconosciute"). Per crearlo serve l'Android SDK con JDK 21:
   ```bash
   npm run setup:android  # una volta per macchina/sessione: SDK in /opt/android-sdk (~650 MB)
@@ -251,7 +251,7 @@ In `.claude/skills/` ci sono skill installate con `npx skills add … -a claude-
 
 ## Privacy
 
-MappAmi non raccoglie dati: le mappe restano sul dispositivo, non ci sono account, pubblicità o statistiche. L'informativa, scritta in modo semplice anche per i ragazzi, è in `public/privacy.html`: si apre dalla schermata iniziale («🔒 Privacy») ed è online su https://mappeora.vercel.app/privacy.html, l'indirizzo da dare a Google Play. Spiega anche le funzioni che usano servizi esterni: jsDelivr (illustrazioni e motore OCR sul web), Google Immagini, dettatura e alcune voci online del browser.
+MappAmi non raccoglie dati: le mappe restano sul dispositivo, non ci sono account, pubblicità o statistiche. L'informativa, scritta in modo semplice anche per i ragazzi, è in `public/privacy.html`: si apre dalla schermata iniziale («🔒 Privacy») ed è online su https://mapp-ami.vercel.app/privacy.html, l'indirizzo da dare a Google Play. Spiega anche le funzioni che usano servizi esterni: jsDelivr (illustrazioni e motore OCR sul web), Google Immagini, dettatura e alcune voci online del browser.
 
 Chi aggiunge una funzione che usa internet o un nuovo permesso deve aggiornare l'informativa e la data in alto. Le risposte proposte per i moduli di Google Play (Sicurezza dei dati, Famiglie, classificazione) sono in [docs/google-play.md](docs/google-play.md).
 
