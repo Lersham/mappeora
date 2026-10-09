@@ -229,10 +229,15 @@ textarea {
   padding: 0;
   margin: 24px 0 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* a long title must not widen the page */
   gap: 12px;
 }
 .map-card {
   display: flex;
+  /* Large text: when a word of the title needs the room, 🔊 and 🗑️ go under
+     it, on the right, instead of off the screen. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   background: var(--surface);
   border: 2px solid var(--border);
@@ -241,6 +246,7 @@ textarea {
 }
 .map-open {
   flex: 1;
+  max-width: 100%; /* also caps the flex minimum: a very long word wraps */
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -254,6 +260,9 @@ textarea {
 .map-title {
   font-size: 1.15rem;
   font-weight: 600;
+  /* Only a word longer than the whole card is broken. */
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 .map-date {
   color: var(--muted);
