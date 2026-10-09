@@ -8,6 +8,8 @@ import { useModal } from '../../components/Dialog';
 import { Listenable } from '../../components/OptionCard';
 
 const INTRO = 'Fotografa una pagina: leggerò il testo per te e potrai scegliere le parole importanti.';
+/** How late the click of a tap can arrive and still be recognised as that tap's. */
+const TAP_CLICK_MS = 1500;
 const PICK_HINT = 'Tocca le parole importanti, oppure passaci sopra il dito come un evidenziatore: diventeranno concetti della mappa.';
 
 type Step =
@@ -118,8 +120,9 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
   // The highlighter: a finger (or the mouse) dragged across the words marks
   // all of them, as on the book; starting on a marked word unmarks instead.
   const drag = useRef<{ anchor: number; mark: boolean; before: ReadonlySet<number> } | null>(null);
-  // A tap is handled on pointerdown: the click that follows must not undo it.
-  const fromPointer = useRef(false);
+  // A tap is handled on pointerdown: the click that follows must not undo
+  // it, even when a busy phone delivers that click late.
+  const tapped = useRef<{ word: number; at: number } | null>(null);
   const paint = (to: number) => {
     const d = drag.current;
     if (!d) return;
@@ -134,9 +137,11 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
   useEffect(() => {
     const end = (e: PointerEvent) => {
       // The browser took the gesture to scroll the text: it was not a highlight.
-      if (e.type === 'pointercancel' && drag.current) setSelected(drag.current.before);
+      if (e.type === 'pointercancel') {
+        if (drag.current) setSelected(drag.current.before);
+        tapped.current = null; // no click will follow
+      }
       drag.current = null;
-      setTimeout(() => void (fromPointer.current = false));
     };
     window.addEventListener('pointerup', end);
     window.addEventListener('pointercancel', end);
@@ -246,14 +251,17 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
                         data-word={t.word}
                         onPointerDown={(e) => {
                           if (e.button !== 0) return;
-                          fromPointer.current = true;
+                          tapped.current = { word: t.word, at: performance.now() };
                           drag.current = { anchor: t.word, mark: !selected.has(t.word), before: selected };
                           paint(t.word);
                         }}
                         onClick={() => {
+                          // The click of a tap already handled on pointerdown.
+                          const tap = tapped.current;
+                          tapped.current = null;
+                          if (tap && tap.word === t.word && performance.now() - tap.at < TAP_CLICK_MS) return;
                           // Keyboard and screen readers: Enter or Space toggles.
-                          if (!fromPointer.current) toggle(t.word);
-                          fromPointer.current = false;
+                          toggle(t.word);
                         }}
                       >
                         {t.text}
