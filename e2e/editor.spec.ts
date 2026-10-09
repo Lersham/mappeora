@@ -191,8 +191,10 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     expect(at('Mammiferi').x).toBeGreaterThan(at('Vertebrati').x);
   });
 
-  test('ogni ramo ha le linee del suo colore; i pallini per collegare solo sul concetto scelto', async ({ page }) => {
+  test('ogni ramo ha le linee del suo colore; i pallini per collegare solo sul concetto scelto', async ({ page, isMobile }) => {
     await sampleMap(page);
+    // On a phone the concepts start locked, with no dots at all: free them first.
+    if (isMobile) await page.getByRole('button', { name: /^Concetti bloccati/ }).click();
     const colours = await page.locator('.react-flow__edge-path.branch-line').evaluateAll((paths) => [
       ...new Set(paths.map((p) => [...p.classList].find((c) => /^branch-\d$/.test(c)))),
     ]);
@@ -224,5 +226,43 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await node(page, 'Le cause').click();
     await expect.poll(() => onScreenPx('Le cause'), { timeout: 5000 }).toBeGreaterThanOrEqual(12);
     await expect(node(page, 'Le cause')).toBeInViewport();
+  });
+});
+
+test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
+  test('bloccati di partenza: il dito su un concetto muove la mappa; 🔓 li libera, e la scelta resta', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'il blocco di partenza vale per i touch screen');
+    await sampleMap(page);
+    const lock = page.getByRole('button', { name: /^Concetti bloccati/ });
+    await expect(lock).toBeVisible();
+    await expect(page.locator('.react-flow__node.draggable')).toHaveCount(0);
+
+    // One finger from «Calore del sole» downwards: the whole map follows, nothing changes order.
+    const before = await boxes(page);
+    const at = (b: typeof before, label: string) => b.find((x) => x.label === label)!;
+    const start = at(before, 'Calore del sole');
+    const [x, y] = [start.x + start.w / 2, start.y + start.h / 2];
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', points: { x: number; y: number }[]) =>
+      cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+    await touch('touchStart', [{ x, y }]);
+    for (let i = 1; i <= 8; i++) await touch('touchMove', [{ x: x + i * 5, y: y + i * 12 }]);
+    await touch('touchEnd', []);
+    await settled(page);
+    const after = await boxes(page);
+    expect(at(after, 'Calore del sole').y - at(before, 'Calore del sole').y).toBeGreaterThan(50);
+    for (const b of before) {
+      expect(at(after, b.label).x - at(after, 'Calore del sole').x, b.label).toBeCloseTo(b.x - start.x, 0);
+      expect(at(after, b.label).y - at(after, 'Calore del sole').y, b.label).toBeCloseTo(b.y - start.y, 0);
+    }
+
+    await lock.click();
+    await expect(page.getByRole('alert')).toContainText('Ora puoi spostare i concetti');
+    await expect(page.getByRole('button', { name: /^Concetti liberi/ })).toBeVisible();
+    await expect(page.locator('.react-flow__node.draggable')).toHaveCount(9);
+    // Remembered on the device, for every map.
+    await page.reload();
+    await page.locator('.map-open').first().click();
+    await expect(page.getByRole('button', { name: /^Concetti liberi/ })).toBeVisible();
   });
 });
