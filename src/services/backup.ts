@@ -88,7 +88,7 @@ export function snoozeBackup(now = Date.now()) {
 
 /**
  * Safari on iPhone and iPad may wipe what a website keeps after 7 days
- * without a visit; added to the Home screen, Mappeora is an app and keeps
+ * without a visit; added to the Home screen, MappAmi is an app and keeps
  * its maps. True when that hint is worth showing.
  */
 export function homeScreenHintNeeded(): boolean {

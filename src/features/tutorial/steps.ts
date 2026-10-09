@@ -51,13 +51,13 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Ascolta la mappa',
-    text: 'Premi «Leggi»: Mappeora legge la mappa ad alta voce e illumina il riquadro che sta leggendo.',
+    text: 'Premi «Leggi»: MappAmi legge la mappa ad alta voce e illumina il riquadro che sta leggendo.',
     target: 'leggi',
     done: (now) => now.read,
   },
   {
     title: 'Detta un concetto',
-    text: 'Premi «Detta» e di’ una parola, per esempio «Estate». Mappeora la scrive per te in un riquadro nuovo. Se non puoi usare il microfono, premi «Salta».',
+    text: 'Premi «Detta» e di’ una parola, per esempio «Estate». MappAmi la scrive per te in un riquadro nuovo. Se non puoi usare il microfono, premi «Salta».',
     target: 'detta',
     done: (now, start) => now.map.nodes.length > start.map.nodes.length,
   },

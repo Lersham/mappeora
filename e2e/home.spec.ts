@@ -120,7 +120,7 @@ test.describe('Schermata iniziale', () => {
     await page.getByRole('link', { name: 'Privacy' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Privacy' })).toBeVisible();
     await expect(page.getByText('Le tue mappe restano')).toBeVisible();
-    await page.getByRole('link', { name: 'Torna a Mappeora' }).first().click();
+    await page.getByRole('link', { name: 'Torna a MappAmi' }).first().click();
     await expect(page.getByRole('heading', { name: 'Le mie mappe' })).toBeVisible();
   });
 });

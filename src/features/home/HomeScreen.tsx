@@ -104,8 +104,8 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     <main className="home">
       <header className="home-header">
         <div className="home-brand">
-          <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width="44" height="44" />
-          <span>Mappeora</span>
+          <img src={`${import.meta.env.BASE_URL}icon-192.png`} alt="" width="44" height="44" />
+          <span>MappAmi</span>
         </div>
         <div className="home-header-tools">
           <BigButton icon="❓" label="Come funziona" onClick={() => setWelcomeOpen(true)} />
@@ -140,7 +140,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       {homeHint && (
         <section className="home-notice" aria-label="Consiglio per iPhone e iPad">
           <p>
-            <strong>Su iPhone e iPad</strong> aggiungi Mappeora alla schermata Home: tocca Condividi <span aria-hidden>⬆️</span> e poi «Aggiungi alla
+            <strong>Su iPhone e iPad</strong> aggiungi MappAmi alla schermata Home: tocca Condividi <span aria-hidden>⬆️</span> e poi «Aggiungi alla
             schermata Home». Così il browser non cancella le tue mappe.
           </p>
           <BigButton

@@ -1,4 +1,4 @@
-# Pubblicare Mappeora su Google Play
+# Pubblicare MappAmi su Google Play
 
 Promemoria per la pubblicazione (issue #11, #12, #13). Le risposte ai moduli sono **proposte**: le hanno scritte gli sviluppatori dopo aver
 controllato il codice, ma chi pubblica deve rileggerle in Play Console prima di inviarle.
@@ -37,7 +37,7 @@ La stessa pagina è dentro l'app: schermata iniziale → «🔒 Privacy».
 |---|---|---|
 | L'app raccoglie o condivide dati utente? | **Sì, solo dati tecnici di ML Kit** | Mappe, immagini e impostazioni restano sul dispositivo (SQLite). Non ci sono account, statistiche o pubblicità. La lettura del testo dalle foto (ML Kit) avviene sul dispositivo, ma [ML Kit invia a Google dati tecnici](https://developers.google.com/ml-kit/android-data-disclosure) e Google chiede di dichiararli (vedi la riga sotto). |
 | Dati tecnici di ML Kit | **Raccolti, non condivisi**: «Informazioni e prestazioni dell'app → Diagnostica» e «Dispositivo o altri ID» | Scopo: funzionalità dell'app. Non collegati all'identità, cifrati in transito, obbligatori (non si possono spegnere). Mai la foto né il testo letto. |
-| Dettatura | Nessun dato raccolto dall'app | Mappeora usa il riconoscimento vocale di sistema di Android (`SpeechRecognizer`) e preferisce quello senza internet. Quando non c'è, è il servizio di sistema (di solito Google) a ricevere l'audio, non Mappeora. Se Google in revisione chiede diversamente, dichiarare «Audio → Registrazioni vocali», *non conservato, trattato in modo temporaneo, obbligatorio solo per la dettatura*. |
+| Dettatura | Nessun dato raccolto dall'app | MappAmi usa il riconoscimento vocale di sistema di Android (`SpeechRecognizer`) e preferisce quello senza internet. Quando non c'è, è il servizio di sistema (di solito Google) a ricevere l'audio, non MappAmi. Se Google in revisione chiede diversamente, dichiarare «Audio → Registrazioni vocali», *non conservato, trattato in modo temporaneo, obbligatorio solo per la dettatura*. |
 | Illustrazioni da jsDelivr | Nessun dato raccolto | È il download di un'immagine pubblica: non contiene dati dell'utente. Lo stesso vale per il programma di lettura Tesseract, che l'app scarica da jsDelivr solo se ML Kit non funziona sul telefono. |
 | Dati cifrati in transito | Sì | Tutte le connessioni sono HTTPS. |
 | Si possono cancellare i dati? | Sì | Si cancella la mappa nell'app, oppure si disinstalla l'app. |
@@ -63,7 +63,7 @@ dall'utente. Risultato atteso: PEGI 3 / Tutti.
 
 ## 7. Scheda dello store
 
-- [ ] Nome: «Mappeora – mappe concettuali».
+- [ ] Nome: «MappAmi – mappe concettuali».
 - [ ] Descrizione breve (max 80 caratteri), ad esempio: «Mappe concettuali con la voce, anche per DSA. Dal libro alla mappa con una foto.»
 - [ ] Descrizione lunga, icona 512×512, immagine in evidenza 1024×500.
 - [ ] Almeno 2 screenshot del telefono (meglio anche del tablet da 7" e 10").

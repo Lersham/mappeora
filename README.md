@@ -1,7 +1,9 @@
-# Mappeora
+# MappAmi
 
 App per creare **mappe concettuali** in modo semplice, pensata per bambini con DSA e per tutti gli studenti.
 Legge le mappe ad alta voce e permette di crearle dettando.
+
+Prima si chiamava **Mappeora**. Per non perdere installazioni, file e dati salvati restano con il vecchio nome l'indirizzo web, l'ID dell'app (`it.mappeora.app`), l'estensione dei file `.mappeora` e i nomi interni.
 
 Un'unica base di codice (React + TypeScript) viene pubblicata come:
 
@@ -92,7 +94,7 @@ Limite: l'OCR sul dispositivo legge bene il testo stampato, male la scrittura a 
 
 | Funzione | Dove |
 |---|---|
-| 💾 **Salva tutte le mappe**: un solo file `.mappeora` con tutte le mappe del dispositivo (formato `mappeora-archivio`). «Apri file» lo riconosce e rimette le mappe che mancano, senza doppioni e senza mai sovrascrivere: una mappa più nuova nel file torna accanto a quella che c'è, con «(dalla copia)». Un promemoria nella schermata iniziale chiede una copia quando le mappe sono almeno tre (o una ha una settimana) e poi ogni due settimane se qualcosa è cambiato; «Più tardi» lo rimanda di una settimana. Su iPhone e iPad, se Mappeora non è nella schermata Home, un avviso spiega come aggiungerla: Safari può cancellare i dati di un sito dopo 7 giorni senza visite | `src/services/backup.ts`, `src/lib/mapFile.ts`, `src/features/home/HomeScreen.tsx` |
+| 💾 **Salva tutte le mappe**: un solo file `.mappeora` con tutte le mappe del dispositivo (formato `mappeora-archivio`). «Apri file» lo riconosce e rimette le mappe che mancano, senza doppioni e senza mai sovrascrivere: una mappa più nuova nel file torna accanto a quella che c'è, con «(dalla copia)». Un promemoria nella schermata iniziale chiede una copia quando le mappe sono almeno tre (o una ha una settimana) e poi ogni due settimane se qualcosa è cambiato; «Più tardi» lo rimanda di una settimana. Su iPhone e iPad, se MappAmi non è nella schermata Home, un avviso spiega come aggiungerla: Safari può cancellare i dati di un sito dopo 7 giorni senza visite | `src/services/backup.ts`, `src/lib/mapFile.ts`, `src/features/home/HomeScreen.tsx` |
 | ✍️ **Concetto nuovo già pronto per scrivere**: dopo «Concetto» il riquadro è aperto, con il testo selezionato. Mentre si scrive, **Tab** crea un concetto sotto e **Maiusc+Tab** uno accanto (come nella Scaletta) | `src/features/editor/ConceptNode.tsx`, `src/features/editor/MapEditor.tsx` |
 | 🗣️ **Lettura in frasi**: con le parole di collegamento si legge la proposizione intera («L'acqua è formata da idrogeno»), anche nella didascalia dell'Interrogazione | `src/lib/readingOrder.ts` |
 | 🔊 **Evidenziazione anche senza eventi della voce**: alcune voci (le voci online «Google» di Chrome) non dicono a che parola sono; l'evidenziazione segue allora una stima del tempo di ogni parola, finché la voce non ne segnala una vera | `src/services/speech/web.ts` |
@@ -214,9 +216,10 @@ Dopo ogni modifica al codice web: `npm run cap:sync`.
 
 ### Logo, icone e splash screen
 
-Il logo (una piccola mappa: il concetto principale in giallo, collegato a tre concetti) è disegnato una volta sola in `scripts/make-icons.mjs`. `npm run icons` rigenera tutto con il Chromium di Playwright:
-- web e PWA: `public/icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`;
-- Android: icone del launcher (`mipmap-*`, anche adattive e rotonde, sfondo blu in `values/ic_launcher_background.xml`) e splash screen chiaro e scuro (`drawable-*` e `drawable-*-night-*`). Da Android 12 lo splash è l'icona sul colore di `values/splash.xml` (crema, o scuro con il telefono in modalità scura).
+Il logo è la mascotte di MappAmi, che mostra la sua mappa sul tablet. Il disegno è uno solo, `resources/mascotte.png` (1024×1024, a tutto quadrato, senza angoli arrotondati: ogni sistema ritaglia la sua forma). `npm run icons` (`scripts/make-icons.mjs`) ne ricava tutto con il Chromium di Playwright:
+- web e PWA: `public/icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` (`icon-192.png` è anche la favicon e il logo nella schermata iniziale);
+- Android: icone del launcher (`mipmap-*`, anche adattive e rotonde, con il colore del cielo in `values/ic_launcher_background.xml`) e splash screen chiaro e scuro (`drawable-*` e `drawable-*-night-*`). Da Android 12 lo splash è l'icona sul colore di `values/splash.xml` (crema, o scuro con il telefono in modalità scura);
+- iOS: icona dell'App Store (`AppIcon.appiconset`, senza trasparenza) e splash (`Splash.imageset`).
 
 ### Permessi già configurati
 
@@ -248,7 +251,7 @@ In `.claude/skills/` ci sono skill installate con `npx skills add … -a claude-
 
 ## Privacy
 
-Mappeora non raccoglie dati: le mappe restano sul dispositivo, non ci sono account, pubblicità o statistiche. L'informativa, scritta in modo semplice anche per i ragazzi, è in `public/privacy.html`: si apre dalla schermata iniziale («🔒 Privacy») ed è online su https://mappeora.vercel.app/privacy.html, l'indirizzo da dare a Google Play. Spiega anche le funzioni che usano servizi esterni: jsDelivr (illustrazioni e motore OCR sul web), Google Immagini, dettatura e alcune voci online del browser.
+MappAmi non raccoglie dati: le mappe restano sul dispositivo, non ci sono account, pubblicità o statistiche. L'informativa, scritta in modo semplice anche per i ragazzi, è in `public/privacy.html`: si apre dalla schermata iniziale («🔒 Privacy») ed è online su https://mappeora.vercel.app/privacy.html, l'indirizzo da dare a Google Play. Spiega anche le funzioni che usano servizi esterni: jsDelivr (illustrazioni e motore OCR sul web), Google Immagini, dettatura e alcune voci online del browser.
 
 Chi aggiunge una funzione che usa internet o un nuovo permesso deve aggiornare l'informativa e la data in alto. Le risposte proposte per i moduli di Google Play (Sicurezza dei dati, Famiglie, classificazione) sono in [docs/google-play.md](docs/google-play.md).
 

@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'it.mappeora.app',
-  appName: 'Mappeora',
+  appName: 'MappAmi',
   webDir: 'dist',
   ios: {
     // Every plugin except @capacitor-mlkit/text-recognition: ML Kit only
