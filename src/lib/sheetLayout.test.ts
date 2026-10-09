@@ -58,7 +58,7 @@ describe('sheetLayout', () => {
     const r = sheetLayout(nodes, edges, sizes);
     expect(r.positions.b0i0.x).toBeGreaterThan(r.positions.b0.x);
     expect(r.positions.b0i1.y).toBeGreaterThan(r.positions.b0i0.y);
-    expect(r.edges['b0-i0']).toEqual({ kind: 'ladder' });
+    expect(r.edges['b0-i0']).toEqual({ kind: 'ladder', branch: 0 });
   });
 
   it('feeds lower rows along the gap between columns', () => {
@@ -68,6 +68,22 @@ describe('sheetLayout', () => {
     expect(rows.size).toBeGreaterThan(1);
     const lower = Object.entries(r.edges).find(([id, e]) => e.kind === 'bus' && r.positions[id.slice(2)].y > r.positions.b0.y)!;
     expect(lower[1].kind === 'bus' && lower[1].points.length).toBe(4);
+  });
+
+  it('numbers the branches, so each keeps its colour of line even below another branch', () => {
+    const { nodes, edges, sizes } = map([2, 2, 2, 2, 2, 2, 2]);
+    const r = sheetLayout(nodes, edges, sizes);
+    const bus = Object.entries(r.edges).filter(([, e]) => e.kind === 'bus');
+    expect(new Set(bus.map(([, e]) => e.kind === 'bus' && e.branch)).size).toBe(7);
+    // Each branch's ladder has the same number as the line that feeds it.
+    for (const [id, e] of bus) {
+      const branch = e.kind === 'bus' ? e.branch : -1;
+      const b = id.slice(2);
+      expect(r.edges[`${b}-i0`]).toEqual({ kind: 'ladder', branch });
+    }
+    // A branch in a lower row has its own stretch from the gap between columns,
+    // one in the top row only from where it turns down.
+    for (const [, e] of bus) if (e.kind === 'bus') expect(e.own).toBe(e.points.length === 4 ? 1 : e.points.length - 1);
   });
 
   it('keeps the main concept where it is', () => {

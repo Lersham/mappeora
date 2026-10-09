@@ -4,9 +4,10 @@ import { MAP_FILE_EXTENSION } from '../lib/mapFile';
 /**
  * Lets the child pick a ".mappeora" file and returns its text, or null if
  * they cancel. Must be called from a click handler (it opens a picker).
+ * Fails if the file cannot be read (e.g. a cloud file not downloaded yet).
  */
 export function pickMapFile(): Promise<string | null> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
     // Android filters the picker by MIME type, and a ".mappeora" file sent
@@ -15,7 +16,7 @@ export function pickMapFile(): Promise<string | null> {
     input.addEventListener('change', () => {
       const file = input.files?.[0];
       if (!file) return resolve(null);
-      file.text().then(resolve, () => resolve(null));
+      file.text().then(resolve, reject);
     });
     input.addEventListener('cancel', () => resolve(null));
     input.click();

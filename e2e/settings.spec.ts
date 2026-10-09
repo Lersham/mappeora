@@ -41,3 +41,13 @@ test('Testo grande in stampatello: le parole lunghe di un concetto non vanno a c
     });
   expect(words).toBe(1);
 });
+
+test('Aspetto: i cursori dicono quanto valgono', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Aspetto' }).click();
+  const panel = page.getByRole('dialog', { name: 'Aspetto e voce' });
+  await expect(panel.getByText('Grandezza testo: 115%')).toBeVisible();
+  await expect(panel.getByText('Velocità della voce: normale (0,9×)')).toBeVisible();
+  await panel.getByRole('slider', { name: /Velocità della voce/ }).fill('0.6');
+  await expect(panel.getByText('Velocità della voce: lenta (0,6×)')).toBeVisible();
+});

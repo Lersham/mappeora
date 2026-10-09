@@ -1,10 +1,12 @@
-import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react';
+import { BaseEdge, type Edge, type EdgeProps } from '@xyflow/react';
+import { EdgeLabel } from './EdgeLabel';
 import { LADDER, labelScale } from '../../lib/ladder';
 import { useSettings } from '../../store/settingsStore';
 import { roundedPath } from '../../lib/sheetLayout';
 import { LinkAdd } from './LinkAdd';
+import { branchClass } from './branchColor';
 
-export type BusEdgeData = { points: { x: number; y: number }[]; onEdit?: () => void };
+export type BusEdgeData = { points: { x: number; y: number }[]; own?: number; branch?: number; onEdit?: () => void; near?: boolean };
 export type BusFlowEdge = Edge<BusEdgeData, 'bus'>;
 
 /**
@@ -26,9 +28,14 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
   // Several branches share the line along the top: only the last stretch,
   // down into this branch, is a wide target for a tap (linking words).
   const last = points[points.length - 1] ?? { x: sourceX, y: sourceY };
+  // The stretch that belongs to this branch only, in the branch's colour.
+  const own = points.slice(Math.min(data?.own ?? points.length, points.length));
   return (
     <>
       <BaseEdge id={id} path={path} interactionWidth={0} />
+      {own.length > 0 && data?.branch !== undefined && (
+        <path d={roundedPath([...own, { x: targetX, y: targetY }])} className={`react-flow__edge-path ${branchClass(data.branch)}`} fill="none" />
+      )}
       <path
         d={`M ${last.x},${last.y} L ${targetX},${targetY}`}
         className="react-flow__edge-interaction"
@@ -37,7 +44,7 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
         strokeWidth={interactionWidth ?? 40}
       />
       {label && (
-        <EdgeLabelRenderer>
+        <EdgeLabel>
           <button
             type="button"
             className="ladder-label nodrag nopan"
@@ -47,9 +54,9 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
           >
             {label}
           </button>
-        </EdgeLabelRenderer>
+        </EdgeLabel>
       )}
-      {!label && <LinkAdd x={targetX} y={(last.y + targetY) / 2} onEdit={data?.onEdit} />}
+      {!label && <LinkAdd x={targetX} y={(last.y + targetY) / 2} onEdit={data?.onEdit} near={data?.near} />}
     </>
   );
 }

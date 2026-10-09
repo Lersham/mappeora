@@ -72,14 +72,35 @@ export class WebSpeechService implements SpeechService {
     const voice = chosen ?? preferred;
     if (voice) utterance.voice = voice;
     return new Promise((resolve) => {
+      // Some voices never say which word they are on (Chrome's online
+      // «Google» voices among them): the highlight then follows an estimate
+      // of the time each word takes, until the voice reports a real one.
+      let reported = false;
+      let guess: ReturnType<typeof setTimeout> | undefined;
+      const words = [...text.matchAll(/\S+/g)];
+      const estimate = (i: number) => {
+        if (reported || i >= words.length || mine !== this.generation || !options.onWord) return;
+        const [word] = words[i];
+        const at = words[i].index ?? 0;
+        options.onWord(at, at + word.length);
+        guess = setTimeout(() => estimate(i + 1), wordMs(word) / (options.rate ?? 1));
+      };
+      const stopGuessing = () => clearTimeout(guess);
+      utterance.onstart = () => estimate(0);
       utterance.onboundary = (e) => {
         if (e.name !== 'word' || !options.onWord) return;
+        reported = true;
+        stopGuessing();
         // Some engines omit charLength: fall back to the next whitespace.
         const end = e.charLength ? e.charIndex + e.charLength : nextWordEnd(text, e.charIndex);
         options.onWord(e.charIndex, end);
       };
-      utterance.onend = () => resolve();
+      utterance.onend = () => {
+        stopGuessing();
+        resolve();
+      };
       utterance.onerror = (e) => {
+        stopGuessing();
         // Google's voices speak from the internet: when it is not there,
         // the browser's own voice says it instead.
         if (preferred && !preferred.localService && e.error !== 'interrupted' && e.error !== 'canceled' && mine === this.generation) {
@@ -139,4 +160,12 @@ export class WebSpeechService implements SpeechService {
 export function nextWordEnd(text: string, start: number): number {
   const match = /\s/.exec(text.slice(start));
   return match ? start + match.index : text.length;
+}
+
+/**
+ * About how long a word takes to say at normal speed: Italian runs at
+ * roughly twelve letters a second, with a breath after punctuation.
+ */
+export function wordMs(word: string): number {
+  return 120 + word.length * 70 + (/[.,;:!?]$/.test(word) ? 250 : 0);
 }

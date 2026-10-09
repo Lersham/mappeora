@@ -37,6 +37,8 @@ export interface ExportOptions {
   usesPictograms: boolean;
   /** True once «Annulla» was pressed: the file is then never handed over. */
   cancelled?: () => boolean;
+  /** PDF only: the concepts' «Approfondimenti», on the last page(s). Never with `simple`. */
+  notes?: { label: string; note: string }[];
 }
 
 interface RenderedMap {
@@ -93,7 +95,7 @@ function labelRects(flow: HTMLElement, viewport: HTMLElement): Rect[] {
 }
 
 /** Renders the whole map (not just the visible area) to a PNG. */
-async function renderMap(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
+async function renderMap(nodes: Node[], background: string, simple: boolean, withNotes: boolean): Promise<RenderedMap> {
   const flow = document.querySelector<HTMLElement>('.react-flow');
   const el = flow?.querySelector<HTMLElement>('.react-flow__viewport');
   if (!flow || !el) throw new Error('viewport-not-found');
@@ -111,6 +113,8 @@ async function renderMap(nodes: Node[], background: string, simple: boolean): Pr
     y: (height - bounds.height) / 2 - bounds.y,
   };
   flow.classList.toggle('export-simple', simple);
+  // The 📝 on a concept only makes sense with the page of notes.
+  flow.classList.toggle('export-no-notes', !withNotes);
   flow.classList.add('exporting');
   try {
     const dataUrl = await toPng(el, {
@@ -135,7 +139,7 @@ async function renderMap(nodes: Node[], background: string, simple: boolean): Pr
     );
     return { dataUrl, width, height, breaks };
   } finally {
-    flow.classList.remove('export-simple', 'exporting');
+    flow.classList.remove('export-simple', 'export-no-notes', 'exporting');
   }
 }
 
@@ -245,11 +249,57 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
       doc.text(ARASAAC_CREDIT, margin, pageH - margin + 2, { maxWidth: boxW });
     }
   }
+  if (!opts.simple && opts.notes?.length) addNotes(doc, opts.notes, opts.paper, plan.orientation, title, margin);
   return doc;
 }
 
+/** «Approfondimenti»: each concept's note, in reading order, after the map. */
+function addNotes(doc: Pdf, notes: { label: string; note: string }[], paper: Paper, orientation: 'portrait' | 'landscape', title: string[], margin: number) {
+  doc.addPage(paper, orientation);
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const width = pageW - margin * 2;
+  let y = margin + 6;
+  doc.setTextColor(0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(TITLE_SIZE);
+  doc.text(`Approfondimenti - ${title.join(' ')}`.slice(0, 120), margin, y, { maxWidth: width });
+  y += TITLE_LINE + 4;
+  for (const { label, note } of notes) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    const head: string[] = doc.splitTextToSize(pdfText(label) || '-', width);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    const body: string[] = doc.splitTextToSize(pdfText(note), width);
+    const needed = head.length * 5.5 + body.length * 5 + 6;
+    if (y + Math.min(needed, 40) > pageH - margin) {
+      doc.addPage(paper, orientation);
+      y = margin + 6;
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    for (const line of head) {
+      doc.text(line, margin, y);
+      y += 5.5;
+    }
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    for (const line of body) {
+      if (y > pageH - margin) {
+        doc.addPage(paper, orientation);
+        y = margin + 6;
+      }
+      doc.text(line, margin, y);
+      y += 5;
+    }
+    y += 6;
+  }
+}
+
 export async function exportMap(nodes: Node[], background: string, opts: ExportOptions): Promise<void> {
-  const img = await renderMap(nodes, background, opts.simple);
+  const withNotes = opts.format === 'pdf' && !opts.simple && !!opts.notes?.length;
+  const img = await renderMap(nodes, background, opts.simple, withNotes);
   if (opts.cancelled?.()) return;
   const base = `${slug(opts.title) || 'mappa'}${opts.simple ? '-verifica' : ''}`;
   if (opts.format === 'png') return shareFile(img.dataUrl, `${base}.png`, opts.title);
@@ -284,7 +334,7 @@ export async function saveMapFile(map: ConceptMap): Promise<void> {
 }
 
 /** Web: downloads the file. Android/iOS: opens the native share sheet. */
-async function shareFile(dataUrl: string, fileName: string, title: string): Promise<void> {
+export async function shareFile(dataUrl: string, fileName: string, title: string): Promise<void> {
   if (!isNative()) {
     const blob = await (await fetch(dataUrl)).blob();
     const url = URL.createObjectURL(blob);

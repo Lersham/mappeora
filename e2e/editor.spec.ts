@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures';
-import { addConcept, boxes, newMap, node, nodes, overlapping, rename, sampleMap, settled, showAll, tapLink, toolbar } from './helpers';
+import { test, expect, spoken } from './fixtures';
+import { addConcept, boxes, newMap, node, nodes, onScreen, overlapping, rename, sampleMap, settled, showAll, tapLink, toolbar } from './helpers';
 
 test.describe('Editor', () => {
   test('aggiunge, rinomina, annulla, ripete ed elimina concetti', async ({ page }) => {
@@ -160,5 +160,69 @@ test.describe('Editor', () => {
     await page.getByRole('button', { name: 'Annulla' }).click();
     await expect(nodes(page)).toHaveCount(2);
     await expect(page.locator('.react-flow__edge')).toHaveCount(1);
+  });
+});
+
+test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
+  test('un concetto nuovo è subito pronto; Tab ne fa uno sotto, Maiusc+Tab uno accanto', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'la tastiera fisica si prova sul computer');
+    await newMap(page, 'Gli animali');
+    await node(page, 'Gli animali').click();
+    await page.getByRole('button', { name: 'Concetto', exact: true }).click();
+    const input = page.getByRole('textbox', { name: 'Testo del concetto' });
+    await expect(input).toBeFocused();
+    await page.keyboard.type('Vertebrati');
+    await page.keyboard.press('Tab');
+    await expect(input).toBeFocused();
+    await page.keyboard.type('Mammiferi');
+    await page.keyboard.press('Shift+Tab');
+    await expect(input).toBeFocused();
+    await page.keyboard.type('Uccelli');
+    await page.keyboard.press('Enter');
+    await expect(input).toHaveCount(0);
+    await settled(page);
+
+    await page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Leggi', exact: true }).click();
+    await expect.poll(() => spoken(page)).toEqual(['Gli animali', 'Vertebrati', 'Mammiferi', 'Uccelli']);
+    const b = await boxes(page);
+    const at = (label: string) => b.find((x) => x.label === label)!;
+    // «Mammiferi» and «Uccelli» are both under «Vertebrati»
+    expect(at('Uccelli').x).toBeCloseTo(at('Mammiferi').x, 0);
+    expect(at('Mammiferi').x).toBeGreaterThan(at('Vertebrati').x);
+  });
+
+  test('ogni ramo ha le linee del suo colore; i pallini per collegare solo sul concetto scelto', async ({ page }) => {
+    await sampleMap(page);
+    const colours = await page.locator('.react-flow__edge-path.branch-line').evaluateAll((paths) => [
+      ...new Set(paths.map((p) => [...p.classList].find((c) => /^branch-\d$/.test(c)))),
+    ]);
+    expect(colours.sort()).toEqual(['branch-0', 'branch-1', 'branch-2']);
+
+    await (await onScreen(page, node(page, 'Vapore'))).click();
+    const handleOpacity = (label: string) =>
+      page
+        .locator('.react-flow__node', { has: page.locator('.concept-label', { hasText: label }) })
+        .locator('.react-flow__handle:not(.handle-hidden)')
+        .first()
+        .evaluate((h) => getComputedStyle(h).opacity);
+    await expect.poll(() => handleOpacity('Vapore')).toBe('1');
+    await expect.poll(() => handleOpacity('Neve')).toBe('0');
+  });
+
+  test('sul telefono, toccando un concetto di una mappa vista da lontano, il suo ramo si avvicina', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'sul computer la mappa d’esempio si legge già');
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Esempi', exact: true }).click();
+    await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
+    await expect(nodes(page)).toHaveCount(37);
+    await showAll(page);
+    const onScreenPx = (label: string) =>
+      node(page, label)
+        .locator('.concept-label')
+        .evaluate((el) => (parseFloat(getComputedStyle(el).fontSize) * el.getBoundingClientRect().height) / (el as HTMLElement).offsetHeight);
+    expect(await onScreenPx('Le cause')).toBeLessThan(12);
+    await node(page, 'Le cause').click();
+    await expect.poll(() => onScreenPx('Le cause'), { timeout: 5000 }).toBeGreaterThanOrEqual(12);
+    await expect(node(page, 'Le cause')).toBeInViewport();
   });
 });

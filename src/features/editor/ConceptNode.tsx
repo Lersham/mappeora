@@ -10,6 +10,16 @@ import { useReadAloud } from '../../hooks/useReadAloud';
 import { reviewVisibility, useReview } from '../../store/reviewStore';
 import { illustrationUrl } from '../../services/illustrations';
 
+/** What a concept can ask of the editor. The same object for every concept, so they don't re-render for it. */
+export interface ConceptActions {
+  /** Collapses/expands, keeping the concept where it is on screen. */
+  toggle(id: string): void;
+  /** A new concept under this one (`child`) or next to it (`sibling`), ready for typing. */
+  addNear(id: string, where: 'child' | 'sibling'): void;
+  /** Opens the concept's «Approfondimento». */
+  openNote(id: string): void;
+}
+
 export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'collapsed'> & {
   layout: MapLayout;
   /** "Foglio" maps: main concept, branch, or concept inside a branch. */
@@ -17,8 +27,9 @@ export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image
   hasChildren?: boolean;
   /** How many concepts this one hides while collapsed. */
   hiddenBelow?: number;
-  /** Collapses/expands, keeping the concept where it is on screen. */
-  onToggle?: () => void;
+  /** The concept has an «Approfondimento». */
+  hasNote?: boolean;
+  actions?: ConceptActions;
 };
 export type ConceptFlowNode = Node<ConceptNodeData, 'concept'>;
 
@@ -95,8 +106,32 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (editing) inputRef.current?.select();
+    if (!editing) return;
+    // A concept just added stays invisible until React Flow has measured
+    // it, and an invisible field cannot take the focus: try for a few frames.
+    // No scrolling: the view is moved on purpose (see reveal() in the editor).
+    let frame = 0;
+    let tries = 0;
+    const focus = () => {
+      const input = inputRef.current;
+      if (!input) return;
+      input.focus({ preventScroll: true });
+      if (document.activeElement === input) return input.select();
+      if (++tries < 30) frame = requestAnimationFrame(focus);
+    };
+    focus();
+    return () => cancelAnimationFrame(frame);
   }, [editing]);
+
+  // A concept just made opens ready for typing: no double tap needed.
+  const editRequested = useMapStore((s) => s.editingId === id);
+  useEffect(() => {
+    if (!editRequested) return;
+    useMapStore.getState().startEditing(null);
+    if (reviewing) return;
+    setDraft(data.label);
+    setEditing(true);
+  }, [editRequested]);
 
   const commit = () => {
     const label = draft.trim();
@@ -124,6 +159,21 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
         </span>
       ) : (
         <>
+          {/* Always there when the concept has one; to add one, only on the concept in hand. */}
+          {(data.hasNote || (selected && !reviewing)) && (
+            <button
+              type="button"
+              className={`concept-note-mark nodrag${data.hasNote ? '' : ' is-empty'}`}
+              aria-label={data.hasNote ? `Approfondimento: ${data.label}` : `Aggiungi un approfondimento a ${data.label}`}
+              title={data.hasNote ? 'Approfondimento' : 'Aggiungi un approfondimento'}
+              onClick={(e) => {
+                e.stopPropagation();
+                data.actions?.openNote(id);
+              }}
+            >
+              📝
+            </button>
+          )}
           {data.image && <NodeImageView image={data.image} />}
           {editing ? (
             <textarea
@@ -140,6 +190,13 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
                   commit();
                 }
                 if (e.key === 'Escape') setEditing(false);
+                // As in the «Scaletta»: Tab goes on with a concept under this
+                // one, Maiusc+Tab with one next to it.
+                if (e.key === 'Tab' && data.actions) {
+                  e.preventDefault();
+                  commit();
+                  data.actions.addNear(id, e.shiftKey ? 'sibling' : 'child');
+                }
               }}
             />
           ) : (
@@ -171,7 +228,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
           aria-label={data.collapsed ? `Mostra ${data.hiddenBelow} concetti nascosti` : 'Nascondi i concetti sotto'}
           onClick={(e) => {
             e.stopPropagation();
-            data.onToggle?.();
+            data.actions?.toggle(id);
           }}
         >
           {data.collapsed ? `+${data.hiddenBelow}` : '−'}
