@@ -67,7 +67,7 @@ const NODE_PHOTO_SIZE = 480;
 
 /**
  * Shrinks a picked photo to a small JPEG data URL, so it is stored inside
- * the map (and its ".mappeora" file) instead of pointing to a device path.
+ * the map (and its ".mappami" file) instead of pointing to a device path.
  */
 export async function photoToDataUrl(webPath: string, maxSide = NODE_PHOTO_SIZE): Promise<string> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {

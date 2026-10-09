@@ -10,7 +10,7 @@ export interface NodeImage {
   ref: string;
   /**
    * The picture itself as a data URL, saved when it is chosen: it keeps
-   * showing offline and travels inside ".mappeora" files.
+   * showing offline and travels inside ".mappami" files.
    */
   src?: string;
 }

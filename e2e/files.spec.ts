@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { test, expect } from './fixtures';
 import { newMap, node, nodes, sampleMap, toolbar } from './helpers';
 
-test.describe('File .mappeora', () => {
+test.describe('File .mappami', () => {
   test('salva la mappa come file e la riapre come copia, con le immagini', async ({ page }, info) => {
     await sampleMap(page);
     // an illustration, to check it travels inside the file
@@ -15,9 +15,9 @@ test.describe('File .mappeora', () => {
     await page.getByRole('button', { name: /^File modificabile/ }).click();
     const download = page.waitForEvent('download');
     await page.locator('.dialog-actions').getByRole('button', { name: 'Salva' }).click();
-    const file = info.outputPath('mappa.mappeora');
+    const file = info.outputPath('mappa.mappami');
     await (await download).saveAs(file);
-    expect((await download).suggestedFilename()).toBe('il-ciclo-dell-acqua.mappeora');
+    expect((await download).suggestedFilename()).toBe('il-ciclo-dell-acqua.mappami');
     const json = JSON.parse(await readFile(file, 'utf8'));
     expect(json.format).toBe('mappeora');
 

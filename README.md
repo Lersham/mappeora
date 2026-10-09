@@ -3,7 +3,7 @@
 App per creare **mappe concettuali** in modo semplice, pensata per bambini con DSA e per tutti gli studenti.
 Legge le mappe ad alta voce e permette di crearle dettando.
 
-Prima si chiamava **Mappeora**. Per non perdere installazioni, file e dati salvati restano con il vecchio nome l'ID dell'app (`it.mappeora.app`), l'estensione dei file `.mappeora` e i nomi interni. Il sito è passato a https://mapp-ami.vercel.app: le mappe salvate nel browser sul vecchio indirizzo restano legate a quell'indirizzo e si spostano con «Salva tutte le mappe» e poi «Apri file».
+Prima si chiamava **Mappeora**: cosa è cambiato e cosa resta col vecchio nome è in [Il nome](#il-nome-mappami-prima-mappeora).
 
 Un'unica base di codice (React + TypeScript) viene pubblicata come:
 
@@ -38,7 +38,7 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
 
 | Funzione | Dove |
 |---|---|
-| 🖼️ Immagini nei nodi, con colore e forma. Due schede: **✨ Illustrazioni** (Fluent Emoji di Microsoft, licenza MIT: circa 1.600 immagini cercabili in italiano **sul dispositivo** grazie ai nomi e alle parole chiave Unicode CLDR, es. «Vesuvio» → 🌋) e **📷 Foto**. La ricerca ignora articoli e preposizioni, cerca la frase e poi le singole parole e mette prima i risultati esatti. L'immagine scelta viene **salvata dentro la mappa**, quindi funziona offline e nel file `.mappeora`; le mappe vecchie la salvano alla prima apertura con internet | `src/features/editor/NodeStyleDialog.tsx`, `src/services/illustrations.ts`, `src/lib/searchText.ts`, `src/services/embed.ts` |
+| 🖼️ Immagini nei nodi, con colore e forma. Due schede: **✨ Illustrazioni** (Fluent Emoji di Microsoft, licenza MIT: circa 1.600 immagini cercabili in italiano **sul dispositivo** grazie ai nomi e alle parole chiave Unicode CLDR, es. «Vesuvio» → 🌋) e **📷 Foto**. La ricerca ignora articoli e preposizioni, cerca la frase e poi le singole parole e mette prima i risultati esatti. L'immagine scelta viene **salvata dentro la mappa**, quindi funziona offline e nel file `.mappami`; le mappe vecchie la salvano alla prima apertura con internet | `src/features/editor/NodeStyleDialog.tsx`, `src/services/illustrations.ts`, `src/lib/searchText.ts`, `src/services/embed.ts` |
 | 🧩 Modelli pronti: Libera, 5 W, Causa ed effetto, Linea del tempo (verticale), Confronto | `src/lib/templates.ts`, `src/features/home/NewMapDialog.tsx` |
 | 🧠 Ripasso "Un passo alla volta" e "Indovina" (concetto nascosto, poi «Scopri») | `src/store/reviewStore.ts`, `src/features/editor/ReviewBar.tsx` |
 | 📤 Esporta PDF A4/A3 o PNG, con **versione per la verifica** (bianco e nero, immagini in grigio) | `src/services/export.ts`, `src/features/editor/ExportDialog.tsx` |
@@ -68,7 +68,7 @@ Limite: l'OCR sul dispositivo legge bene il testo stampato, male la scrittura a 
 
 | Funzione | Dove |
 |---|---|
-| ✏️ **File modificabile `.mappeora`**: «Salva» → «File modificabile» (download sul web, «Condividi» su Android/iOS); «Apri file» nella schermata iniziale. Si apre sempre come copia nuova; foto e immagini viaggiano dentro il file. Il file viene controllato all'apertura: si accettano solo immagini incorporate, mai indirizzi web | `src/lib/mapFile.ts`, `src/services/openFile.ts` |
+| ✏️ **File modificabile `.mappami`** (i vecchi file `.mappeora`, di quando l'app si chiamava Mappeora, si aprono come prima): «Salva» → «File modificabile» (download sul web, «Condividi» su Android/iOS); «Apri file» nella schermata iniziale. Si apre sempre come copia nuova; foto e immagini viaggiano dentro il file. Il file viene controllato all'apertura: si accettano solo immagini incorporate, mai indirizzi web | `src/lib/mapFile.ts`, `src/services/openFile.ts` |
 | 📚 **Mappe di esempio**: pulsante «Esempi» nella schermata iniziale; la prima è *La Rivoluzione francese* (37 concetti, colori per argomento, illustrazioni). Si apre una copia da modificare. I file sono in `public/esempi`, generati dagli script in `scripts/esempi` | `src/services/examples.ts`, `src/features/home/ExamplesDialog.tsx` |
 | 🙋 **Interrogazione**: tutta la mappa a schermo intero, un concetto alla volta in evidenza (gli altri sbiaditi), testo grande in basso. Si va avanti con frecce, barra spaziatrice o PagSu/PagGiù (telecomandi per presentazioni sulla LIM), oppure toccando un concetto. L'app legge solo se si preme «Leggi»: a parlare è lo studente | `src/store/reviewStore.ts`, `src/features/editor/MapEditor.tsx` |
 | 📷 **Foto e Google**: foto scattata o presa dalla galleria, oppure **«Cerca su Google»**, che apre Google Immagini (con SafeSearch) sul concetto: si copia l'immagine e si preme «Incolla immagine» (o Ctrl+V). Se l'app non può leggere gli appunti, compare un riquadro dove incollare a mano. Le immagini vengono ridotte a 480 px e salvate dentro la mappa. L'API di ricerca di Google non è più disponibile per i nuovi progetti, per questo la ricerca si fa nel browser | `src/features/editor/NodeStyleDialog.tsx`, `src/services/photo.ts`, `src/services/webImage.ts` |
@@ -94,7 +94,7 @@ Limite: l'OCR sul dispositivo legge bene il testo stampato, male la scrittura a 
 
 | Funzione | Dove |
 |---|---|
-| 💾 **Salva tutte le mappe**: un solo file `.mappeora` con tutte le mappe del dispositivo (formato `mappeora-archivio`). «Apri file» lo riconosce e rimette le mappe che mancano, senza doppioni e senza mai sovrascrivere: una mappa più nuova nel file torna accanto a quella che c'è, con «(dalla copia)». Un promemoria nella schermata iniziale chiede una copia quando le mappe sono almeno tre (o una ha una settimana) e poi ogni due settimane se qualcosa è cambiato; «Più tardi» lo rimanda di una settimana. Su iPhone e iPad, se MappAmi non è nella schermata Home, un avviso spiega come aggiungerla: Safari può cancellare i dati di un sito dopo 7 giorni senza visite | `src/services/backup.ts`, `src/lib/mapFile.ts`, `src/features/home/HomeScreen.tsx` |
+| 💾 **Salva tutte le mappe**: un solo file `.mappami` con tutte le mappe del dispositivo (formato interno `mappeora-archivio`). «Apri file» lo riconosce e rimette le mappe che mancano, senza doppioni e senza mai sovrascrivere: una mappa più nuova nel file torna accanto a quella che c'è, con «(dalla copia)». Un promemoria nella schermata iniziale chiede una copia quando le mappe sono almeno tre (o una ha una settimana) e poi ogni due settimane se qualcosa è cambiato; «Più tardi» lo rimanda di una settimana. Su iPhone e iPad, se MappAmi non è nella schermata Home, un avviso spiega come aggiungerla: Safari può cancellare i dati di un sito dopo 7 giorni senza visite | `src/services/backup.ts`, `src/lib/mapFile.ts`, `src/features/home/HomeScreen.tsx` |
 | ✍️ **Concetto nuovo già pronto per scrivere**: dopo «Concetto» il riquadro è aperto, con il testo selezionato. Mentre si scrive, **Tab** crea un concetto sotto e **Maiusc+Tab** uno accanto (come nella Scaletta) | `src/features/editor/ConceptNode.tsx`, `src/features/editor/MapEditor.tsx` |
 | 🗣️ **Lettura in frasi**: con le parole di collegamento si legge la proposizione intera («L'acqua è formata da idrogeno»), anche nella didascalia dell'Interrogazione | `src/lib/readingOrder.ts` |
 | 🔊 **Evidenziazione anche senza eventi della voce**: alcune voci (le voci online «Google» di Chrome) non dicono a che parola sono; l'evidenziazione segue allora una stima del tempo di ogni parola, finché la voce non ne segnala una vera | `src/services/speech/web.ts` |
@@ -108,6 +108,17 @@ Limite: l'OCR sul dispositivo legge bene il testo stampato, male la scrittura a 
 | Piccole correzioni: Esc chiude un dialogo anche quando il pulsante che aveva il focus è sparito; «Immagine» non va più a capo nel menu Altro; i cursori di «Aspetto» mostrano il valore; un file che non si riesce a leggere ora lo dice | `src/components/Dialog.tsx`, `src/features/accessibility/SettingsPanel.tsx`, `src/services/openFile.ts` |
 
 La prova con studenti veri e le verifiche sui dispositivi sono in [docs/prova-con-studenti.md](docs/prova-con-studenti.md).
+
+## Il nome: MappAmi (prima Mappeora)
+
+Per chi usa l'app il nome è **MappAmi** ovunque: titolo, icona, schermata d'avvio, testi, permessi, file `.mappami`, pagina privacy.
+Restano col vecchio nome solo cose che l'utente non vede e che, cambiate, farebbero danni:
+
+- chiavi di salvataggio (`mappeora-settings`, `mappeora-welcome`…) e nome del database (`mappeora` in IndexedDB e SQLite): cambiarle **cancellerebbe le mappe** già salvate;
+- il formato dentro il file (`"format": "mappeora"`): non si vede, e cambiarlo renderebbe i file nuovi illeggibili per chi non ha ancora aggiornato l'app;
+- il plugin `MappeoraOcr` e i secret `MAPPEORA_*` di GitHub.
+
+Cambiati invece prima della pubblicazione, quando non c'erano ancora utenti da perdere: l'identificativo dell'app è **`it.mappami.app`** (Android e iOS; dopo l'uscita su Google Play non si potrebbe più cambiare) e l'indirizzo web è **mapp-ami.vercel.app** (`mappami.vercel.app` era già preso). Le mappe salvate nel browser sul vecchio indirizzo non passano al nuovo: il browser le tiene separate per indirizzo.
 
 ## Architettura
 
@@ -182,7 +193,7 @@ In `e2e/` ci sono circa 90 test che usano l'app come farebbe uno studente: su un
 - aggiungere, rinominare, annullare ed eliminare concetti; parole di collegamento; rami comprimibili; disposizione a foglio A4 senza sovrapposizioni; trascinamento per riordinare;
 - immagini: ricerca delle illustrazioni, Google Immagini, incolla, foto dalla galleria;
 - Scaletta, menu «Altro» sul telefono, 🔊 sul concetto scelto, benvenuto al primo avvio;
-- file `.mappeora`, PNG, PDF su 1, 2 o 4 fogli A4/A3, stampa;
+- file `.mappami`, PNG, PDF su 1, 2 o 4 fogli A4/A3, stampa;
 - lettura ad alta voce (ordine e parola evidenziata), ripasso, Indovina, Interrogazione, dettatura con i comandi vocali;
 - aspetto (carattere, sfondo, maiuscolo), «Dal libro» senza internet, e la scelta delle parole (a tocchi e con l'evidenziatore) su un testo letto da un finto motore OCR;
 - l'informativa privacy, raggiungibile dalla schermata iniziale;
