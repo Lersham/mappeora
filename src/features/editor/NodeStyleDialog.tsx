@@ -42,8 +42,8 @@ const SHAPES: { value: NodeShape; label: string }[] = [
 type Tab = 'illustrazioni' | 'foto';
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: 'illustrazioni', label: '✨ Illustrazioni' },
-  { value: 'foto', label: '📷 Foto e Google' },
+  { value: 'illustrazioni', label: 'Illustrazioni' },
+  { value: 'foto', label: 'Foto e Google' },
 ];
 
 export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): void }) {
@@ -201,16 +201,16 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
       {tab === 'foto' && (
         <>
           <div className="photo-sources">
-            <BigButton icon="📸" label="Scatta una foto" disabled={busy} onClick={() => void addPhoto('camera')} />
-            <BigButton icon="🖼️" label="Dalla galleria" disabled={busy} onClick={() => void addPhoto('gallery')} />
+            <BigButton icon="camera" label="Scatta una foto" disabled={busy} onClick={() => void addPhoto('camera')} />
+            <BigButton icon="gallery" label="Dalla galleria" disabled={busy} onClick={() => void addPhoto('gallery')} />
           </div>
           <p className="muted small">Una figura del libro, un esperimento, un disegno fatto da te.</p>
 
           <h3 className="photo-web-title">Da Google Immagini</h3>
           {searchRow}
           <div className="photo-sources">
-            <BigButton icon="🔎" label="Cerca su Google" disabled={busy || !query.trim()} onClick={() => openGoogleImages(query)} />
-            <BigButton icon="📋" label="Incolla immagine" disabled={busy} onClick={() => void pasteFromClipboard()} />
+            <BigButton icon="search" label="Cerca su Google" disabled={busy || !query.trim()} onClick={() => openGoogleImages(query)} />
+            <BigButton icon="paste" label="Incolla immagine" disabled={busy} onClick={() => void pasteFromClipboard()} />
           </div>
           <Listenable text={GOOGLE_STEPS.join(' ')} label="Ascolta come fare">
             <ol className="photo-web-steps muted small">
@@ -276,8 +276,8 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
       </fieldset>
 
       <div className="dialog-actions">
-        {node.image && <BigButton icon="🚫" label="Togli immagine" onClick={() => choose(undefined)} />}
-        <BigButton icon="✅" label="Fatto" variant="primary" onClick={onClose} />
+        {node.image && <BigButton icon="image-off" label="Togli immagine" onClick={() => choose(undefined)} />}
+        <BigButton icon="check" label="Fatto" variant="primary" onClick={onClose} />
       </div>
     </Dialog>
   );

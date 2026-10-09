@@ -38,20 +38,26 @@ textarea {
 
 /* ---------- Buttons ---------- */
 
+/* One main button per place, filled with ink. The others have no frame: a
+   quiet tint, or nothing at all in the bars (see .topbar, .toolbar). */
 .big-button {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   min-width: 64px;
   min-height: 56px;
   padding: 6px 12px;
-  border: 2px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
+  border: 0;
+  border-radius: 12px;
+  background: var(--tint);
   cursor: pointer;
   touch-action: manipulation;
+  transition: background-color 0.12s;
+}
+.big-button:hover:not(:disabled) {
+  background: var(--tint-strong);
 }
 .big-button:disabled {
   opacity: 0.4;
@@ -59,15 +65,29 @@ textarea {
 }
 .big-button.primary {
   background: var(--primary);
-  border-color: var(--primary);
   color: var(--primary-text);
+}
+.big-button.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 85%, #000);
 }
 .big-button.danger {
   color: var(--danger);
 }
 .big-button-icon {
-  font-size: 1.4rem;
-  line-height: 1;
+  font-size: 1.5rem;
+}
+.big-button:not(.primary, .danger) .big-button-icon {
+  color: var(--primary);
+}
+/* Line icons (components/Icon.tsx): as big as the text around them. */
+.icon {
+  flex: none;
+  width: 1em;
+  height: 1em;
+}
+.inline-icon {
+  vertical-align: -0.15em;
+  color: var(--primary);
 }
 .big-button-label {
   font-size: 0.8rem;
@@ -75,12 +95,20 @@ textarea {
 }
 
 .icon-button {
+  display: inline-grid;
+  place-items: center;
   min-width: 56px;
   min-height: 56px;
   border: none;
+  border-radius: 12px;
   background: transparent;
-  font-size: 1.4rem;
+  color: var(--muted);
+  font-size: 1.35rem;
   cursor: pointer;
+}
+.icon-button:hover {
+  background: var(--tint);
+  color: var(--primary);
 }
 
 /* ---------- Home ---------- */
@@ -120,11 +148,12 @@ textarea {
   margin-left: auto;
 }
 /* «Come funziona» and «Aspetto» are used now and then: smaller than the
-   buttons that start a map, still with an icon and a word. */
+   buttons that start a map, still with an icon and a word, and no frame. */
 .home-header-tools .big-button {
   min-height: 44px;
   padding: 4px 10px;
   gap: 0;
+  background: transparent;
 }
 .home-header-tools .big-button-icon {
   font-size: 1.1rem;
@@ -254,7 +283,7 @@ textarea {
   justify-content: flex-end;
   align-items: center;
   background: var(--surface);
-  border: 2px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 16px;
   padding-right: 4px;
 }
@@ -342,28 +371,51 @@ textarea {
 }
 .editor-notice-close {
   flex: none;
+  display: grid;
+  place-items: center;
   min-width: 44px;
   min-height: 44px;
   border: none;
   border-radius: 10px;
   background: transparent;
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   cursor: pointer;
 }
+/* The bars around the map are thin, the colour of the phone's status bar
+   (theme-color in index.html), and their buttons have no frame: the room
+   goes to the map. */
 .topbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: max(8px, env(safe-area-inset-top)) 12px 8px;
-  border-bottom: 2px solid var(--border);
+  gap: 4px;
+  padding: max(6px, env(safe-area-inset-top)) 8px 6px;
+  border-bottom: 1px solid var(--line);
   background: var(--surface);
+}
+.topbar .big-button,
+.toolbar .big-button:not(.primary),
+.review-bar .big-button:not(.primary) {
+  background: transparent;
+}
+.topbar .big-button {
+  min-height: 48px;
+  padding: 4px 10px;
+  gap: 2px;
+}
+.topbar .big-button-icon {
+  font-size: 1.3rem;
+}
+.topbar .big-button-label,
+.toolbar .big-button-label {
+  font-size: 0.75rem;
+  line-height: 1.25;
 }
 .title-input {
   flex: 1;
   min-width: 0;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   font-weight: 600;
-  padding: 10px 12px;
+  padding: 6px 10px;
   border: 2px solid transparent;
   border-radius: 12px;
   background: transparent;
@@ -387,10 +439,10 @@ textarea {
 }
 .toolbar {
   display: flex;
-  gap: 8px;
-  padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+  gap: 4px;
+  padding: 6px 8px max(6px, env(safe-area-inset-bottom));
   overflow-x: auto;
-  border-top: 2px solid var(--border);
+  border-top: 1px solid var(--line);
   background: var(--surface);
 }
 .toolbar .big-button {
@@ -425,11 +477,6 @@ textarea {
   .toolbar .toolbar-more {
     display: inline-flex;
   }
-  .toolbar {
-    gap: 4px;
-    padding-left: 6px;
-    padding-right: 6px;
-  }
   .toolbar .big-button {
     flex: 1 1 0;
     min-width: 0;
@@ -438,11 +485,11 @@ textarea {
   /* Five buttons share the width: with large text the words must still
      fit inside their button. */
   .toolbar .big-button-icon {
-    font-size: min(1.4rem, 7vw);
+    font-size: min(1.5rem, 7vw);
   }
   .toolbar .big-button-label {
     max-width: 100%;
-    font-size: min(0.8rem, 3.1vw);
+    font-size: min(0.75rem, 3.1vw);
     letter-spacing: normal;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -453,7 +500,7 @@ textarea {
 @media (max-width: 560px) {
   .topbar {
     flex-wrap: wrap;
-    row-gap: 4px;
+    row-gap: 0;
   }
   .topbar > .big-button:first-child {
     margin-right: auto;
@@ -461,20 +508,21 @@ textarea {
   /* «Mappe», «Annulla» and «Ripeti» stay on one row with large text too. */
   .topbar .big-button {
     min-width: 0;
-    padding: 4px 8px;
+    min-height: 44px;
+    padding: 2px 8px;
   }
   .topbar .big-button-icon {
-    font-size: min(1.4rem, 7vw);
+    font-size: min(1.3rem, 6.5vw);
   }
   .topbar .big-button-label {
-    font-size: min(0.8rem, 3.4vw);
+    font-size: min(0.75rem, 3.4vw);
     letter-spacing: normal;
   }
   .title-input {
     order: 1;
     flex-basis: 100%;
-    padding: 4px 12px;
-    font-size: 1.1rem;
+    padding: 2px 10px;
+    font-size: 1.05rem;
   }
 }
 
@@ -583,7 +631,14 @@ textarea {
   pointer-events: none;
 }
 .react-flow__controls-button.lock-button {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
+}
+/* React Flow fills the svg of its buttons: a line icon must stay a line. */
+.react-flow__controls-button.lock-button svg {
+  width: 1em;
+  max-width: none;
+  max-height: none;
+  fill: none;
 }
 .react-flow__controls-button.lock-button[aria-pressed='false'] {
   background: color-mix(in srgb, var(--highlight) 45%, var(--surface));
@@ -680,10 +735,14 @@ textarea {
   right: -20px;
   width: 40px;
   height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
   border: 2px solid var(--primary);
   border-radius: 50%;
   background: var(--surface);
-  font-size: 1.1rem;
+  color: var(--primary);
+  font-size: 1.25rem;
   cursor: pointer;
 }
 .concept-note-mark {
@@ -692,13 +751,16 @@ textarea {
      the line and its «+» come in. */
   top: 22px;
   right: -36px;
+  display: grid;
+  place-items: center;
   width: 34px;
   height: 34px;
   padding: 0;
   border: 2px solid var(--primary);
   border-radius: 50%;
   background: var(--surface);
-  font-size: 0.95rem;
+  color: var(--primary);
+  font-size: 1.05rem;
   cursor: pointer;
 }
 /* On the concept in hand, to write its first «Approfondimento». */
@@ -772,7 +834,14 @@ textarea {
   text-align: center;
 }
 .mic-pulse {
-  font-size: 3.5rem;
+  display: grid;
+  place-items: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 50%;
+  background: var(--tint);
+  color: var(--primary);
+  font-size: 2.75rem;
   animation: pulse 1.2s ease-in-out infinite;
 }
 @keyframes pulse {
@@ -934,22 +1003,25 @@ textarea {
 }
 .mic-button {
   flex: none;
+  display: grid;
+  place-items: center;
   width: 52px;
   height: 52px;
-  border: 2px solid var(--border);
+  border: 0;
   border-radius: 50%;
-  background: var(--surface);
+  background: var(--tint);
+  color: var(--primary);
   font-size: 1.4rem;
   cursor: pointer;
 }
 .mic-button.is-listening {
-  border-color: var(--danger);
+  color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger);
   animation: pulse 1.2s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .mic-button.is-listening {
     animation: none;
-    border-width: 4px;
   }
 }
 
@@ -1427,12 +1499,15 @@ textarea {
 }
 .outline-tool {
   flex: none;
+  display: grid;
+  place-items: center;
   width: 44px;
   height: 48px;
-  border: 2px solid var(--border);
+  border: 0;
   border-radius: 10px;
-  background: var(--surface);
-  font-size: 1.1rem;
+  background: var(--tint);
+  color: var(--primary);
+  font-size: 1.25rem;
   cursor: pointer;
   touch-action: manipulation;
 }

@@ -14,7 +14,7 @@ export default defineConfig({
         short_name: 'MappAmi',
         description: 'Mappe concettuali semplici, con voce, per bambini con DSA e studenti.',
         lang: 'it',
-        theme_color: '#3b6ea5',
+        theme_color: '#fffdf7',
         background_color: '#fdf8ec',
         display: 'standalone',
         icons: [

@@ -1,7 +1,8 @@
 import type { ButtonHTMLAttributes } from 'react';
+import { Icon, type IconName } from './Icon';
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
-  icon: string;
+  icon: IconName;
   label: string;
   variant?: 'default' | 'primary' | 'danger';
 }
@@ -10,9 +11,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 export function BigButton({ icon, label, variant = 'default', className = '', ...rest }: Props) {
   return (
     <button type="button" className={`big-button ${variant} ${className}`} {...rest}>
-      <span className="big-button-icon" aria-hidden>
-        {icon}
-      </span>
+      <Icon name={icon} className="big-button-icon" />
       <span className="big-button-label">{label}</span>
     </button>
   );

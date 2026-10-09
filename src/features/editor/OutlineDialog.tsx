@@ -5,6 +5,7 @@ import { MicButton } from '../../components/MicButton';
 import { useMapStore } from '../../store/mapStore';
 import { toOutline, type OutlineRow } from '../../lib/outline';
 import { newId } from '../../lib/id';
+import { Icon } from '../../components/Icon';
 
 /** Rows from `i` to the end of its sub-list (the line and the ones indented under it). */
 function subtreeEnd(rows: OutlineRow[], i: number): number {
@@ -116,7 +117,10 @@ export function OutlineDialog({ onDone, onClose }: { onDone(): void; onClose(): 
 
   return (
     <Dialog title="Scaletta" onClose={close} className="outline-dialog">
-      <p className="muted small">Un concetto per riga. Con ➡️ lo metti sotto quello di sopra, con ⬅️ lo riporti indietro.</p>
+      <p className="muted small">
+        Un concetto per riga. Con <Icon name="indent" className="inline-icon" /> lo metti sotto quello di sopra, con{' '}
+        <Icon name="outdent" className="inline-icon" /> lo riporti indietro.
+      </p>
       <p className="muted small outline-keys">Con la tastiera: Invio per una nuova riga, Tab e Maiusc+Tab per spostarla, Ctrl+Invio per finire.</p>
       <ol className="outline-list">
         {rows.map((r, i) => (
@@ -135,27 +139,27 @@ export function OutlineDialog({ onDone, onClose }: { onDone(): void; onClose(): 
               onKeyDown={(e) => onKey(e, i)}
             />
             <button type="button" className="outline-tool outline-tools-start" aria-label="Sposta a sinistra" disabled={r.depth === 0} onClick={() => shift(i, -1)}>
-              ⬅️
+              <Icon name="outdent" />
             </button>
             <button type="button" className="outline-tool" aria-label="Sposta a destra" disabled={i === 0 || r.depth > rows[i - 1].depth} onClick={() => shift(i, 1)}>
-              ➡️
+              <Icon name="indent" />
             </button>
             <button type="button" className="outline-tool" aria-label="Togli la riga" onClick={() => remove(i)}>
-              🗑️
+              <Icon name="trash" />
             </button>
           </li>
         ))}
       </ol>
       <div className="outline-add">
-        <BigButton icon="➕" label="Nuova riga" onClick={() => setFocusId(add())} />
+        <BigButton icon="plus" label="Nuova riga" onClick={() => setFocusId(add())} />
         <span className="outline-mic">
           <MicButton onText={onDictation} onStart={() => void (dictated.current = null)} label="Detta una nuova riga" />
         </span>
       </div>
       <div className="dialog-actions">
-        <BigButton icon="✖️" label="Annulla" onClick={onClose} />
+        <BigButton icon="close" label="Annulla" onClick={onClose} />
         <BigButton
-          icon="✅"
+          icon="check"
           label="Fatto"
           variant="primary"
           onClick={done}

@@ -6,6 +6,7 @@ import { cleanOcrText, selectionToConcepts, tokenize } from '../../lib/ocrText';
 import { useReadLongText } from '../../hooks/useReadLongText';
 import { useModal } from '../../components/Dialog';
 import { Listenable } from '../../components/OptionCard';
+import { Icon } from '../../components/Icon';
 
 const INTRO = 'Fotografa una pagina: leggerò il testo per te e potrai scegliere le parole importanti.';
 /** How late the click of a tap can arrive and still be recognised as that tap's. */
@@ -154,7 +155,7 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Dal libro" ref={ref} onKeyDown={onKeyDown} tabIndex={tabIndex}>
       <div className="overlay-card photo-text">
-        <h2 className="dialog-title">📷 Dal libro</h2>
+        <h2 className="dialog-title">Dal libro</h2>
 
         {step.kind === 'pick' && (
           <>
@@ -162,13 +163,14 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
               <p>{INTRO}</p>
             </Listenable>
             <div className="photo-sources">
-              <BigButton icon="📷" label="Scatta una foto" variant="primary" onClick={() => void takePhoto('camera')} />
-              <BigButton icon="🖼️" label="Scegli una foto" onClick={() => void takePhoto('gallery')} />
+              <BigButton icon="camera" label="Scatta una foto" variant="primary" onClick={() => void takePhoto('camera')} />
+              <BigButton icon="gallery" label="Scegli una foto" onClick={() => void takePhoto('gallery')} />
             </div>
-            <p className="muted small">🔒 La foto resta sul tuo dispositivo: non viene inviata a nessuno.</p>
+            <p className="muted small">
+              <Icon name="lock" className="inline-icon" /> La foto resta sul tuo dispositivo: non viene inviata a nessuno.</p>
             {text && (
               <div className="photo-sources">
-                <BigButton icon="↩️" label="Torna al testo" onClick={() => setStep({ kind: 'text' })} />
+                <BigButton icon="undo" label="Torna al testo" onClick={() => setStep({ kind: 'text' })} />
               </div>
             )}
           </>
@@ -181,7 +183,7 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
             <div className="progress-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={step.progress === null ? undefined : Math.round(step.progress * 100)}>
               <div className={`progress-fill${step.progress === null ? ' indeterminate' : ''}`} style={step.progress === null ? undefined : { width: `${Math.round(step.progress * 100)}%` }} />
             </div>
-            <BigButton icon="⏹️" label="Annulla" onClick={cancelReading} />
+            <BigButton icon="stop" label="Annulla" onClick={cancelReading} />
           </div>
         )}
 
@@ -190,7 +192,7 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
             <p className="field-error" role="alert">{step.message}</p>
             {step.detail && <p className="muted small">Dettagli tecnici: {step.detail}</p>}
             <div className="photo-sources">
-              <BigButton icon="📷" label="Riprova" variant="primary" onClick={() => setStep({ kind: 'pick' })} />
+              <BigButton icon="camera" label="Riprova" variant="primary" onClick={() => setStep({ kind: 'pick' })} />
             </div>
           </>
         )}
@@ -199,12 +201,12 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
           <>
             <div className="ocr-actions">
               {reader.reading ? (
-                <BigButton icon="⏹️" label="Stop" onClick={() => void reader.stop()} />
+                <BigButton icon="stop" label="Stop" onClick={() => void reader.stop()} />
               ) : (
-                <BigButton icon="🔊" label="Leggi" onClick={() => void reader.read(text)} disabled={editing} />
+                <BigButton icon="speak" label="Leggi" onClick={() => void reader.read(text)} disabled={editing} />
               )}
               <BigButton
-                icon={editing ? '✅' : '✏️'}
+                icon={editing ? 'check' : 'edit'}
                 label={editing ? 'Fatto' : 'Correggi'}
                 onClick={() => {
                   void reader.stop();
@@ -215,7 +217,7 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
                 }}
               />
               <BigButton
-                icon="📷"
+                icon="camera"
                 label="Altra foto"
                 onClick={() => {
                   void reader.stop();
@@ -229,7 +231,7 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
             ) : (
               <>
                 <Listenable text={PICK_HINT} label="Ascolta come fare">
-                  <p className="muted small">👆 {PICK_HINT}</p>
+                  <p className="muted small">{PICK_HINT}</p>
                 </Listenable>
                 <div
                   className="ocr-text ocr-pick"
@@ -289,10 +291,10 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
         )}
 
         <div className="dialog-actions">
-          <BigButton icon="✖️" label="Chiudi" onClick={onClose} />
+          <BigButton icon="close" label="Chiudi" onClick={onClose} />
           {step.kind === 'text' && (
             <BigButton
-              icon="➕"
+              icon="plus"
               label={concepts.length === 1 ? 'Aggiungi 1 concetto' : `Aggiungi ${concepts.length} concetti`}
               variant="primary"
               disabled={editing || concepts.length === 0}

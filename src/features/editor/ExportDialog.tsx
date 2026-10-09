@@ -4,6 +4,7 @@ import { BigButton } from '../../components/BigButton';
 import { OptionCard } from '../../components/OptionCard';
 import { isNative } from '../../services/platform';
 import type { PageCount, Paper } from '../../lib/pagePlan';
+import { Icon } from '../../components/Icon';
 
 export type ExportKind = 'pdf' | 'png' | 'file';
 
@@ -99,7 +100,7 @@ export function ExportDialog({ busy, hasNotes = false, error, onExport, onClose 
           <span>
             <strong>Con gli approfondimenti</strong>
             <br />
-            <span className="muted">Le note dei concetti 📝, in un foglio in fondo.</span>
+            <span className="muted">Le note dei concetti <Icon name="note" className="inline-icon" />, in un foglio in fondo.</span>
           </span>
         </label>
       )}
@@ -111,10 +112,10 @@ export function ExportDialog({ busy, hasNotes = false, error, onExport, onClose 
       )}
 
       <div className="dialog-actions">
-        <BigButton icon="✖️" label="Annulla" onClick={onClose} />
-        {kind === 'pdf' && !isNative() && <BigButton icon="🖨️" label="Stampa" disabled={busy} onClick={() => run(true)} />}
+        <BigButton icon="close" label="Annulla" onClick={onClose} />
+        {kind === 'pdf' && !isNative() && <BigButton icon="print" label="Stampa" disabled={busy} onClick={() => run(true)} />}
         <BigButton
-          icon={isNative() ? '📤' : '💾'}
+          icon={isNative() ? 'share' : 'save'}
           label={busy ? 'Preparo…' : isNative() ? 'Condividi' : 'Salva'}
           variant="primary"
           disabled={busy}

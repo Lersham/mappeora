@@ -45,7 +45,7 @@ export function LinkWordDialog({ edge, onClose }: { edge: MapEdge; onClose(): vo
       </div>
       <div className="dialog-actions">
         <BigButton
-          icon="✂️"
+          icon="scissors"
           label="Togli freccia"
           variant="danger"
           onClick={() => {
@@ -53,7 +53,7 @@ export function LinkWordDialog({ edge, onClose }: { edge: MapEdge; onClose(): vo
             onClose();
           }}
         />
-        <BigButton icon="✅" label="Fatto" variant="primary" onClick={() => save(text)} />
+        <BigButton icon="check" label="Fatto" variant="primary" onClick={() => save(text)} />
       </div>
     </Dialog>
   );

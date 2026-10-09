@@ -13,20 +13,20 @@ export function ReviewBar({ onRepeat, onOverview, onExit }: Props) {
   const quiz = mode === 'quiz';
   return (
     <nav className="toolbar review-bar" aria-label={mode === 'interrogazione' ? 'Interrogazione' : 'Ripasso'}>
-      <BigButton icon="⬅️" label="Indietro" onClick={prev} disabled={index === 0} />
+      <BigButton icon="back" label="Indietro" onClick={prev} disabled={index === 0} />
       <span className="review-progress" aria-live="polite">
         {index + 1} / {steps.length}
       </span>
       {quiz && !revealed ? (
-        <BigButton icon="👀" label="Scopri" variant="primary" onClick={reveal} />
+        <BigButton icon="eye" label="Scopri" variant="primary" onClick={reveal} />
       ) : (
-        <BigButton icon="🔊" label={mode === 'interrogazione' ? 'Leggi' : 'Ripeti'} onClick={onRepeat} />
+        <BigButton icon="speak" label={mode === 'interrogazione' ? 'Leggi' : 'Ripeti'} onClick={onRepeat} />
       )}
-      {mode === 'interrogazione' && <BigButton icon="🗺️" label="Tutta" onClick={onOverview} />}
+      {mode === 'interrogazione' && <BigButton icon="map" label="Tutta" onClick={onOverview} />}
       {last && (!quiz || revealed) ? (
-        <BigButton icon="🎉" label="Finito!" variant="primary" onClick={onExit} />
+        <BigButton icon="party" label="Finito!" variant="primary" onClick={onExit} />
       ) : (
-        <BigButton icon="➡️" label="Avanti" variant={quiz && !revealed ? 'default' : 'primary'} onClick={next} disabled={last} />
+        <BigButton icon="forward" label="Avanti" variant={quiz && !revealed ? 'default' : 'primary'} onClick={next} disabled={last} />
       )}
     </nav>
   );

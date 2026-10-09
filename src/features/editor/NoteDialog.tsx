@@ -57,10 +57,10 @@ export function NoteDialog({ node, readOnly = false, onClose }: Props) {
         </>
       )}
       <div className="dialog-actions">
-        <BigButton icon="🔊" label="Ascolta" disabled={!heard} onClick={() => void readText(heard)} />
+        <BigButton icon="speak" label="Ascolta" disabled={!heard} onClick={() => void readText(heard)} />
         {!readOnly && node.note && (
           <BigButton
-            icon="🗑️"
+            icon="trash"
             label="Togli"
             variant="danger"
             onClick={() => {
@@ -69,7 +69,7 @@ export function NoteDialog({ node, readOnly = false, onClose }: Props) {
             }}
           />
         )}
-        <BigButton icon="✅" label={readOnly ? 'Chiudi' : 'Fatto'} variant="primary" onClick={close} />
+        <BigButton icon="check" label={readOnly ? 'Chiudi' : 'Fatto'} variant="primary" onClick={close} />
       </div>
     </Dialog>
   );

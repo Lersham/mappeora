@@ -47,7 +47,7 @@ export function ExamplesDialog({ onOpen, onClose }: Props) {
         </p>
       )}
       <div className="dialog-actions">
-        <BigButton icon="✖️" label="Chiudi" onClick={onClose} />
+        <BigButton icon="close" label="Chiudi" onClick={onClose} />
       </div>
     </Dialog>
   );
