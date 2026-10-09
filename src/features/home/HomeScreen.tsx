@@ -104,7 +104,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     <main className="home">
       <header className="home-header">
         <div className="home-brand">
-          <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width="44" height="44" />
+          <img src={`${import.meta.env.BASE_URL}icon-192.png`} alt="" width="44" height="44" />
           <span>MappAmi</span>
         </div>
         <div className="home-header-tools">

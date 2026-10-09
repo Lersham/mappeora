@@ -27,7 +27,7 @@ controllato il codice, ma chi pubblica deve rileggerle in Play Console prima di 
 
 URL da inserire in Play Console (Contenuti dell'app → Norme sulla privacy) e nella scheda dello store:
 
-**https://mappeora.vercel.app/privacy.html**
+**https://mapp-ami.vercel.app/privacy.html**
 
 La stessa pagina è dentro l'app: schermata iniziale → «🔒 Privacy».
 

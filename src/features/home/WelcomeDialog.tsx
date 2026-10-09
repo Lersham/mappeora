@@ -32,7 +32,7 @@ interface Page {
 
 const PAGES: Page[] = [
   {
-    icon: <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width="72" height="72" />,
+    icon: <img src={`${import.meta.env.BASE_URL}icon-192.png`} alt="" width="72" height="72" />,
     title: 'Benvenuto in MappAmi',
     text: 'Qui costruisci da solo le tue mappe per studiare. Scrivi o detta i concetti, collegali tra loro, e la mappa si mette in ordine su un foglio.',
   },
