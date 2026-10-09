@@ -118,7 +118,7 @@ export function parseMapFile(text: string): ConceptMap {
   if (data.format === ARCHIVE_FORMAT) {
     throw new MapFileError('Questo file contiene tutte le mappe di un dispositivo: aprilo dalla schermata iniziale, con «Apri file».');
   }
-  if (data.format !== FORMAT || !isObj(data.map)) throw new MapFileError('Questo file non è una mappa di Mappeora.');
+  if (data.format !== FORMAT || !isObj(data.map)) throw new MapFileError('Questo file non è una mappa di MappAmi.');
   return readMap(data.map, { keepId: false });
 }
 
@@ -148,11 +148,11 @@ function readJson(text: string): Record<string, unknown> {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new MapFileError('Questo file non è una mappa di Mappeora.');
+    throw new MapFileError('Questo file non è una mappa di MappAmi.');
   }
-  if (!isObj(data)) throw new MapFileError('Questo file non è una mappa di Mappeora.');
+  if (!isObj(data)) throw new MapFileError('Questo file non è una mappa di MappAmi.');
   if ((num(data.version) ?? 0) > VERSION) {
-    throw new MapFileError('Questa mappa è stata fatta con una versione più nuova di Mappeora. Aggiorna l’app.');
+    throw new MapFileError('Questa mappa è stata fatta con una versione più nuova di MappAmi. Aggiorna l’app.');
   }
   return data;
 }

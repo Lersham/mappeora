@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>it</string>
 	<key>CFBundleDisplayName</key>
-        <string>Mappeora</string>
+        <string>MappAmi</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -67,12 +67,12 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Mappeora usa il microfono per scrivere i concetti con la voce.</string>
+	<string>MappAmi usa il microfono per scrivere i concetti con la voce.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Mappeora trasforma la tua voce in testo per creare le mappe.</string>
+	<string>MappAmi trasforma la tua voce in testo per creare le mappe.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Mappeora usa la fotocamera per fotografare le pagine del libro e leggerne il testo.</string>
+	<string>MappAmi usa la fotocamera per fotografare le pagine del libro e leggerne il testo.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Mappeora apre le tue foto per leggere il testo delle pagine del libro.</string>
+	<string>MappAmi apre le tue foto per leggere il testo delle pagine del libro.</string>
 </dict>
 </plist>

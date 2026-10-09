@@ -36,7 +36,7 @@ test.describe('File .mappeora', () => {
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: 'Apri file' }).click();
     await (await chooser).setFiles({ name: 'compiti.mappeora', mimeType: 'application/json', buffer: Buffer.from('ciao') });
-    await expect(page.getByRole('alert')).toHaveText('Questo file non è una mappa di Mappeora.');
+    await expect(page.getByRole('alert')).toHaveText('Questo file non è una mappa di MappAmi.');
   });
 
   test('esporta un’immagine PNG', async ({ page }) => {

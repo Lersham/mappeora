@@ -80,7 +80,7 @@ test.describe('Voce', () => {
     await newMap(page, 'Le stagioni');
     await micError(page, 'not-allowed');
     await toolbar(page, 'Detta');
-    await expect(page.getByText('permetti a Mappeora di usare il microfono')).toBeVisible();
+    await expect(page.getByText('permetti a MappAmi di usare il microfono')).toBeVisible();
   });
 
   test('se il bambino non dice niente la dettatura si chiude senza rimproveri', async ({ page }) => {

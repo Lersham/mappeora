@@ -5,10 +5,10 @@ test.describe('Benvenuto', () => {
   test('al primo avvio spiega l’app pagina per pagina, poi non si ripresenta', async ({ page }) => {
     await freshInstall(page);
     const welcome = page.getByRole('dialog', { name: 'Come funziona' });
-    await expect(welcome.getByRole('heading', { name: 'Benvenuto in Mappeora' })).toBeVisible();
+    await expect(welcome.getByRole('heading', { name: 'Benvenuto in MappAmi' })).toBeVisible();
 
     await welcome.getByRole('button', { name: 'Ascolta' }).click();
-    await expect.poll(() => spoken(page)).toContainEqual(expect.stringContaining('Benvenuto in Mappeora.'));
+    await expect.poll(() => spoken(page)).toContainEqual(expect.stringContaining('Benvenuto in MappAmi.'));
 
     for (const title of ['Dal libro alla mappa', 'Scrivi o detta', 'Ascolta la mappa', 'Ripassa e personalizza']) {
       await welcome.getByRole('button', { name: 'Avanti' }).click();
@@ -33,7 +33,7 @@ test.describe('Benvenuto', () => {
     await expect(welcome).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Come funziona' }).click();
-    await expect(welcome.getByRole('heading', { name: 'Benvenuto in Mappeora' })).toBeVisible();
+    await expect(welcome.getByRole('heading', { name: 'Benvenuto in MappAmi' })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(welcome).toHaveCount(0);
   });

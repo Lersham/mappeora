@@ -8,17 +8,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['icon-192.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Mappeora – mappe concettuali',
-        short_name: 'Mappeora',
+        name: 'MappAmi – mappe concettuali',
+        short_name: 'MappAmi',
         description: 'Mappe concettuali semplici, con voce, per bambini con DSA e studenti.',
         lang: 'it',
         theme_color: '#3b6ea5',
         background_color: '#fdf8ec',
         display: 'standalone',
         icons: [
-          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
