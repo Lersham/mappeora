@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Mappeora – mappe concettuali',
-        short_name: 'Mappeora',
+        name: 'MappAmi – mappe concettuali',
+        short_name: 'MappAmi',
         description: 'Mappe concettuali semplici, con voce, per bambini con DSA e studenti.',
         lang: 'it',
         theme_color: '#3b6ea5',

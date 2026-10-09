@@ -1,4 +1,4 @@
-// Draws the Mappeora logo and writes every icon and splash screen the app
+// Draws the MappAmi logo and writes every icon and splash screen the app
 // needs: favicon and PWA icons (public/), Android launcher icons and splash
 // screens (android/app/src/main/res/). The logo is defined once, here.
 //
@@ -59,7 +59,7 @@ function splash(w, h, dark) {
   const top = Math.round((h - icon - text * 1.6) / 2);
   return `<div style="width:${w}px;height:${h}px;background:${dark ? DARK : CREAM};display:flex;flex-direction:column;align-items:center;padding-top:${top}px;box-sizing:border-box">
     ${squareIcon(icon)}
-    <div style="font:600 ${text}px Lexend;color:${dark ? '#f1ede4' : '#1f2430'};margin-top:${Math.round(text * 0.5)}px;letter-spacing:0.02em">Mappeora</div>
+    <div style="font:600 ${text}px Lexend;color:${dark ? '#f1ede4' : '#1f2430'};margin-top:${Math.round(text * 0.5)}px;letter-spacing:0.02em">MappAmi</div>
   </div>`;
 }
 

@@ -429,7 +429,7 @@ function printPdf(pdf: Blob): void {
   document.body.appendChild(frame);
 }
 
-/** Saves an editable copy of the map (".mappeora") to share or reopen later. */
+/** Saves an editable copy of the map (".mappami") to share or reopen later. */
 export async function saveMapFile(map: ConceptMap): Promise<void> {
   const dataUrl = textToDataUrl(serializeMap(map), 'application/json');
   await shareFile(dataUrl, `${slug(map.title) || 'mappa'}${MAP_FILE_EXTENSION}`, map.title);

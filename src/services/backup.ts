@@ -44,7 +44,7 @@ export async function saveAllMaps(): Promise<number> {
   const list = await storage().list();
   const maps = (await Promise.all(list.map((m) => storage().get(m.id)))).filter((m): m is ConceptMap => !!m);
   const date = new Date().toISOString().slice(0, 10);
-  await shareFile(textToDataUrl(serializeArchive(maps), 'application/json'), `mappeora-tutte-le-mappe-${date}${MAP_FILE_EXTENSION}`, 'Le mie mappe');
+  await shareFile(textToDataUrl(serializeArchive(maps), 'application/json'), `mappami-tutte-le-mappe-${date}${MAP_FILE_EXTENSION}`, 'Le mie mappe');
   writeState({ savedAt: Date.now(), snoozedUntil: undefined });
   return maps.length;
 }
@@ -88,7 +88,7 @@ export function snoozeBackup(now = Date.now()) {
 
 /**
  * Safari on iPhone and iPad may wipe what a website keeps after 7 days
- * without a visit; added to the Home screen, Mappeora is an app and keeps
+ * without a visit; added to the Home screen, MappAmi is an app and keeps
  * its maps. True when that hint is worth showing.
  */
 export function homeScreenHintNeeded(): boolean {

@@ -2,11 +2,13 @@ import type { ConceptMap, MapEdge, MapNode, MapTemplate, NodeShape } from '../ty
 import { newId } from './id';
 
 /**
- * The ".mappeora" file: an editable copy of a map that can travel between
+ * The ".mappami" file: an editable copy of a map that can travel between
  * devices (home ↔ school, student ↔ teacher). Plain JSON, self-contained:
  * photos and voice notes are embedded as data URLs.
  */
-export const MAP_FILE_EXTENSION = '.mappeora';
+export const MAP_FILE_EXTENSION = '.mappami';
+/** Files saved when the app was still called Mappeora: they open as before. */
+export const OLD_MAP_FILE_EXTENSION = '.mappeora';
 const FORMAT = 'mappeora';
 /** «Salva tutte le mappe»: every map of the device in one file, same extension. */
 const ARCHIVE_FORMAT = 'mappeora-archivio';
@@ -110,7 +112,7 @@ function readEdge(v: unknown, nodeIds: Set<string>): MapEdge | undefined {
 }
 
 /**
- * Parses and sanitises a ".mappeora" file. The result is a fresh copy with
+ * Parses and sanitises a ".mappami" (or older ".mappeora") file. The result is a fresh copy with
  * a new id, so opening a file never overwrites a map already on the device.
  */
 export function parseMapFile(text: string): ConceptMap {
@@ -118,7 +120,7 @@ export function parseMapFile(text: string): ConceptMap {
   if (data.format === ARCHIVE_FORMAT) {
     throw new MapFileError('Questo file contiene tutte le mappe di un dispositivo: aprilo dalla schermata iniziale, con «Apri file».');
   }
-  if (data.format !== FORMAT || !isObj(data.map)) throw new MapFileError('Questo file non è una mappa di Mappeora.');
+  if (data.format !== FORMAT || !isObj(data.map)) throw new MapFileError('Questo file non è una mappa di MappAmi.');
   return readMap(data.map, { keepId: false });
 }
 
@@ -148,11 +150,11 @@ function readJson(text: string): Record<string, unknown> {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new MapFileError('Questo file non è una mappa di Mappeora.');
+    throw new MapFileError('Questo file non è una mappa di MappAmi.');
   }
-  if (!isObj(data)) throw new MapFileError('Questo file non è una mappa di Mappeora.');
+  if (!isObj(data)) throw new MapFileError('Questo file non è una mappa di MappAmi.');
   if ((num(data.version) ?? 0) > VERSION) {
-    throw new MapFileError('Questa mappa è stata fatta con una versione più nuova di Mappeora. Aggiorna l’app.');
+    throw new MapFileError('Questa mappa è stata fatta con una versione più nuova di MappAmi. Aggiorna l’app.');
   }
   return data;
 }

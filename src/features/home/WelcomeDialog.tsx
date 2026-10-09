@@ -33,24 +33,24 @@ interface Page {
 const PAGES: Page[] = [
   {
     icon: <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width="72" height="72" />,
-    title: 'Benvenuto in Mappeora',
+    title: 'Benvenuto in MappAmi',
     text: 'Qui costruisci da solo le tue mappe per studiare. Scrivi o detta i concetti, collegali tra loro, e la mappa si mette in ordine su un foglio.',
   },
   {
     icon: '📷',
     title: 'Dal libro alla mappa',
-    text: 'Fotografa una pagina del libro: Mappeora legge il testo per te. Poi passi il dito sulle parole importanti, come un evidenziatore, e diventano la tua mappa.',
+    text: 'Fotografa una pagina del libro: MappAmi legge il testo per te. Poi passi il dito sulle parole importanti, come un evidenziatore, e diventano la tua mappa.',
     tryBook: true,
   },
   {
     icon: '🎤',
     title: 'Scrivi o detta',
-    text: 'Con «Concetto» aggiungi un riquadro. Con «Detta» parli e Mappeora scrive per te. Se preferisci un elenco, apri «Scaletta» e scrivi un concetto per riga.',
+    text: 'Con «Concetto» aggiungi un riquadro. Con «Detta» parli e MappAmi scrive per te. Se preferisci un elenco, apri «Scaletta» e scrivi un concetto per riga.',
   },
   {
     icon: '🔊',
     title: 'Ascolta la mappa',
-    text: 'Con «Leggi» Mappeora legge la mappa ad alta voce e colora la parola che sta dicendo. Tocca un concetto e premi 🔊 per sentire solo quello.',
+    text: 'Con «Leggi» MappAmi legge la mappa ad alta voce e colora la parola che sta dicendo. Tocca un concetto e premi 🔊 per sentire solo quello.',
   },
   {
     icon: '🧠',

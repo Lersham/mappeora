@@ -15,7 +15,7 @@ test.describe('Copia di sicurezza', () => {
     await reminder.getByRole('button', { name: 'Salva tutte le mappe' }).click();
     // The file's contents, not its path: this test's folder has «» in its name.
     const buffer = await readFile((await (await download).path())!);
-    expect((await download).suggestedFilename()).toMatch(/^mappeora-tutte-le-mappe-\d{4}-\d{2}-\d{2}\.mappeora$/);
+    expect((await download).suggestedFilename()).toMatch(/^mappami-tutte-le-mappe-\d{4}-\d{2}-\d{2}\.mappami$/);
     const json = JSON.parse(buffer.toString('utf8'));
     expect(json.format).toBe('mappeora-archivio');
     expect(json.maps.map((m: { title: string }) => m.title).sort()).toEqual(['Gli animali', 'Il ciclo dell’acqua', 'Le stagioni']);
