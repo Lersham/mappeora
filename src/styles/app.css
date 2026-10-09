@@ -385,6 +385,14 @@ textarea {
 /* The bars around the map are thin, the colour of the phone's status bar
    (theme-color in index.html), and their buttons have no frame: the room
    goes to the map. */
+/* Above the map: concepts scrolled under a bar never show through it (and
+   tools that check contrast see the bar, not the concept behind). */
+.topbar,
+.toolbar,
+.tutorial {
+  position: relative;
+  z-index: 1;
+}
 .topbar {
   display: flex;
   align-items: center;
@@ -427,6 +435,7 @@ textarea {
 .title-input {
   flex: 1;
   min-width: 0;
+  min-height: 44px;
   font-size: 1.15rem;
   font-weight: 600;
   padding: 2px 10px;
@@ -561,7 +570,7 @@ textarea {
      each word under its icon. */
   .topbar .big-button {
     flex-direction: column;
-    min-width: 0;
+    min-width: 44px;
     padding: 2px 8px;
     gap: 2px;
   }
@@ -722,9 +731,10 @@ textarea {
   stroke: var(--focus);
   stroke-width: 4;
 }
+/* As big as every other button: a finger, not a mouse pointer. */
 .react-flow__controls-button {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
 }
 
 /* ---------- Concept node ---------- */
@@ -979,10 +989,14 @@ textarea {
 }
 .choice {
   min-height: 48px;
+  max-width: 100%;
   padding: 8px 16px;
   border: 2px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
+  /* On a small phone with large text «OpenDyslexic», one long word in its
+     own wide font, still fits the window. */
+  font-size: min(1rem, 5.2vw);
   cursor: pointer;
 }
 .choice[aria-pressed='true'],
@@ -1056,8 +1070,8 @@ textarea {
 
 .dialog-title {
   margin: 0 0 16px;
-  /* On a phone with large text «collegamento» still fits the window. */
-  font-size: min(1.4rem, 7vw);
+  /* On a phone with large text «Approfondimento» still fits the window. */
+  font-size: min(1.4rem, 6vw);
   overflow-wrap: break-word;
 }
 .overlay-card > .dialog-actions {
@@ -1594,6 +1608,7 @@ textarea {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
+  container-type: inline-size;
 }
 .outline-row {
   display: flex;
@@ -1612,9 +1627,9 @@ textarea {
 .outline-input {
   /* Grows with flex; when a deep line leaves too little room the buttons
      go to a second line instead of squeezing the text. */
-  flex: 1 1 13ch;
+  flex: 1 1 7rem;
   width: 0;
-  min-width: min(13ch, 100%);
+  min-width: 7rem;
   min-height: 48px;
   padding: 8px 10px;
   /* A long concept goes on more lines: all of it can be read. */
@@ -1656,6 +1671,14 @@ textarea {
 @media (max-width: 520px) {
   .outline-row {
     padding-left: calc(var(--depth, 0) * 12px);
+  }
+}
+/* Where the list is narrow for its words (a phone, large text) every line
+   has the whole width and its buttons underneath: the same for all lines,
+   not beside on one and under on the next. */
+@container (max-width: 30em) {
+  .outline-input {
+    flex-basis: calc(100% - 1em - 4px);
   }
 }
 /* Keyboard shortcuts only where there is probably a keyboard. */

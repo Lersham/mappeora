@@ -61,6 +61,8 @@ const READABLE_PX = 12;
 /** …to this size, comfortable to read on a phone. */
 const COMFORT_PX = 16;
 const MAX_READ_ZOOM = 1.2;
+/** The farthest the map can be seen from. */
+const MIN_ZOOM = 0.2;
 
 const LOCK_KEY = 'mappeora-concetti-bloccati';
 
@@ -380,9 +382,10 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
    * shown as wide as the screen, from the top, like a page: the rest is a
    * scroll away. Null when the whole map reads fine, or when the screen is
    * no wider than the sheet (a phone, a tablet held upright: no bands, and
-   * a tap brings a branch close).
+   * a tap brings a branch close). `mustFit`: only when the whole map cannot
+   * be seen even from afar.
    */
-  const pageView = () => {
+  const pageView = (mustFit = false) => {
     const box = document.querySelector('.react-flow')?.getBoundingClientRect();
     const visible = getNodes().filter((n) => !n.hidden);
     if (!box || visible.length === 0) return null;
@@ -391,8 +394,17 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     const pad = 32;
     const whole = Math.min(MAX_READ_ZOOM, (box.width - pad * 2) / b.width, (box.height - pad * 2) / b.height);
     const wide = Math.min(MAX_READ_ZOOM, (box.width - pad * 2) / b.width);
-    if (px * whole >= READABLE_PX || wide < whole * 1.5) return null;
-    return { x: (box.width - b.width * wide) / 2 - b.x * wide, y: pad - b.y * wide, zoom: wide };
+    const top = (zoom: number) => ({ x: (box.width - b.width * zoom) / 2 - b.x * zoom, y: pad - b.y * zoom, zoom });
+    // Too big to be seen whole even from afar (large text on a phone): from
+    // the top, where the main concept is, not centred and cut at both ends.
+    if (whole < MIN_ZOOM) return top(Math.max(MIN_ZOOM, wide));
+    if (mustFit || px * whole >= READABLE_PX || wide < whole * 1.5) return null;
+    return top(wide);
+  };
+
+  const fromTopIfTooBig = () => {
+    const page = pageView(true);
+    if (page) void setViewport(page);
   };
 
   /** After «Riordina», «Scaletta», a review: the page view if the map needs it, else all of it. */
@@ -675,7 +687,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   };
 
   useBackHandler(exitReview, review.active);
-  const overview = () => void fitView({ padding: 0.15, duration: motion(500) });
+  const overview = () => void fitView({ padding: 0.15, duration: motion(500) }).then(fromTopIfTooBig);
 
   // Review: follow the current concept and read it once it is visible.
   const current = review.active ? review.steps[review.index] : undefined;
@@ -894,8 +906,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           // the two taps of a double tap, so renaming it failed.
           autoPanOnNodeFocus={false}
           fitView
-          fitViewOptions={{ padding: 0.3, maxZoom: 1.2 }}
-          minZoom={0.2}
+          fitViewOptions={{ padding: 0.3, maxZoom: MAX_READ_ZOOM }}
+          minZoom={MIN_ZOOM}
           // The wheel and two fingers on a touchpad scroll the sheet, like a
           // page; Ctrl + wheel, a pinch and the buttons zoom.
           panOnScroll
@@ -904,7 +916,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           ariaLabelConfig={MAP_ARIA_LABELS}
         >
           <Background gap={24} />
-          <Controls showInteractive={false}>
+          <Controls
+            showInteractive={false}
+            // A map too big to be seen whole: its top, not its middle (once
+            // React Flow has done its own fit, which waits for a render).
+            onFitView={() => void fitView().then(fromTopIfTooBig)}
+          >
             {editing && (
               <ControlButton
                 className="lock-button"

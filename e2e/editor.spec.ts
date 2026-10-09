@@ -278,6 +278,34 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     expect(await onScreenPx('Le cause')).toBeLessThan(12);
   });
 
+  test('sul telefono con il testo grande una mappa troppo grande per starci tutta si apre dalla cima, con il concetto principale', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!isMobile, 'sullo schermo largo si apre come una pagina');
+    await page.addInitScript(() => {
+      if (!localStorage.getItem('mappeora-settings')) {
+        const state = { font: 'opendyslexic', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
+        localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+      }
+    });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Esempi', exact: true }).click();
+    await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
+    await expect(nodes(page)).toHaveCount(37);
+    await settled(page);
+    // Not centred and cut at both ends: the main concept, whole, under the bar.
+    const main = node(page, 'La Rivoluzione francese');
+    const insideCanvas = async () => {
+      const [b, c] = [(await main.boundingBox())!, (await page.locator('.react-flow').boundingBox())!];
+      return b.y >= c.y && b.y + b.height <= c.y + c.height;
+    };
+    expect(await insideCanvas()).toBe(true);
+    // «Mostra tutta la mappa» too.
+    await page.locator('.react-flow__controls-fitview').click();
+    await expect.poll(insideCanvas).toBe(true);
+  });
+
   test('sullo schermo largo la barra in alto è una riga sottile: ogni parola accanto alla sua icona', async ({ page, isMobile }) => {
     test.skip(isMobile, 'sul telefono il titolo ha una riga sua');
     await newMap(page, 'I vulcani');

@@ -105,6 +105,10 @@ test('Testo grande, OpenDyslexic e spaziatura ampia: in nessuna schermata parole
   await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
   await expect(page.locator('.concept-node')).toHaveCount(37);
   await looks('la mappa');
+  await page.locator('.concept-node').first().click();
+  await page.getByRole('button', { name: /^Aggiungi un approfondimento a La Rivoluzione francese/ }).click();
+  await looks('Approfondimento');
+  await close('Approfondimento');
   const bar = page.getByRole('navigation', { name: 'Strumenti' });
   if (await bar.getByRole('button', { name: 'Altro', exact: true }).isVisible()) {
     await bar.getByRole('button', { name: 'Altro', exact: true }).click();
