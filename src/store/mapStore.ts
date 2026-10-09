@@ -14,6 +14,8 @@ type Size = { width: number; height: number };
 interface MapState {
   map: ConceptMap | null;
   selectedId: string | null;
+  /** A concept that should open ready for typing (just created), until it does. */
+  editingId: string | null;
   /** Rendered node sizes reported by React Flow (not part of the document). */
   sizes: Record<string, Size>;
 
@@ -22,6 +24,8 @@ interface MapState {
   /** Concepts placed by hand (true) or kept in order on an A4 sheet. */
   setFreeLayout(free: boolean): void;
   select(id: string | null): void;
+  /** Asks the concept `id` to open its text field (null: the request was taken). */
+  startEditing(id: string | null): void;
   /** Adds a node linked under `parentId` (or unlinked if null). Returns its id. */
   addChild(parentId: string | null, label?: string): string;
   updateNode(id: string, patch: Partial<Omit<MapNode, 'id'>>): void;
@@ -91,15 +95,18 @@ export const useMapStore = create<MapState>()(
     (set, get) => ({
       map: null,
       selectedId: null,
+      editingId: null,
       sizes: {},
 
-      load: (map) => set({ map, selectedId: null, sizes: {} }),
+      load: (map) => set({ map, selectedId: null, editingId: null, sizes: {} }),
 
       setTitle: (title) => set((s) => edit(s, (map) => (map.title === title ? {} : { title }))),
 
       setFreeLayout: (free) => set((s) => edit(s, () => ({ freeLayout: free || undefined }))),
 
       select: (selectedId) => set({ selectedId }),
+
+      startEditing: (editingId) => set({ editingId }),
 
       addChild: (parentId, label = NEW_CONCEPT_LABEL) => {
         const id = newId();

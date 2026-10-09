@@ -20,6 +20,13 @@
   --focus: #e07a00;
   --highlight: #ffe066;
   --edge: #556070;
+  /* "Foglio" maps: each branch has its own colour of line (see BusEdge, LadderEdge). */
+  --branch-0: #3b6ea5;
+  --branch-1: #a85a12;
+  --branch-2: #7a4fa3;
+  --branch-3: #2c7a4b;
+  --branch-4: #b03a5b;
+  --branch-5: #0f767c;
 
   font-size: calc(16px * var(--text-scale));
   color-scheme: light;
@@ -71,5 +78,11 @@
   --primary-text: #10161f;
   --danger: #ef8f7d;
   --edge: #aab2bf;
+  --branch-0: #7fb0e6;
+  --branch-1: #f0a35c;
+  --branch-2: #c5a3e8;
+  --branch-3: #7fd19c;
+  --branch-4: #f08fa8;
+  --branch-5: #6fd0d6;
   color-scheme: dark;
 }

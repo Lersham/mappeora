@@ -8,7 +8,11 @@ import { newId } from './id';
  */
 export const MAP_FILE_EXTENSION = '.mappeora';
 const FORMAT = 'mappeora';
+/** «Salva tutte le mappe»: every map of the device in one file, same extension. */
+const ARCHIVE_FORMAT = 'mappeora-archivio';
 const VERSION = 1;
+/** Far more maps than a child makes in years. */
+const MAX_MAPS = 1000;
 
 interface MapFile {
   format: typeof FORMAT;
@@ -21,6 +25,11 @@ export class MapFileError extends Error {}
 export function serializeMap(map: ConceptMap): string {
   const file: MapFile = { format: FORMAT, version: VERSION, map };
   return JSON.stringify(file);
+}
+
+/** A safety copy of all the maps (see services/backup.ts). */
+export function serializeArchive(maps: ConceptMap[], savedAt = Date.now()): string {
+  return JSON.stringify({ format: ARCHIVE_FORMAT, version: VERSION, savedAt, maps });
 }
 
 const SHAPES: NodeShape[] = ['rettangolo', 'ellisse', 'nuvola'];
@@ -105,19 +114,51 @@ function readEdge(v: unknown, nodeIds: Set<string>): MapEdge | undefined {
  * a new id, so opening a file never overwrites a map already on the device.
  */
 export function parseMapFile(text: string): ConceptMap {
+  const data = readJson(text);
+  if (data.format === ARCHIVE_FORMAT) {
+    throw new MapFileError('Questo file contiene tutte le mappe di un dispositivo: aprilo dalla schermata iniziale, con «Apri file».');
+  }
+  if (data.format !== FORMAT || !isObj(data.map)) throw new MapFileError('Questo file non è una mappa di Mappeora.');
+  return readMap(data.map, { keepId: false });
+}
+
+/**
+ * «Apri file»: one map (a new copy, as parseMapFile) or a safety copy of
+ * all the maps, which keep their ids and dates so that opening the same
+ * copy twice adds nothing (see services/backup.ts).
+ */
+export function parseAnyMapFile(text: string): { archive: boolean; maps: ConceptMap[] } {
+  const data = readJson(text);
+  if (data.format !== ARCHIVE_FORMAT) return { archive: false, maps: [parseMapFile(text)] };
+  const list = Array.isArray(data.maps) ? data.maps.slice(0, MAX_MAPS) : [];
+  const maps: ConceptMap[] = [];
+  for (const raw of list) {
+    try {
+      maps.push(readMap(raw, { keepId: true }));
+    } catch {
+      // A damaged map does not stop the others.
+    }
+  }
+  if (maps.length === 0) throw new MapFileError('Nel file non ci sono mappe che riesco ad aprire.');
+  return { archive: true, maps };
+}
+
+function readJson(text: string): Record<string, unknown> {
   let data: unknown;
   try {
     data = JSON.parse(text);
   } catch {
     throw new MapFileError('Questo file non è una mappa di Mappeora.');
   }
-  if (!isObj(data) || data.format !== FORMAT || !isObj(data.map)) {
-    throw new MapFileError('Questo file non è una mappa di Mappeora.');
-  }
+  if (!isObj(data)) throw new MapFileError('Questo file non è una mappa di Mappeora.');
   if ((num(data.version) ?? 0) > VERSION) {
     throw new MapFileError('Questa mappa è stata fatta con una versione più nuova di Mappeora. Aggiorna l’app.');
   }
-  const m = data.map;
+  return data;
+}
+
+function readMap(m: unknown, { keepId }: { keepId: boolean }): ConceptMap {
+  if (!isObj(m)) throw new MapFileError('La mappa nel file è vuota o rovinata.');
   const tooBig = () => new MapFileError('La mappa nel file è troppo grande.');
   const nodes: MapNode[] = [];
   const seen = new Set<string>();
@@ -148,11 +189,12 @@ export function parseMapFile(text: string): ConceptMap {
   }
 
   const now = Date.now();
+  const id = keepId ? str(m.id, 100) : undefined;
   return {
-    id: newId(),
+    id: id || newId(),
     title: str(m.title, SHORT_TEXT_MAX)?.trim() || 'Mappa importata',
     createdAt: num(m.createdAt) ?? now,
-    updatedAt: now,
+    updatedAt: keepId ? (num(m.updatedAt) ?? now) : now,
     template: TEMPLATES.includes(m.template as MapTemplate) ? (m.template as MapTemplate) : 'libera',
     ...(m.freeLayout === true && { freeLayout: true }),
     nodes,

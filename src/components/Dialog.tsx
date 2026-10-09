@@ -8,6 +8,9 @@ interface Props {
   className?: string;
 }
 
+/** Dialogs open now, oldest first. */
+const open: HTMLElement[] = [];
+
 const FOCUSABLE = 'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])';
 
 /**
@@ -26,6 +29,37 @@ export function useModal(onClose: () => void) {
     };
   }, [opener]);
   useBackHandler(onClose);
+
+  // The button that had the focus can disappear (a photo read, a step
+  // changed): the focus then falls out of the dialog, and Esc and Tab
+  // would no longer reach it. Esc still closes the newest dialog, and Tab
+  // goes back inside.
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    open.push(el);
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.defaultPrevented || open[open.length - 1] !== el) return;
+      const at = document.activeElement;
+      if (at && at !== document.body && at !== document.documentElement) return;
+      if (e.key === 'Escape') {
+        // Not also a review or an editor behind it.
+        e.preventDefault();
+        e.stopPropagation();
+        close.current();
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        el.focus({ preventScroll: true });
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      open.splice(open.indexOf(el), 1);
+    };
+  }, []);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.defaultPrevented) return;

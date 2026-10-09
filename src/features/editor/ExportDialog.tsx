@@ -13,6 +13,8 @@ export interface ExportChoice {
   pages: PageCount;
   simple: boolean;
   print: boolean;
+  /** The «Approfondimenti» on a last page of the PDF (never in the «versione per la verifica»). */
+  notes: boolean;
 }
 
 const KINDS: { value: ExportKind; icon: string; label: string; desc: string }[] = [
@@ -29,18 +31,21 @@ const PAGES: { value: PageCount; label: string }[] = [
 
 interface Props {
   busy: boolean;
+  /** Some concept has an «Approfondimento». */
+  hasNotes?: boolean;
   /** The last attempt failed (not cancelled by the child). */
   error?: boolean;
   onExport(choice: ExportChoice): void;
   onClose(): void;
 }
 
-export function ExportDialog({ busy, error, onExport, onClose }: Props) {
+export function ExportDialog({ busy, hasNotes = false, error, onExport, onClose }: Props) {
   const [kind, setKind] = useState<ExportKind>('pdf');
   const [paper, setPaper] = useState<Paper>('a4');
   const [pages, setPages] = useState<PageCount>(1);
   const [simple, setSimple] = useState(false);
-  const run = (print: boolean) => onExport({ kind, paper, pages, simple, print });
+  const [notes, setNotes] = useState(true);
+  const run = (print: boolean) => onExport({ kind, paper, pages, simple, print, notes: hasNotes && notes && !simple && kind === 'pdf' });
 
   return (
     <Dialog title="Salva, esporta o stampa" onClose={onClose} className="export-dialog">
@@ -84,6 +89,17 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
             <strong>Versione per la verifica</strong>
             <br />
             <span className="muted">Sfondo bianco e niente colori: le immagini restano, in grigio.</span>
+          </span>
+        </label>
+      )}
+
+      {kind === 'pdf' && hasNotes && !simple && (
+        <label className="setting toggle">
+          <input type="checkbox" checked={notes} onChange={(e) => setNotes(e.target.checked)} />
+          <span>
+            <strong>Con gli approfondimenti</strong>
+            <br />
+            <span className="muted">Le note dei concetti 📝, in un foglio in fondo.</span>
           </span>
         </label>
       )}

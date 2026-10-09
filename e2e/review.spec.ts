@@ -14,7 +14,30 @@ test.describe('Lettura, ripasso e voce', () => {
     await toolbar(page, 'Leggi');
     // the word being read is highlighted
     await expect(page.locator('.spoken-word').first()).toBeVisible();
-    await expect.poll(() => spoken(page), { timeout: 15_000 }).toEqual(['L’acqua', 'è formato da: Idrogeno', 'Atomo', 'Ossigeno']);
+    await expect.poll(() => spoken(page), { timeout: 15_000 }).toEqual(['L’acqua', 'L’acqua è formato da Idrogeno', 'Atomo', 'Ossigeno']);
+  });
+
+  test('anche con una voce che non dice a che parola è, le parole si illuminano una dopo l’altra', async ({ page }) => {
+    await newMap(page, 'La fotosintesi avviene nelle foglie verdi');
+    await page.evaluate(() => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__noBoundaries = true;
+      w.__wordMs = 1500;
+    });
+    await node(page, 'La fotosintesi avviene nelle foglie verdi').click();
+    // Every word that lights up, in order: some stay lit only a few tenths of a second.
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as { __lit: string[] }).__lit = seen;
+      new MutationObserver(() => {
+        const text = document.querySelector('.spoken-word')?.textContent;
+        if (text && seen[seen.length - 1] !== text) seen.push(text);
+      }).observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
+    await node(page, 'La fotosintesi avviene nelle foglie verdi').getByRole('button', { name: /^Leggi:/ }).click();
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __lit: string[] }).__lit), { timeout: 15_000 })
+      .toEqual(['La', 'fotosintesi', 'avviene', 'nelle', 'foglie', 'verdi']);
   });
 
   test('ripasso «Un passo alla volta»: i concetti compaiono uno per volta', async ({ page }) => {

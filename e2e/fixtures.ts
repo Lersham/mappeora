@@ -59,11 +59,13 @@ const SPEECH_STUB = () => {
       current = u;
       const words = [...u.text.matchAll(/\S+/g)];
       let i = 0;
+      // `__noBoundaries`: a voice that never says which word it is on (Chrome's online voices).
+      setTimeout(() => !u.__stopped && u.onstart?.({} as SpeechSynthesisEvent), 0);
       const step = () => {
         if (u.__stopped) return;
         if (i < words.length) {
           const m = words[i++];
-          u.onboundary?.({ name: 'word', charIndex: m.index, charLength: m[0].length } as SpeechSynthesisEvent);
+          if (!w.__noBoundaries) u.onboundary?.({ name: 'word', charIndex: m.index, charLength: m[0].length } as SpeechSynthesisEvent);
           setTimeout(step, (w.__wordMs as number | undefined) ?? 20);
         } else {
           current = null;
@@ -103,6 +105,7 @@ const SPEECH_STUB = () => {
     rate = 1;
     voice: unknown = null;
     onboundary: ((e: SpeechSynthesisEvent) => void) | null = null;
+    onstart: ((e: SpeechSynthesisEvent) => void) | null = null;
     onend: ((e: SpeechSynthesisEvent) => void) | null = null;
     onerror: ((e: SpeechSynthesisErrorEvent) => void) | null = null;
     constructor(public text = '') {}

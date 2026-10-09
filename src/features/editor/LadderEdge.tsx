@@ -1,9 +1,11 @@
-import { BaseEdge, EdgeLabelRenderer, useInternalNode, type Edge, type EdgeProps } from '@xyflow/react';
+import { BaseEdge, useInternalNode, type Edge, type EdgeProps } from '@xyflow/react';
+import { EdgeLabel } from './EdgeLabel';
 import { LADDER, labelScale } from '../../lib/ladder';
 import { useSettings } from '../../store/settingsStore';
 import { LinkAdd } from './LinkAdd';
+import { branchClass } from './branchColor';
 
-export type LadderEdgeData = { onEdit?: () => void };
+export type LadderEdgeData = { onEdit?: () => void; branch?: number; near?: boolean };
 export type LadderFlowEdge = Edge<LadderEdgeData, 'ladder'>;
 
 /**
@@ -19,9 +21,9 @@ export function LadderEdge({ id, target, sourceX, sourceY, targetX, targetY, lab
   const path = `M ${sourceX},${sourceY} L ${sourceX},${targetY - r} Q ${sourceX},${targetY} ${sourceX + r},${targetY} L ${targetX},${targetY}`;
   return (
     <>
-      <BaseEdge id={id} path={path} interactionWidth={interactionWidth} />
+      <BaseEdge id={id} path={path} interactionWidth={interactionWidth} className={branchClass(data?.branch)} />
       {label && (
-        <EdgeLabelRenderer>
+        <EdgeLabel>
           <button
             type="button"
             className="ladder-label nodrag nopan"
@@ -31,10 +33,10 @@ export function LadderEdge({ id, target, sourceX, sourceY, targetX, targetY, lab
           >
             {label}
           </button>
-        </EdgeLabelRenderer>
+        </EdgeLabel>
       )}
       {/* On the line down, level with the child's top: clear of its connection dot. */}
-      {!label && <LinkAdd x={sourceX} y={targetY - childHeight / 2} onEdit={data?.onEdit} />}
+      {!label && <LinkAdd x={sourceX} y={targetY - childHeight / 2} onEdit={data?.onEdit} near={data?.near} />}
     </>
   );
 }

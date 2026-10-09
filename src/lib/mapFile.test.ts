@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MapFileError, parseMapFile, serializeMap, textToDataUrl } from './mapFile';
+import { MapFileError, parseAnyMapFile, parseMapFile, serializeArchive, serializeMap, textToDataUrl } from './mapFile';
 import { createMap } from './mapFactory';
 
 describe('mapFile', () => {
@@ -105,5 +105,27 @@ describe('mapFile', () => {
     const url = textToDataUrl('perché è così', 'application/json');
     const decoded = new TextDecoder().decode(Uint8Array.from(atob(url.split(',')[1]), (c) => c.charCodeAt(0)));
     expect(decoded).toBe('perché è così');
+  });
+
+  it('reads a safety copy of all the maps, keeping their ids and dates', () => {
+    const a = { ...createMap('Le stagioni'), updatedAt: 1000 };
+    const b = createMap('Il ciclo dell’acqua');
+    b.nodes[0].note = 'Evaporazione, condensazione, precipitazione.';
+    const { archive, maps } = parseAnyMapFile(serializeArchive([a, b]));
+    expect(archive).toBe(true);
+    expect(maps.map((m) => m.id)).toEqual([a.id, b.id]);
+    expect(maps[0].updatedAt).toBe(1000);
+    expect(maps[1].nodes[0].note).toBe('Evaporazione, condensazione, precipitazione.');
+  });
+
+  it('opens a single map file as a new copy, and skips broken maps in a safety copy', () => {
+    const map = createMap('Gli animali');
+    const single = parseAnyMapFile(serializeMap(map));
+    expect(single.archive).toBe(false);
+    expect(single.maps[0].id).not.toBe(map.id);
+    const text = JSON.stringify({ format: 'mappeora-archivio', version: 1, maps: [{ nodes: [] }, map] });
+    expect(parseAnyMapFile(text).maps.map((m) => m.title)).toEqual(['Gli animali']);
+    expect(() => parseAnyMapFile(JSON.stringify({ format: 'mappeora-archivio', version: 1, maps: [] }))).toThrow(MapFileError);
+    expect(() => parseMapFile(serializeArchive([map]))).toThrow(/Apri file/);
   });
 });

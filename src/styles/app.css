@@ -180,6 +180,39 @@ textarea {
   margin-top: 40px;
   text-align: center;
 }
+/* A reminder that matters (a safety copy, the Home screen on iPhone). */
+.home-notice {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 2px solid var(--focus);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--highlight) 22%, var(--surface));
+}
+.home-notice p {
+  margin: 0;
+}
+.home-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.backup-card {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 2px dashed var(--border);
+}
+.backup-card p {
+  margin: 0;
+}
+.backup-note {
+  margin: 12px 0 0;
+  font-weight: 600;
+}
 .home-footer a {
   display: inline-block;
   padding: 12px 16px;
@@ -346,6 +379,8 @@ textarea {
 .more-grid .big-button {
   min-height: 72px;
   min-width: 0;
+  /* The room goes to the word: «Immagine» must not break in two. */
+  padding-inline: 4px;
 }
 /* Large text: a long word goes on two lines instead of out of its button. */
 .more-grid .big-button-label {
@@ -475,10 +510,43 @@ textarea {
   inset: -8px;
   border-radius: 50%;
 }
+/* On the other lines the «+» stays, but quietly: a big map is not covered in buttons. */
+.link-add.is-faint {
+  width: 18px;
+  height: 18px;
+  border-width: 1.5px;
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  color: color-mix(in srgb, var(--primary) 60%, transparent);
+  font-size: 0.85rem;
+}
+/* "Foglio" maps: each branch keeps its own colour of line, also when it
+   sits below another branch to fill the sheet. */
+.react-flow__edge-path.branch-line.branch-0 { stroke: var(--branch-0); }
+.react-flow__edge-path.branch-line.branch-1 { stroke: var(--branch-1); }
+.react-flow__edge-path.branch-line.branch-2 { stroke: var(--branch-2); }
+.react-flow__edge-path.branch-line.branch-3 { stroke: var(--branch-3); }
+.react-flow__edge-path.branch-line.branch-4 { stroke: var(--branch-4); }
+.react-flow__edge-path.branch-line.branch-5 { stroke: var(--branch-5); }
 /* "Foglio" maps: connection points a concept's role doesn't use. */
 .react-flow__handle.handle-hidden {
   opacity: 0;
   pointer-events: none;
+}
+/* The dots to draw a line show on the concept in hand (and under the
+   mouse); while a line is being drawn, everywhere it can arrive. */
+.react-flow__node:not(.selected) .react-flow__handle:not(.handle-hidden) {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .react-flow__node:hover .react-flow__handle:not(.handle-hidden) {
+    opacity: 1;
+    pointer-events: all;
+  }
+}
+.is-connecting .react-flow__node .react-flow__handle:not(.handle-hidden) {
+  opacity: 1;
+  pointer-events: all;
 }
 .react-flow__handle {
   width: 16px;
@@ -578,6 +646,51 @@ textarea {
   font-size: 1.1rem;
   cursor: pointer;
 }
+.concept-note-mark {
+  position: absolute;
+  /* Outside the corner, so a concept can still be grabbed near its edge. */
+  top: -24px;
+  left: -24px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+/* On the concept in hand, to write its first «Approfondimento». */
+.concept-note-mark.is-empty {
+  border-style: dashed;
+  opacity: 0.75;
+}
+.exporting .concept-note-mark.is-empty,
+.export-no-notes .concept-note-mark,
+.export-simple .concept-note-mark {
+  display: none;
+}
+.note-concept {
+  margin: 0 0 8px;
+  font-weight: 700;
+  white-space: pre-line;
+}
+.note-text {
+  margin: 0 0 16px;
+  font-size: 1.15rem;
+  white-space: pre-line;
+}
+.note-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 0 16px;
+}
+.note-input {
+  min-height: 8em;
+  resize: vertical;
+  font: inherit;
+}
 .spoken-word {
   background: var(--highlight);
   color: inherit;
@@ -652,7 +765,7 @@ textarea {
 .settings h2 {
   margin-top: 0;
 }
-.settings fieldset {
+.overlay-card.settings fieldset {
   border: none;
   padding: 0;
   margin: 0 0 16px;
@@ -699,10 +812,16 @@ textarea {
 .setting input[type='checkbox'] {
   width: 28px;
   height: 28px;
+  accent-color: var(--primary);
 }
 .setting input[type='range'] {
   width: 100%;
   height: 32px;
+  accent-color: var(--primary);
+}
+.setting-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .setting select {
   min-height: 48px;
@@ -1083,7 +1202,8 @@ textarea {
   border-color: #1f2430;
   box-shadow: none;
 }
-.export-simple .react-flow__edge-path {
+.export-simple .react-flow__edge-path,
+.export-simple .react-flow__edge-path.branch-line {
   stroke: #1f2430;
 }
 .export-simple .react-flow__edge-textbg {

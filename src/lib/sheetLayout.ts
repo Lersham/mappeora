@@ -35,8 +35,12 @@ export type NodeRole = 'root' | 'head' | 'item';
 export interface SheetResult {
   positions: Record<string, Point>;
   roles: Record<string, NodeRole>;
-  /** Tree links: "bus" from the main concept to a branch, "ladder" inside a branch. */
-  edges: Record<string, { kind: 'bus'; points: Point[] } | { kind: 'ladder' }>;
+  /**
+   * Tree links: "bus" from the main concept to a branch, "ladder" inside a
+   * branch. `branch` numbers the branches, so each can have its own colour;
+   * a bus's own stretch (after the line it shares with others) starts at `points[own]`.
+   */
+  edges: Record<string, { kind: 'bus'; points: Point[]; branch: number; own: number } | { kind: 'ladder'; branch: number }>;
   /** Columns per row chosen for the branches. */
   columns: number;
 }
@@ -45,6 +49,7 @@ type GraphEdge = Pick<MapEdge, 'id' | 'source' | 'target' | 'label'>;
 
 interface Block {
   head: string;
+  branch: number;
   via?: GraphEdge;
   rel: Record<string, Point>;
   width: number;
@@ -67,7 +72,7 @@ export function sheetLayout(
   const [root, ...extraTops] = tops;
 
   // Each branch is a small "scaletta", laid out on its own.
-  const makeBlock = (head: string, via?: GraphEdge): Block => {
+  const makeBlock = (head: string, branch: number, via?: GraphEdge): Block => {
     const rel: Record<string, Point> = {};
     let cursor = 0;
     let width = 0;
@@ -76,7 +81,7 @@ export function sheetLayout(
       width = Math.max(width, depth * LADDER.indent + size(id).width);
       cursor += size(id).height + LADDER.gap;
       for (const e of kids.get(id) ?? []) {
-        result.edges[e.id] = { kind: 'ladder' };
+        result.edges[e.id] = { kind: 'ladder', branch };
         if (e.label) {
           cursor += labelSpace;
           width = Math.max(width, depth * LADDER.indent + LABEL_OFFSET + labelWidth(e.label, scale));
@@ -85,9 +90,10 @@ export function sheetLayout(
       }
     };
     place(head, 0);
-    return { head, via, rel, width, height: cursor - LADDER.gap };
+    return { head, branch, via, rel, width, height: cursor - LADDER.gap };
   };
-  const blocks = [...(kids.get(root) ?? []).map((e) => makeBlock(e.target, e)), ...extraTops.map((t) => makeBlock(t))];
+  const fromRoot = kids.get(root) ?? [];
+  const blocks = [...fromRoot.map((e, i) => makeBlock(e.target, i, e)), ...extraTops.map((t, i) => makeBlock(t, fromRoot.length + i))];
 
   const rootSize = size(root);
   result.positions[root] = { ...origin };
@@ -146,7 +152,8 @@ export function sheetLayout(
       points.push({ x: channel, y: topLine }, { x: channel, y: gridTop + lineY });
     }
     points.push({ x: headCentre, y: first ? topLine : gridTop + lineY });
-    result.edges[block.via.id] = { kind: 'bus', points };
+    // Along the top the line is shared; from where it turns towards this branch it is its own.
+    result.edges[block.via.id] = { kind: 'bus', points, branch: block.branch, own: first ? points.length - 1 : 1 };
   }
   return result;
 }
