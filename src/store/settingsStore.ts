@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type FontChoice = 'lexend' | 'atkinson' | 'sistema';
+export type FontChoice = 'lexend' | 'atkinson' | 'opendyslexic' | 'sistema';
 export type ThemeChoice = 'crema' | 'bianco' | 'azzurro' | 'scuro';
 
 /**

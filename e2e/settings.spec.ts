@@ -19,6 +19,17 @@ test('Aspetto: carattere, sfondo e maiuscolo si applicano e restano dopo aver ri
   await expect(html).toHaveAttribute('data-uppercase', 'true');
 });
 
+test('OpenDyslexic: si sceglie in Aspetto e il carattere arriva davvero', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Aspetto' }).click();
+  await page.getByRole('dialog', { name: 'Aspetto e voce' }).getByRole('button', { name: 'OpenDyslexic' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-font', 'opendyslexic');
+  // Not a stand-in: the font file itself is loaded.
+  await expect
+    .poll(() => page.evaluate(() => [...document.fonts].some((f) => f.family.replace(/"/g, '') === 'OpenDyslexic' && f.status === 'loaded')))
+    .toBe(true);
+});
+
 test('Testo grande in stampatello: le parole lunghe di un concetto non vanno a capo a metà', async ({ page }) => {
   await page.addInitScript(() => {
     if (!localStorage.getItem('mappeora-settings')) {
