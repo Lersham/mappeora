@@ -9,6 +9,7 @@ import { useReading } from '../../store/readingStore';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { reviewVisibility, useReview } from '../../store/reviewStore';
 import { illustrationUrl } from '../../services/illustrations';
+import { Icon } from '../../components/Icon';
 
 /** What a concept can ask of the editor. The same object for every concept, so they don't re-render for it. */
 export interface ConceptActions {
@@ -171,7 +172,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
                 data.actions?.openNote(id);
               }}
             >
-              📝
+              <Icon name="note" />
             </button>
           )}
           {data.image && <NodeImageView image={data.image} />}
@@ -215,7 +216,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
                 readNode(id);
               }}
             >
-              🔊
+              <Icon name="speak" />
             </button>
           )}
         </>

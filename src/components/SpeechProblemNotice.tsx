@@ -1,5 +1,6 @@
 import { speech } from '../services/speech';
 import { useSpeechProblem } from '../hooks/speechTurn';
+import { Icon } from './Icon';
 
 /** Why the app could not read aloud: shown over everything, dialogs too. */
 export function SpeechProblemNotice() {
@@ -22,7 +23,7 @@ export function SpeechProblemNotice() {
         </button>
       )}
       <button type="button" className="editor-notice-close" aria-label="Chiudi il messaggio" onClick={close}>
-        ✖️
+        <Icon name="close" />
       </button>
     </div>
   );

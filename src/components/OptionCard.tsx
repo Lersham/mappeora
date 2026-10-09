@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useReadAloud } from '../hooks/useReadAloud';
+import { Icon } from './Icon';
 
 interface Props {
   icon: string;
@@ -28,7 +29,7 @@ export function OptionCard({ icon, name, extra, description, pressed, disabled, 
         <span className="template-desc">{description}</span>
       </button>
       <button type="button" className="icon-button" aria-label={`Leggi: ${name}`} onClick={() => void readText(`${name}. ${description}`)}>
-        🔊
+        <Icon name="speak" />
       </button>
     </div>
   );
@@ -41,7 +42,7 @@ export function Listenable({ text, label = 'Ascolta', children }: { text: string
     <div className="listenable">
       <div>{children}</div>
       <button type="button" className="icon-button" aria-label={label} onClick={() => void readText(text)}>
-        🔊
+        <Icon name="speak" />
       </button>
     </div>
   );

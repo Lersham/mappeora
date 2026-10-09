@@ -1,6 +1,7 @@
 import { DICTATION_ERRORS, type DictationError } from '../hooks/useDictation';
 import { VOICE_COMMAND_HINTS } from '../lib/voiceCommands';
 import { useModal } from './Dialog';
+import { Icon } from './Icon';
 
 interface Props {
   listening: boolean;
@@ -25,7 +26,7 @@ function DictationCard({ listening, partial, error, onStop, onClose }: Props) {
         {listening ? (
           <>
             <div className="mic-pulse" aria-hidden>
-              🎤
+              <Icon name="mic" />
             </div>
             <p className="dictation-hint">Ti ascolto… parla pure!</p>
             <p className="dictation-text" aria-live="polite">
@@ -35,9 +36,7 @@ function DictationCard({ listening, partial, error, onStop, onClose }: Props) {
               Puoi anche dire: {VOICE_COMMAND_HINTS.map((h) => `«${h}»`).join(', ')}
             </p>
             <button type="button" className="big-button primary" onClick={onStop} autoFocus>
-              <span className="big-button-icon" aria-hidden>
-                ✅
-              </span>
+              <Icon name="check" className="big-button-icon" />
               <span className="big-button-label">Fatto</span>
             </button>
           </>

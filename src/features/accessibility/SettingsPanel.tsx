@@ -139,12 +139,12 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
 
       <div className="dialog-actions">
         <BigButton
-          icon="🔊"
+          icon="speak"
           label="Prova la voce"
           onClick={() => void readText(SAMPLE)}
         />
-        <BigButton icon="↺" label="Ripristina" onClick={s.reset} />
-        <BigButton icon="✅" label="Chiudi" variant="primary" onClick={onClose} />
+        <BigButton icon="reset" label="Ripristina" onClick={s.reset} />
+        <BigButton icon="check" label="Chiudi" variant="primary" onClick={onClose} />
       </div>
     </Dialog>
   );

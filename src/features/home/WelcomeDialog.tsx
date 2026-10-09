@@ -50,7 +50,7 @@ const PAGES: Page[] = [
   {
     icon: '🔊',
     title: 'Ascolta la mappa',
-    text: 'Con «Leggi» MappAmi legge la mappa ad alta voce e colora la parola che sta dicendo. Tocca un concetto e premi 🔊 per sentire solo quello.',
+    text: 'Con «Leggi» MappAmi legge la mappa ad alta voce e colora la parola che sta dicendo. Tocca un concetto e premi l’altoparlante per sentire solo quello.',
   },
   {
     icon: '🧠',
@@ -93,8 +93,8 @@ export function WelcomeDialog({ onClose, onExamples, onTryBook }: Props) {
         <h3 className="welcome-title">{page.title}</h3>
         <p className="welcome-text">{page.text}</p>
         <div className="welcome-tools">
-          <BigButton icon="🔊" label="Ascolta" onClick={() => void readText(`${page.title}. ${page.text}`)} />
-          {page.tryBook && <BigButton icon="📷" label="Provalo adesso" variant="primary" onClick={() => close(onTryBook)} />}
+          <BigButton icon="speak" label="Ascolta" onClick={() => void readText(`${page.title}. ${page.text}`)} />
+          {page.tryBook && <BigButton icon="camera" label="Provalo adesso" variant="primary" onClick={() => close(onTryBook)} />}
         </div>
       </div>
       <p className="welcome-dots">
@@ -108,15 +108,15 @@ export function WelcomeDialog({ onClose, onExamples, onTryBook }: Props) {
         ))}
       </p>
       <div className="dialog-actions">
-        {!last && <BigButton icon="⏭️" label="Salta" onClick={() => close()} />}
-        {index > 0 && <BigButton icon="⬅️" label="Indietro" onClick={() => go(index - 1)} />}
+        {!last && <BigButton icon="skip" label="Salta" onClick={() => close()} />}
+        {index > 0 && <BigButton icon="back" label="Indietro" onClick={() => go(index - 1)} />}
         {last ? (
           <>
-            <BigButton icon="📚" label="Guarda un esempio" onClick={() => close(onExamples)} />
-            <BigButton icon="✅" label="Inizia" variant="primary" onClick={() => close()} />
+            <BigButton icon="book" label="Guarda un esempio" onClick={() => close(onExamples)} />
+            <BigButton icon="check" label="Inizia" variant="primary" onClick={() => close()} />
           </>
         ) : (
-          <BigButton icon="➡️" label="Avanti" variant="primary" onClick={() => go(index + 1)} />
+          <BigButton icon="forward" label="Avanti" variant="primary" onClick={() => go(index + 1)} />
         )}
       </div>
     </Dialog>

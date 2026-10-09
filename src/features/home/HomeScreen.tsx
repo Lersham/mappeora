@@ -9,6 +9,7 @@ import { MapFileError, parseAnyMapFile } from '../../lib/mapFile';
 import { backupDue, homeScreenHintNeeded, homeScreenHintSeen, restoreMaps, saveAllMaps, snoozeBackup } from '../../services/backup';
 import { ExamplesDialog } from './ExamplesDialog';
 import { WelcomeDialog, welcomeNeeded } from './WelcomeDialog';
+import { Icon } from '../../components/Icon';
 
 interface Props {
   onOpen(id: string): void;
@@ -97,7 +98,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
   };
 
   const saveAllButton = (
-    <BigButton icon="💾" label={saving ? 'Salvo…' : 'Salva tutte le mappe'} disabled={saving} onClick={() => void saveAll()} />
+    <BigButton icon="save" label={saving ? 'Salvo…' : 'Salva tutte le mappe'} disabled={saving} onClick={() => void saveAll()} />
   );
 
   return (
@@ -108,23 +109,19 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
           <span>MappAmi</span>
         </div>
         <div className="home-header-tools">
-          <BigButton icon="❓" label="Come funziona" onClick={() => setWelcomeOpen(true)} />
-          <BigButton icon="🎨" label="Aspetto" onClick={onOpenSettings} />
+          <BigButton icon="help" label="Come funziona" onClick={() => setWelcomeOpen(true)} />
+          <BigButton icon="palette" label="Aspetto" onClick={onOpenSettings} />
         </div>
       </header>
       <h1 className="home-title">Le mie mappe</h1>
 
       <div className="home-actions">
-        <BigButton icon="➕" label="Nuova mappa" variant="primary" className="home-new" onClick={onCreate} />
-        <BigButton icon="📂" label="Apri file" className="home-new" onClick={() => void importFile()} />
-        <BigButton icon="📚" label="Esempi" className="home-new" onClick={() => setExamplesOpen(true)} />
-        <BigButton
-          icon="🎓"
-          label="Impara facendo"
-          title="Costruisci la tua prima mappa passo passo, con una guida"
-          className="home-new"
-          onClick={onStartTutorial}
-        />
+        <BigButton icon="plus" label="Nuova mappa" variant="primary" className="home-new" onClick={onCreate} />
+        <div className="home-more">
+          <BigButton icon="folder" label="Apri file" onClick={() => void importFile()} />
+          <BigButton icon="book" label="Esempi" onClick={() => setExamplesOpen(true)} />
+          <BigButton icon="graduation" label="Impara facendo" title="Costruisci la tua prima mappa passo passo, con una guida" onClick={onStartTutorial} />
+        </div>
       </div>
       {[error, importError, listError].filter(Boolean).map((message) => (
         <p key={message} className="field-error" role="alert">
@@ -140,11 +137,11 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       {homeHint && (
         <section className="home-notice" aria-label="Consiglio per iPhone e iPad">
           <p>
-            <strong>Su iPhone e iPad</strong> aggiungi MappAmi alla schermata Home: tocca Condividi <span aria-hidden>⬆️</span> e poi «Aggiungi alla
+            <strong>Su iPhone e iPad</strong> aggiungi MappAmi alla schermata Home: tocca Condividi <Icon name="share" className="inline-icon" /> e poi «Aggiungi alla
             schermata Home». Così il browser non cancella le tue mappe.
           </p>
           <BigButton
-            icon="👍"
+            icon="check"
             label="Ho capito"
             onClick={() => {
               homeScreenHintSeen();
@@ -161,7 +158,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
           <div className="home-notice-actions">
             {saveAllButton}
             <BigButton
-              icon="⏰"
+              icon="clock"
               label="Più tardi"
               onClick={() => {
                 snoozeBackup();
@@ -192,10 +189,10 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
               <span className="map-date">{new Date(m.updatedAt).toLocaleDateString('it-IT')}</span>
             </button>
             <button type="button" className="icon-button" aria-label={`Leggi il titolo ${m.title}`} onClick={() => void readText(m.title)}>
-              🔊
+              <Icon name="speak" />
             </button>
             <button type="button" className="icon-button" aria-label={`Cancella ${m.title}`} onClick={() => void remove(m)}>
-              🗑️
+              <Icon name="trash" />
             </button>
           </li>
         ))}
@@ -209,7 +206,9 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       )}
 
       <footer className="home-footer">
-        <a href={`${import.meta.env.BASE_URL}privacy.html`}>🔒 Privacy</a>
+        <a href={`${import.meta.env.BASE_URL}privacy.html`}>
+          <Icon name="lock" className="inline-icon" /> Privacy
+        </a>
       </footer>
     </main>
   );

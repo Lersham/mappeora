@@ -14,12 +14,20 @@
   --text: #1f2430;
   --muted: #5b6270;
   --border: #d9d1bd;
-  --primary: #3b6ea5;
+  /* The blue of a school pen: actions. Red pen for what deletes, highlighter
+     yellow for what to look at. */
+  --primary: #2b54b0;
   --primary-text: #ffffff;
   --danger: #b3412f;
   --focus: #e07a00;
   --highlight: #ffe066;
   --edge: #556070;
+  /* Quiet fill of the buttons that are not the main one, and their hover:
+     a shade of the paper, not of the ink, so it follows every theme. */
+  --tint: color-mix(in srgb, var(--border) 38%, var(--surface));
+  --tint-strong: color-mix(in srgb, var(--border) 65%, var(--surface));
+  /* Hairline around cards and bars: separates without boxing everything in. */
+  --line: color-mix(in srgb, var(--border) 75%, var(--surface));
   /* "Foglio" maps: each branch has its own colour of line (see BusEdge, LadderEdge). */
   --branch-0: #3b6ea5;
   --branch-1: #a85a12;

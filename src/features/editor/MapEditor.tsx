@@ -50,6 +50,7 @@ import { SaveProblemNotice } from './SaveProblemNotice';
 import { OptionCard } from '../../components/OptionCard';
 import { TutorialCoach } from '../tutorial/TutorialCoach';
 import { TUTORIAL_STEPS } from '../tutorial/steps';
+import { Icon } from '../../components/Icon';
 
 const nodeTypes = { concept: ConceptNode };
 
@@ -155,7 +156,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     } catch {
       // Not remembered: the next visit starts from the device's default.
     }
-    if (say) showNotice(value ? 'Concetti bloccati: puoi muovere e ingrandire la mappa senza spostarli.' : 'Ora puoi spostare i concetti trascinandoli. Tocca 🔒 per bloccarli di nuovo.');
+    if (say) showNotice(value ? 'Concetti bloccati: puoi muovere e ingrandire la mappa senza spostarli.' : 'Ora puoi spostare i concetti trascinandoli. Tocca il lucchetto per bloccarli di nuovo.');
   };
   const noticeTimer = useRef<number | undefined>(undefined);
   /** A short message that goes away by itself. */
@@ -718,13 +719,13 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   // On a phone only the main tools fit: these go in «Altro» (see .toolbar-more).
   const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
-    { key: 'outline', icon: '📝', label: 'Scaletta', title: 'Scrivi la mappa come un elenco puntato', onClick: () => setDialog({ kind: 'outline' }) },
-    { key: 'photo', icon: '📷', label: 'Dal libro', onClick: () => setDialog({ kind: 'photo' }) },
-    { key: 'image', icon: '🖼️', label: 'Immagine', onClick: () => setDialog({ kind: 'style' }), disabled: !selectedNode },
+    { key: 'outline', icon: 'outline', label: 'Scaletta', title: 'Scrivi la mappa come un elenco puntato', onClick: () => setDialog({ kind: 'outline' }) },
+    { key: 'photo', icon: 'camera', label: 'Dal libro', onClick: () => setDialog({ kind: 'photo' }) },
+    { key: 'image', icon: 'image', label: 'Immagine', onClick: () => setDialog({ kind: 'style' }), disabled: !selectedNode },
     sheetMode
       ? {
           key: 'layout',
-          icon: '✋',
+          icon: 'hand',
           label: 'Sposta',
           title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
           onClick: () => {
@@ -735,21 +736,21 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         }
       : {
           key: 'layout',
-          icon: '✨',
+          icon: 'tidy',
           label: 'Riordina',
           title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4.' : undefined,
           onClick: () => void tidy(),
           disabled: arranging,
         },
-    { key: 'delete', icon: '🗑️', label: 'Elimina', variant: 'danger', onClick: () => selectedNode && actions.removeNodes([selectedNode.id]), disabled: !selectedNode },
-    { key: 'save', icon: '💾', label: 'Salva', onClick: () => setDialog({ kind: 'export' }) },
-    { key: 'settings', icon: '🎨', label: 'Aspetto', onClick: onOpenSettings },
+    { key: 'delete', icon: 'trash', label: 'Elimina', variant: 'danger', onClick: () => selectedNode && actions.removeNodes([selectedNode.id]), disabled: !selectedNode },
+    { key: 'save', icon: 'save', label: 'Salva', onClick: () => setDialog({ kind: 'export' }) },
+    { key: 'settings', icon: 'palette', label: 'Aspetto', onClick: onOpenSettings },
   ];
 
   return (
     <div className={`editor${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}`}>
       <header className="topbar">
-        <BigButton icon="⬅️" label="Mappe" onClick={onBack} />
+        <BigButton icon="back" label="Mappe" onClick={onBack} />
         <input
           className="title-input"
           value={map.title}
@@ -766,11 +767,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         />
         {editing ? (
           <>
-            <BigButton icon="↩️" label="Annulla" disabled={!canUndo} onClick={() => mapHistory().undo()} />
-            <BigButton icon="↪️" label="Ripeti" disabled={!canRedo} onClick={() => mapHistory().redo()} />
+            <BigButton icon="undo" label="Annulla" disabled={!canUndo} onClick={() => mapHistory().undo()} />
+            <BigButton icon="redo" label="Ripeti" disabled={!canRedo} onClick={() => mapHistory().redo()} />
           </>
         ) : (
-          <BigButton icon="✖️" label="Esci" onClick={exitReview} />
+          <BigButton icon="close" label="Esci" onClick={exitReview} />
         )}
       </header>
 
@@ -837,7 +838,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
                 aria-label={locked ? 'Concetti bloccati: tocca per poterli spostare' : 'Concetti liberi: tocca per bloccarli'}
                 title={locked ? 'Concetti bloccati: tocca per poterli spostare' : 'Concetti liberi: tocca per bloccarli'}
               >
-                {locked ? '🔒' : '🔓'}
+                <Icon name={locked ? 'lock' : 'unlock'} />
               </ControlButton>
             )}
           </Controls>
@@ -861,18 +862,18 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         <ReviewBar onRepeat={() => current && void reader.readSteps([current])} onOverview={overview} onExit={exitReview} />
       ) : (
         <nav className="toolbar" aria-label="Strumenti">
-          <BigButton icon="➕" label="Concetto" variant="primary" className={target('concetto')} onClick={() => addConcept()} />
-          <BigButton icon="🎤" label="Detta" className={target('detta')} onClick={dictate} disabled={dictation.listening} />
+          <BigButton icon="plus" label="Concetto" variant="primary" className={target('concetto')} onClick={() => addConcept()} />
+          <BigButton icon="mic" label="Detta" className={target('detta')} onClick={dictate} disabled={dictation.listening} />
           {reader.active ? (
-            <BigButton icon="⏹️" label="Stop" onClick={() => void reader.stop()} />
+            <BigButton icon="stop" label="Stop" onClick={() => void reader.stop()} />
           ) : (
-            <BigButton icon="🔊" label="Leggi" className={target('leggi')} onClick={reader.readMap} />
+            <BigButton icon="speak" label="Leggi" className={target('leggi')} onClick={reader.readMap} />
           )}
-          <BigButton icon="🧠" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
+          <BigButton icon="brain" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
           {moreTools.map(({ key, ...t }) => (
             <BigButton key={key} {...t} className="toolbar-extra" />
           ))}
-          <BigButton icon="☰" label="Altro" className="toolbar-more" aria-haspopup="dialog" onClick={() => setDialog({ kind: 'more' })} />
+          <BigButton icon="menu" label="Altro" className="toolbar-more" aria-haspopup="dialog" onClick={() => setDialog({ kind: 'more' })} />
         </nav>
       )}
 
@@ -882,7 +883,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           <div className="editor-notice" role="alert">
             <span>{notice}</span>
             <button type="button" className="editor-notice-close" aria-label="Chiudi il messaggio" onClick={() => setNotice(null)}>
-              ✖️
+              <Icon name="close" />
             </button>
           </div>
         )}
@@ -942,7 +943,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             ))}
           </div>
           <div className="dialog-actions">
-            <BigButton icon="✖️" label="Chiudi" onClick={() => setDialog(null)} />
+            <BigButton icon="close" label="Chiudi" onClick={() => setDialog(null)} />
           </div>
         </Dialog>
       )}
@@ -962,7 +963,7 @@ function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): vo
         onClick={() => onStart('interrogazione')}
       />
       <div className="dialog-actions">
-        <BigButton icon="✖️" label="Annulla" onClick={onClose} />
+        <BigButton icon="close" label="Annulla" onClick={onClose} />
       </div>
     </Dialog>
   );

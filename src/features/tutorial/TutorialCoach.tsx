@@ -4,6 +4,7 @@ import { useMapStore } from '../../store/mapStore';
 import { useReading } from '../../store/readingStore';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { TUTORIAL_STEPS, type TutorialProgress } from './steps';
+import { Icon } from '../../components/Icon';
 
 interface Props {
   index: number;
@@ -41,19 +42,23 @@ export function TutorialCoach({ index, onNext, onClose }: Props) {
       <h2 className="tutorial-title">{step.title}</h2>
       <p className="tutorial-text">{step.text}</p>
       <p className="tutorial-status" role="status">
-        {done && '✅ Ben fatto! Premi «Avanti».'}
+        {done && (
+          <>
+            <Icon name="check" className="inline-icon" /> Ben fatto! Premi «Avanti».
+          </>
+        )}
       </p>
       <div className="tutorial-actions">
-        <BigButton icon="🔊" label="Ascolta" onClick={() => void readText(`${step.title}. ${step.text}`)} />
+        <BigButton icon="speak" label="Ascolta" onClick={() => void readText(`${step.title}. ${step.text}`)} />
         {last ? (
-          <BigButton icon="✅" label="Fine" variant="primary" onClick={onClose} />
+          <BigButton icon="check" label="Fine" variant="primary" onClick={onClose} />
         ) : (
           <>
-            <BigButton icon="✖️" label="Chiudi" onClick={onClose} />
+            <BigButton icon="close" label="Chiudi" onClick={onClose} />
             {done ? (
-              <BigButton icon="➡️" label="Avanti" variant="primary" onClick={onNext} />
+              <BigButton icon="forward" label="Avanti" variant="primary" onClick={onNext} />
             ) : (
-              <BigButton icon="⏭️" label="Salta" onClick={onNext} />
+              <BigButton icon="skip" label="Salta" onClick={onNext} />
             )}
           </>
         )}

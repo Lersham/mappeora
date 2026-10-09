@@ -6,6 +6,7 @@ import { TEMPLATES } from '../../lib/templates';
 import { NEW_MAP_TITLE } from '../../lib/mapFactory';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import type { MapTemplate } from '../../types/map';
+import { Icon } from '../../components/Icon';
 
 interface Props {
   onCreate(title: string, template: MapTemplate): void;
@@ -46,15 +47,15 @@ export function NewMapDialog({ onCreate, onClose }: Props) {
               <span className="template-desc">{t.description}</span>
             </button>
             <button type="button" className="icon-button" aria-label={`Leggi: ${t.name}`} onClick={() => void readText(`${t.name}. ${t.description}`)}>
-              🔊
+              <Icon name="speak" />
             </button>
           </div>
         ))}
       </div>
 
       <div className="dialog-actions">
-        <BigButton icon="✖️" label="Annulla" onClick={onClose} />
-        <BigButton icon="✅" label="Crea" variant="primary" onClick={() => onCreate(title.trim() || NEW_MAP_TITLE, template)} />
+        <BigButton icon="close" label="Annulla" onClick={onClose} />
+        <BigButton icon="check" label="Crea" variant="primary" onClick={() => onCreate(title.trim() || NEW_MAP_TITLE, template)} />
       </div>
     </Dialog>
   );
