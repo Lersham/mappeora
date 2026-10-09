@@ -181,6 +181,7 @@ export function pdfText(text: string): string {
     .trim();
 }
 
+type Pdf = InstanceType<typeof import('jspdf').jsPDF>;
 const TITLE_SIZE = 16;
 /** Height of one title line, in mm. */
 const TITLE_LINE = 7;
@@ -268,7 +269,7 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const write = await lettering([opts.title, pageLabel(0, 2)]);
   // The title stops before the widest date on its right ("pagina 4 di 4").
   const dateRoom = write.width(pageLabel(opts.pages - 1, opts.pages), 400, DATE_SIZE) + 6;
-  const fitTitle = (doc: InstanceType<typeof jsPDF>) =>
+  const fitTitle = (doc: Pdf) =>
     titleLines(opts.title, doc.internal.pageSize.getWidth() - margin * 2 - dateRoom, (t) => write.width(t, TITLE_WEIGHT, TITLE_SIZE));
   // The header grows with the title: the sheet's way round (and so the
   // title's room) depends on the header, so this may take a second round.
@@ -332,7 +333,7 @@ function addNotes(doc: Pdf, notes: { label: string; note: string }[], paper: Pap
   doc.setTextColor(0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(TITLE_SIZE);
-  doc.text(`Approfondimenti - ${title.join(' ')}`.slice(0, 120), margin, y, { maxWidth: width });
+  doc.text(pdfText(`Approfondimenti - ${title.join(' ')}`).slice(0, 120), margin, y, { maxWidth: width });
   y += TITLE_LINE + 4;
   for (const { label, note } of notes) {
     doc.setFont('helvetica', 'bold');
