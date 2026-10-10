@@ -564,7 +564,8 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
 }
-.editor-notice-close {
+.editor-notice-close,
+.pick-banner-close {
   flex: none;
   display: grid;
   place-items: center;
@@ -846,7 +847,8 @@ textarea {
   }
 }
 
-/* «Collega», «Cambia ramo»: one line says what to tap, and how to stop. */
+/* «Collega», «Cambia ramo»: one line says what to tap; the ✕ stops (just
+   the icon, so the line fits a phone and is not a second «Annulla»). */
 .pick-banner {
   position: absolute;
   z-index: 6;
@@ -867,13 +869,6 @@ textarea {
 .pick-banner p {
   margin: 0;
   font-weight: 600;
-}
-.pick-banner .big-button {
-  flex-direction: row;
-  gap: 6px;
-  min-height: 44px;
-  padding: 2px 12px;
-  background: transparent;
 }
 .is-picking .react-flow__node {
   cursor: crosshair;
