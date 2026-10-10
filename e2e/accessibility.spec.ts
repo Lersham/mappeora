@@ -56,7 +56,7 @@ test.describe('Tastiera', () => {
     await expect(settings).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(settings).toHaveCount(0);
-    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Aspetto', exact: true })).toBeFocused();
+    await expect(page.locator('.topbar').getByRole('button', { name: 'Aspetto', exact: true })).toBeFocused();
   });
 
   test('Invio su un collegamento apre la parola di collegamento', async ({ page }) => {

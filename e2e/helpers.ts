@@ -82,11 +82,17 @@ export async function tapLink(page: Page, index = 0) {
   await page.locator('.react-flow__edge').nth(index).locator('.react-flow__edge-interaction').last().dispatchEvent('click');
 }
 
-/** Uses a tool of the editor toolbar; on a phone most of them are under «Altro». */
+/**
+ * Uses a tool of the editor: in the toolbar, above it for the chosen concept
+ * (Immagine, Elimina), in the top bar (Salva, Aspetto) or, where they do not
+ * fit (a phone), under «Altro».
+ */
 export async function toolbar(page: Page, name: string) {
   const bar = page.getByRole('navigation', { name: 'Strumenti' });
-  const tool = bar.getByRole('button', { name, exact: true });
-  if (await tool.isVisible()) return tool.click();
+  for (const place of [bar, page.getByRole('toolbar', { name: 'Concetto scelto' }), page.locator('.topbar')]) {
+    const tool = place.getByRole('button', { name, exact: true });
+    if (await tool.isVisible()) return tool.click();
+  }
   await bar.getByRole('button', { name: 'Altro', exact: true }).click();
   await page.getByRole('dialog', { name: 'Altro' }).getByRole('button', { name, exact: true }).click();
 }

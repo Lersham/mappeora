@@ -430,3 +430,31 @@ test.describe('Editor: un tocco per immagine e colore, tenere premuto per rinomi
     await expect(node(page, 'I mammiferi')).toBeVisible();
   });
 });
+
+test.describe('Editor: barre più leggere', () => {
+  test('«Immagine» ed «Elimina» compaiono solo con un concetto scelto', async ({ page }) => {
+    await newMap(page, 'Il vulcano');
+    const chosen = page.getByRole('toolbar', { name: 'Concetto scelto' });
+    await page.locator('.react-flow__pane').click({ position: { x: 20, y: 20 } });
+    await expect(chosen).toHaveCount(0);
+    await node(page, 'Il vulcano').click();
+    await expect(chosen.getByRole('button', { name: 'Immagine', exact: true })).toBeVisible();
+    await expect(chosen.getByRole('button', { name: 'Elimina', exact: true })).toBeVisible();
+  });
+
+  test('«Solo la mappa» nasconde i pulsanti; un pulsante o Esc li riporta', async ({ page }) => {
+    await newMap(page, 'Il vulcano');
+    const bar = page.getByRole('navigation', { name: 'Strumenti' });
+    await page.getByRole('button', { name: 'Solo la mappa: nascondi i pulsanti' }).click();
+    await expect(bar).toBeHidden();
+    await expect(page.locator('.topbar')).toBeHidden();
+    await expect(node(page, 'Il vulcano')).toBeVisible();
+    await page.getByRole('button', { name: 'Mostra i pulsanti' }).click();
+    await expect(bar).toBeVisible();
+
+    await page.getByRole('button', { name: 'Solo la mappa: nascondi i pulsanti' }).click();
+    await expect(bar).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(bar).toBeVisible();
+  });
+});

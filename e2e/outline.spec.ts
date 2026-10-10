@@ -74,16 +74,17 @@ test.describe('Strumenti', () => {
     );
     expect(visible).toEqual(['Concetto', 'Detta', 'Leggi', 'Ripassa', 'Altro']);
 
-    // The title has a line of its own: it is not cut short.
-    const title = page.locator('.title-input');
-    expect(await title.evaluate((e: HTMLInputElement) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+    // One thin row above the map: back, the title (a long one ends with «…»), undo and redo.
+    const top = await page.locator('.topbar').boundingBox();
+    expect(top!.height).toBeLessThan(64);
+    expect(await page.locator('.title-input').evaluate((e) => getComputedStyle(e).textOverflow)).toBe('ellipsis');
 
     await bar.getByRole('button', { name: 'Altro' }).click();
     const more = page.getByRole('dialog', { name: 'Altro' });
     // It comes up from the bottom, where the bar it was opened from is (once it has slid in).
     const card = more.locator('.overlay-card');
     await expect.poll(async () => card.boundingBox().then((b) => Math.round(b!.y + b!.height))).toBe(page.viewportSize()!.height);
-    for (const name of ['Scaletta', 'Dal libro', 'Immagine', 'Sposta', 'Elimina', 'Salva', 'Aspetto'])
+    for (const name of ['Scaletta', 'Dal libro', 'Sposta', 'Salva', 'Aspetto'])
       await expect(more.getByRole('button', { name, exact: true })).toBeVisible();
     await more.getByRole('button', { name: 'Chiudi' }).click();
     await expect(more).toHaveCount(0);

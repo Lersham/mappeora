@@ -53,6 +53,40 @@ test.describe('Immagini nei concetti', () => {
     await expect(node(page, 'Il Colosseo').locator('.concept-photo')).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
   });
 
+  test('tornando da Google l’immagine copiata arriva da sola', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'gli appunti del browser si provano sul computer');
+    await newMap(page, 'Il Colosseo');
+    await node(page, 'Il Colosseo').click();
+    await toolbar(page, 'Immagine');
+    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    const popup = page.waitForEvent('popup');
+    await page.getByRole('button', { name: 'Cerca su Google' }).click();
+    // On Google: «Copia immagine», then back to MappAmi.
+    await page.evaluate(async (b64) => {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': new Blob([bytes], { type: 'image/png' }) })]);
+    }, PNG_1PX.toString('base64'));
+    await (await popup).close();
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(node(page, 'Il Colosseo').locator('.concept-photo')).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
+  });
+
+  test('tornando da Google senza un’immagine copiata indica «Incolla immagine»', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'gli appunti del browser si provano sul computer');
+    await newMap(page, 'Il Colosseo');
+    await node(page, 'Il Colosseo').click();
+    await toolbar(page, 'Immagine');
+    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    await page.evaluate(() => navigator.clipboard.writeText('un testo copiato prima'));
+    const popup = page.waitForEvent('popup');
+    await page.getByRole('button', { name: 'Cerca su Google' }).click();
+    await (await popup).close();
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(page.getByRole('status').filter({ hasText: 'Hai copiato un’immagine?' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Incolla immagine' })).toHaveClass(/primary/);
+    await expect(node(page, 'Il Colosseo').locator('.concept-photo')).toHaveCount(0);
+  });
+
   test('se negli appunti c’è del testo spiega cosa fare', async ({ page, isMobile }) => {
     test.skip(isMobile, 'gli appunti del browser si provano sul computer');
     await newMap(page, 'Il Colosseo');
