@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures';
-import { addConcept, newMap, node, nodes, toolbar, type TemplateName } from './helpers';
+import { test, expect, say } from './fixtures';
+import { addConcept, newMap, node, nodes, openCopy, toolbar, type TemplateName } from './helpers';
 
 test.describe('Schermata iniziale', () => {
   const templates: [TemplateName, number][] = [
@@ -123,6 +123,50 @@ test.describe('Schermata iniziale', () => {
     await page.reload();
     await expect(page.getByText('Non hai ancora mappe')).toBeVisible();
     await expect(page.locator('.map-removed')).toHaveCount(0);
+  });
+
+  test('con tante mappe: le ultime 5, «Tutte le mie mappe» e la ricerca', async ({ page }) => {
+    // Oldest first.
+    await openCopy(page, ['Le stagioni', 'Il vulcano', 'Perché piove?', 'Gli animali della savana', 'La Rivoluzione francese', 'Il ciclo dell’acqua', 'I pianeti', 'Le frazioni']);
+
+    // The latest five; the others behind one button.
+    await expect(page.locator('.map-title')).toHaveText(['Le frazioni', 'I pianeti', 'Il ciclo dell’acqua', 'La Rivoluzione francese', 'Gli animali della savana']);
+    const more = page.getByRole('button', { name: 'Tutte le mie mappe (8)' });
+    await expect(more).toBeVisible();
+
+    // The search looks in all of them, the way a child types: no accents, plural.
+    const search = page.getByRole('searchbox', { name: 'Cerca una mappa' });
+    await search.fill('vulcani');
+    await expect(page.locator('.map-title')).toHaveText(['Il vulcano']);
+    await expect(search).toHaveAccessibleDescription('Ho trovato 1 mappa.');
+    await expect(more).toHaveCount(0);
+    await search.fill('perche');
+    await expect(page.locator('.map-title')).toHaveText(['Perché piove?']);
+    await search.fill('dinosauri');
+    await expect(page.locator('.map-card')).toHaveCount(0);
+    await expect(page.getByText('Non trovo mappe con «dinosauri» nel titolo.')).toBeVisible();
+    // ...or by voice.
+    await say(page, 'Le stagioni');
+    await page.getByRole('button', { name: 'Cerca con la voce' }).click();
+    await expect(search).toHaveValue('Le stagioni');
+    await expect(page.locator('.map-title')).toHaveText(['Le stagioni']);
+    await search.fill('');
+    await expect(page.locator('.map-card')).toHaveCount(5);
+
+    // «Tutte le mie mappe»: all of them, the focus on the first one that was hidden.
+    await more.click();
+    await expect(page.locator('.map-card')).toHaveCount(8);
+    await expect(page.getByRole('button', { name: /^Perché piove\?/ })).toBeFocused();
+    await expect(more).toHaveCount(0);
+
+    // Down to six maps, nothing is hidden and there is nothing to search.
+    await page.getByRole('button', { name: 'Cancella Le frazioni' }).click();
+    await page.getByRole('button', { name: 'Cancella I pianeti' }).click();
+    await expect(page.locator('.map-card')).toHaveCount(6);
+    await expect(search).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator('.map-card')).toHaveCount(6);
+    await expect(page.getByRole('button', { name: /^Tutte le mie mappe/ })).toHaveCount(0);
   });
 
   test('apre la mappa di esempio sulla Rivoluzione francese', async ({ page }) => {

@@ -11,6 +11,8 @@ import { ExamplesDialog } from './ExamplesDialog';
 import { WelcomeDialog, welcomeNeeded } from './WelcomeDialog';
 import { Icon, type IconName } from '../../components/Icon';
 import { friendlyDate } from '../../lib/friendlyDate';
+import { titleMatches } from '../../lib/searchText';
+import { MicButton } from '../../components/MicButton';
 
 /** One of the ways to start, with a line that says what it does. The line is the
  *  button's description (aria-describedby), not its name: the name stays the single word. */
@@ -45,6 +47,12 @@ function MapAvatar({ id, title }: { id: string; title: string }) {
     </span>
   );
 }
+
+/**
+ * The maps on the home screen: the latest ones, which are almost always the
+ * ones wanted; the others behind «Tutte le mie mappe», or found by searching.
+ */
+const RECENT = 5;
 
 /** What the card at the bottom says about the safety copy: where things stand, not a warning. */
 function backupStatus(maps: MapSummary[], savedAt: number | undefined): string {
@@ -83,8 +91,10 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
   const [homeHint, setHomeHint] = useState(homeScreenHintNeeded);
   /** The map just cancelled, and where it was in the list: «Annulla» puts it back. */
   const [removed, setRemoved] = useState<{ map: ConceptMap; index: number } | null>(null);
-  /** The map put back by «Annulla»: it takes the focus the button had. */
-  const [restoredId, setRestoredId] = useState<string | null>(null);
+  /** The map that takes the focus: the one «Annulla» put back, or the first one «Tutte le mie mappe» showed. */
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const [allShown, setAllShown] = useState(false);
+  const [query, setQuery] = useState('');
   const refresh = () =>
     void recovered()
       .then(() => storage().list())
@@ -98,10 +108,10 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       .catch(() => setListError('Non riesco a mostrare le tue mappe. Chiudi l’app e riaprila.'));
   useEffect(refresh, []);
   useEffect(() => {
-    if (!restoredId || !maps?.some((m) => m.id === restoredId)) return;
-    document.querySelector<HTMLElement>(`[data-map="${restoredId}"]`)?.focus();
-    setRestoredId(null);
-  }, [maps, restoredId]);
+    if (!focusId || !maps?.some((m) => m.id === focusId)) return;
+    document.querySelector<HTMLElement>(`[data-map="${focusId}"]`)?.focus();
+    setFocusId(null);
+  }, [maps, focusId]);
 
   /**
    * No «Are you sure?»: a child taps OK without reading it, in the browser's
@@ -129,7 +139,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       setListError(`Non ce l’ho fatta a rimettere "${removed.map.title}". Riprova.`);
       return;
     }
-    setRestoredId(removed.map.id);
+    setFocusId(removed.map.id);
     setRemoved(null);
     refresh();
   };
@@ -178,10 +188,15 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     <BigButton icon="save" label={saving ? 'Salvo…' : 'Salva tutte le mappe'} disabled={saving} onClick={() => void saveAll()} />
   );
 
-  const shown = (maps ?? []).filter((m) => m.id !== removed?.map.id).map(({ title, ...m }) => ({ ...m, title: title.trim() || 'Mappa senza titolo' }));
-  const hasList = shown.length > 0 || !!removed;
+  const all = (maps ?? []).filter((m) => m.id !== removed?.map.id).map(({ title, ...m }) => ({ ...m, title: title.trim() || 'Mappa senza titolo' }));
+  // Never hide just one map: «Tutte le mie mappe» would take its place.
+  const long = all.length > RECENT + 1;
+  const searching = long && query.trim() !== '';
+  const found = searching ? all.filter((m) => titleMatches(m.title, query)) : all;
+  const shown = long && !searching && !allShown ? found.slice(0, RECENT) : found;
+  const hasList = all.length > 0 || !!removed;
   const cards = shown.map((m, i) => (
-    <li key={m.id} className={`map-card${i === 0 ? ' is-latest' : ''}`}>
+    <li key={m.id} className={`map-card${i === 0 && !searching ? ' is-latest' : ''}`}>
       <button type="button" className="map-open" data-map={m.id} onClick={() => onOpen(m.id)}>
         <MapAvatar id={m.id} title={m.title} />
         <span className="map-text">
@@ -300,9 +315,45 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
           Continua da dove eri rimasto
         </h2>
       )}
+      {long && (
+        <div className="search-row" role="search">
+          <input
+            type="search"
+            className="text-field"
+            value={query}
+            placeholder="Cerca una mappa…"
+            aria-label="Cerca una mappa"
+            aria-describedby="map-search-result"
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <MicButton onText={setQuery} label="Cerca con la voce" />
+        </div>
+      )}
+      {long && (
+        <p className="map-search-result" id="map-search-result" aria-live="polite">
+          {searching &&
+            (found.length === 0
+              ? `Non trovo mappe con «${query.trim()}» nel titolo. Prova con un’altra parola.`
+              : found.length === 1
+                ? 'Ho trovato 1 mappa.'
+                : `Ho trovato ${found.length} mappe.`)}
+        </p>
+      )}
       <ul className="map-list" aria-labelledby={hasList ? 'maps-title' : undefined}>
         {cards}
       </ul>
+      {shown.length < found.length && (
+        <BigButton
+          icon="map"
+          label={`Tutte le mie mappe (${all.length})`}
+          className="map-more"
+          onClick={() => {
+            setAllShown(true);
+            // The first map that was hidden, where the button was.
+            setFocusId(found[RECENT].id);
+          }}
+        />
+      )}
 
       <h2 className="section-title" id="start-title">
         Altri modi per iniziare

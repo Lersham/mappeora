@@ -520,6 +520,22 @@ textarea {
 .map-removed .big-button-label {
   font-size: 0.9rem;
 }
+/* Many maps: a search above the list, the older ones behind a button. */
+.map-search-result {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+}
+/* Kept in the page while empty: a live region must be there before it speaks. */
+.map-search-result:empty {
+  margin: 0;
+}
+.map-more {
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  gap: 8px;
+  margin-top: 10px;
+}
 @media (prefers-reduced-motion: reduce) {
   .home > *,
   .new-hero,

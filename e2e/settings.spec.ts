@@ -1,6 +1,6 @@
 import type { Locator } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { drawnBadly, newMap, node, rename, toolbar } from './helpers';
+import { drawnBadly, newMap, node, openCopy, rename, toolbar } from './helpers';
 
 test('Aspetto: carattere, sfondo e maiuscolo si applicano e restano dopo aver ricaricato', async ({ page }) => {
   await page.goto('/');
@@ -151,4 +151,18 @@ test('Aspetto: i cursori dicono quanto valgono', async ({ page }) => {
   await expect(panel.getByText('Velocità della voce: normale (0,9×)')).toBeVisible();
   await panel.getByRole('slider', { name: /Velocità della voce/ }).fill('0.6');
   await expect(panel.getByText('Velocità della voce: lenta (0,6×)')).toBeVisible();
+});
+
+test('Testo grande, OpenDyslexic e spaziatura ampia: con tante mappe, la ricerca e «Tutte le mie mappe» restano in ordine', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('mappeora-settings')) {
+      const state = { font: 'opendyslexic', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
+      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+    }
+  });
+  await openCopy(page, ['Le stagioni', 'Il vulcano', 'Perché piove?', 'Gli animali della savana', 'La Rivoluzione francese', 'Il ciclo dell’acqua', 'I pianeti', 'Le frazioni']);
+  await page.evaluate(() => document.fonts.ready);
+  await expect.poll(() => drawnBadly(page)).toEqual([]);
+  await page.getByRole('searchbox', { name: 'Cerca una mappa' }).fill('dinosauri');
+  await expect.poll(() => drawnBadly(page)).toEqual([]);
 });
