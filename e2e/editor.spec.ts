@@ -13,7 +13,8 @@ test.describe('Editor', () => {
     await page.getByRole('button', { name: 'Ripeti' }).click();
     await expect(node(page, 'Invertebrati')).toBeVisible();
 
-    await node(page, 'Invertebrati').click();
+    // A concept just named is the one in hand: another tap on it would open «Immagine e colore».
+    await expect(node(page, 'Invertebrati')).toHaveClass(/is-selected/);
     await toolbar(page, 'Elimina');
     await expect(nodes(page)).toHaveCount(2);
     await expect(page.locator('.react-flow__edge')).toHaveCount(1);

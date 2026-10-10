@@ -490,11 +490,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const cancelCloser = () => window.clearTimeout(closer.current);
   /** The concept in hand when the finger went down: a tap on it again is a request to restyle it. */
   const heldOnPress = useRef<string | null>(null);
-  /** Same wait as for «bringCloser»: a double tap (to rename) must not open the dialog. */
+  /**
+   * Same wait as for «bringCloser»: a double tap (to rename) must not open the dialog.
+   * And never over another one: a button tapped in the meantime wins.
+   */
   const openStyleSoon = () => {
     cancelCloser();
     closer.current = window.setTimeout(() => {
-      if (!useReview.getState().active && !dragging.current) setDialog({ kind: 'style' });
+      if (!useReview.getState().active && !dragging.current) setDialog((d) => d ?? { kind: 'style' });
     }, 350);
   };
   const bringCloser = (id: string) => {
