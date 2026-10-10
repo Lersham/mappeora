@@ -946,6 +946,19 @@ textarea {
   border-radius: 14px;
   color: #1f2430; /* node colours are always light pastels */
   text-align: center;
+  /* A long press renames the concept: it must not select the word or open a menu. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.concept-node .concept-input {
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* Held long enough: let go and the name opens for writing. */
+.concept-node.is-armed {
+  outline: 3px dashed var(--primary);
+  outline-offset: 3px;
 }
 .concept-node.shape-ellisse {
   border-radius: 999px;

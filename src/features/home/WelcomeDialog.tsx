@@ -45,7 +45,7 @@ const PAGES: Page[] = [
   {
     icon: '🎤',
     title: 'Scrivi o detta',
-    text: 'Con «Concetto» aggiungi un riquadro. Con «Detta» parli e MappAmi scrive per te. Se preferisci un elenco, apri «Scaletta» e scrivi un concetto per riga.',
+    text: 'Con «Concetto» aggiungi un riquadro. Con «Detta» parli e MappAmi scrive per te. Se preferisci un elenco, apri «Scaletta» e scrivi un concetto per riga. Tocca un riquadro per sceglierlo: toccalo ancora per cambiare immagine e colore, tienilo premuto per cambiare il nome.',
   },
   {
     icon: '🔊',

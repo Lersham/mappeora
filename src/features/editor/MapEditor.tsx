@@ -484,22 +484,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
    * On a map seen from afar (a phone, a long map) the names are too small
    * to read: a tap on a concept brings its branch close, or just the
    * concept if the branch is too long for the screen. It waits a moment,
-   * so that a double tap (to rename) still lands on the same concept.
+   * so that a quick second tap (to restyle it) still lands on the same concept.
    */
   const closer = useRef<number | undefined>(undefined);
   const cancelCloser = () => window.clearTimeout(closer.current);
   /** The concept in hand when the finger went down: a tap on it again is a request to restyle it. */
   const heldOnPress = useRef<string | null>(null);
-  /**
-   * Same wait as for «bringCloser»: a double tap (to rename) must not open the dialog.
-   * And never over another one: a button tapped in the meantime wins.
-   */
-  const openStyleSoon = () => {
-    cancelCloser();
-    closer.current = window.setTimeout(() => {
-      if (!useReview.getState().active && !dragging.current) setDialog((d) => d ?? { kind: 'style' });
-    }, 350);
-  };
   const bringCloser = (id: string) => {
     cancelCloser();
     closer.current = window.setTimeout(() => {
@@ -760,7 +750,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         const el = target?.closest('.react-flow__node')?.querySelector('.concept-node');
         if (!el || target?.closest('.react-flow__node')?.getAttribute('data-id') !== node.id) return;
         e.preventDefault();
-        el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        s.startEditing(node.id);
         return;
       }
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
@@ -889,13 +879,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onNodeClick={(e, node) => {
             if (!review.active) {
               const again = heldOnPress.current === node.id && !(e.target as Element).closest('button, textarea, input');
-              return again ? openStyleSoon() : bringCloser(node.id);
+              if (!again) return bringCloser(node.id);
+              cancelCloser();
+              return setDialog({ kind: 'style' });
             }
             if (review.mode !== 'interrogazione') return;
             const i = review.order[node.id];
             if (i !== undefined) review.goTo(i);
           }}
-          onNodeDoubleClick={cancelCloser}
           onConnectStart={() => setConnecting(true)}
           onConnectEnd={() => setConnecting(false)}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
@@ -906,9 +897,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           deleteKeyCode={null}
           zoomOnDoubleClick={false}
           // A tap focuses the concept, and React Flow would scroll it fully
-          // into view: the concept moved away from under the finger between
-          // the two taps of a double tap, so renaming it failed.
+          // into view: the concept moved away from under the finger while it
+          // was held to rename it, so renaming failed.
           autoPanOnNodeFocus={false}
+          // A held finger always trembles a little: not enough to drag the concept (see HOLD_SLOP).
+          nodeDragThreshold={6}
           fitView
           fitViewOptions={{ padding: 0.3, maxZoom: MAX_READ_ZOOM }}
           minZoom={MIN_ZOOM}
