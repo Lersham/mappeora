@@ -1,5 +1,5 @@
 import { test, expect, say, spoken } from './fixtures';
-import { newMap, node, nodes, onScreen, rename, tapLink, toolbar } from './helpers';
+import { newMap, node, nodes, rename, tapLink, toolbar } from './helpers';
 
 test.describe('Impara facendo', () => {
   test('dalla home costruisce una mappa vera, un passo alla volta', async ({ page }) => {
@@ -47,14 +47,13 @@ test.describe('Impara facendo', () => {
     await expect(node(page, 'Estate')).toBeVisible();
     await next('Un’immagine');
 
-    // «Estate» is the concept in hand: another tap on it would open «Immagine e colore» by itself.
-    await (await onScreen(page, node(page, 'Il sole'))).click();
+    // «Estate», just dictated, is already the concept in hand: its tools are there.
     const image = page.getByRole('toolbar', { name: 'Concetto scelto' }).getByRole('button', { name: 'Immagine', exact: true });
     await expect(image).toHaveClass(/tutorial-target/);
     await image.click();
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('sole');
     await page.locator('.illustration-tile').first().click();
-    await expect(node(page, 'Il sole').locator('.concept-illustration, .concept-emoji')).toBeVisible();
+    await expect(node(page, 'Estate').locator('.concept-illustration, .concept-emoji')).toBeVisible();
     await next('Ce l’hai fatta!');
 
     await expect(coach.getByRole('button', { name: 'Chiudi' })).toHaveCount(0);

@@ -513,6 +513,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
    * Same wait as for «bringCloser»: a double tap (to rename) must not open the dialog.
    * And never over another one: a button tapped in the meantime wins.
    */
+  // A window opened another way (e.g. «Immagine») while that tap was
+  // waiting: it must not open again by itself once this one is closed.
+  useEffect(() => {
+    if (dialog) cancelCloser();
+  }, [dialog]);
   const openStyleSoon = () => {
     cancelCloser();
     closer.current = window.setTimeout(() => {
@@ -859,7 +864,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   return (
     <div
       className={`editor${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
-      onPointerDownCapture={touch}
+      onPointerDownCapture={(e) => {
+        touch();
+        // A press anywhere but on a concept (a button, the map) is something
+        // else: the second tap's «Immagine e colore» no longer comes.
+        if (!(e.target as Element).closest('.react-flow__node')) cancelCloser();
+      }}
       onKeyDownCapture={touch}
       onWheelCapture={touch}
     >
