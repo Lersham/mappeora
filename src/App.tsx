@@ -110,7 +110,7 @@ export default function App() {
       await storage().save(map);
     } catch {
       setNewMapOpen(false);
-      setHomeError('Non riesco a creare la mappa: forse lo spazio sul dispositivo è pieno.');
+      setHomeError('Non riesco a creare la mappa: forse non c’è più spazio libero.');
       return;
     }
     setNewMapOpen(false);

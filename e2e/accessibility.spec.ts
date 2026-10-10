@@ -21,6 +21,11 @@ test.describe('Accessibilità (axe-core)', () => {
     expect(await seriousProblems(page)).toEqual([]);
   });
 
+  test('crediti e licenze', async ({ page }) => {
+    await page.goto('/crediti.html');
+    expect(await seriousProblems(page)).toEqual([]);
+  });
+
   test('nuova mappa', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Nuova mappa' }).click();
