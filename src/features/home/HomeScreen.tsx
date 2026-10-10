@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { MapSummary } from '../../types/map';
+import type { ConceptMap, MapSummary } from '../../types/map';
 import { storage } from '../../services/storage';
 import { recovered } from '../../services/autosave';
 import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { pickMapFile } from '../../services/openFile';
 import { MapFileError, parseAnyMapFile } from '../../lib/mapFile';
-import { backupDue, homeScreenHintNeeded, homeScreenHintSeen, restoreMaps, saveAllMaps, snoozeBackup } from '../../services/backup';
+import { backupDue, homeScreenHintNeeded, homeScreenHintSeen, lastBackup, restoreMaps, saveAllMaps, snoozeBackup } from '../../services/backup';
 import { ExamplesDialog } from './ExamplesDialog';
 import { WelcomeDialog, welcomeNeeded } from './WelcomeDialog';
 import { Icon, type IconName } from '../../components/Icon';
@@ -46,6 +46,15 @@ function MapAvatar({ id, title }: { id: string; title: string }) {
   );
 }
 
+/** What the card at the bottom says about the safety copy: where things stand, not a warning. */
+function backupStatus(maps: MapSummary[], savedAt: number | undefined): string {
+  if (!savedAt) return 'Le tue mappe sono su questo dispositivo. Fanne una copia su Drive o sul computer: se lo perdi o lo cambi, con «Apri file» le ritrovi tutte.';
+  const changed = maps.filter((m) => m.updatedAt > savedAt).length;
+  const when = `Ultima copia di sicurezza: ${friendlyDate(savedAt).toLowerCase()}.`;
+  if (changed === 0) return `${when} È aggiornata: ci sono tutte le tue mappe.`;
+  return `${when} Da allora hai lavorato su ${changed === 1 ? '1 mappa' : `${changed} mappe`}.`;
+}
+
 interface Props {
   onOpen(id: string): void;
   onCreate(): void;
@@ -70,7 +79,12 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
   const [backupNote, setBackupNote] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [remind, setRemind] = useState(false);
+  const [savedAt, setSavedAt] = useState(lastBackup);
   const [homeHint, setHomeHint] = useState(homeScreenHintNeeded);
+  /** The map just cancelled, and where it was in the list: «Annulla» puts it back. */
+  const [removed, setRemoved] = useState<{ map: ConceptMap; index: number } | null>(null);
+  /** The map put back by «Annulla»: it takes the focus the button had. */
+  const [restoredId, setRestoredId] = useState<string | null>(null);
   const refresh = () =>
     void recovered()
       .then(() => storage().list())
@@ -78,18 +92,45 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         setMaps(list);
         setRemind(backupDue(list));
         setListError(null);
+        // Back from a safety copy («Apri file»): nothing left to undo.
+        setRemoved((r) => (r && list.some((m) => m.id === r.map.id) ? null : r));
       })
       .catch(() => setListError('Non riesco a mostrare le tue mappe. Chiudi l’app e riaprila.'));
   useEffect(refresh, []);
+  useEffect(() => {
+    if (!restoredId || !maps?.some((m) => m.id === restoredId)) return;
+    document.querySelector<HTMLElement>(`[data-map="${restoredId}"]`)?.focus();
+    setRestoredId(null);
+  }, [maps, restoredId]);
 
-  const remove = async (m: MapSummary) => {
-    if (!window.confirm(`Vuoi cancellare la mappa "${m.title}"?`)) return;
+  /**
+   * No «Are you sure?»: a child taps OK without reading it, in the browser's
+   * font. The map goes at once, and in its place «Annulla» brings it back
+   * until the child leaves this screen.
+   */
+  const remove = async (m: MapSummary, index: number) => {
+    let map: ConceptMap | undefined;
     try {
+      map = await storage().get(m.id);
       await storage().remove(m.id);
     } catch {
       setListError(`Non ce l’ho fatta a cancellare "${m.title}". Riprova.`);
       return;
     }
+    setRemoved(map ? { map, index } : null);
+    refresh();
+  };
+
+  const undoRemove = async () => {
+    if (!removed) return;
+    try {
+      await storage().save(removed.map);
+    } catch {
+      setListError(`Non ce l’ho fatta a rimettere "${removed.map.title}". Riprova.`);
+      return;
+    }
+    setRestoredId(removed.map.id);
+    setRemoved(null);
     refresh();
   };
 
@@ -124,6 +165,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     try {
       const n = await saveAllMaps();
       setRemind(false);
+      setSavedAt(lastBackup());
       setBackupNote(`${n === 1 ? 'Ho salvato 1 mappa' : `Ho salvato ${n} mappe`} in un file. Tienilo al sicuro: con «Apri file» le ritrovi tutte.`);
     } catch (e) {
       if (!(e instanceof Error && /cancel/i.test(e.message))) setListError('Non ce l’ho fatta a salvare le mappe. Riprova.');
@@ -135,6 +177,39 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
   const saveAllButton = (
     <BigButton icon="save" label={saving ? 'Salvo…' : 'Salva tutte le mappe'} disabled={saving} onClick={() => void saveAll()} />
   );
+
+  const shown = (maps ?? []).filter((m) => m.id !== removed?.map.id).map(({ title, ...m }) => ({ ...m, title: title.trim() || 'Mappa senza titolo' }));
+  const hasList = shown.length > 0 || !!removed;
+  const cards = shown.map((m, i) => (
+    <li key={m.id} className={`map-card${i === 0 ? ' is-latest' : ''}`}>
+      <button type="button" className="map-open" data-map={m.id} onClick={() => onOpen(m.id)}>
+        <MapAvatar id={m.id} title={m.title} />
+        <span className="map-text">
+          <span className="map-title">{m.title}</span>
+          <time className="map-date" dateTime={new Date(m.updatedAt).toISOString()}>
+            {friendlyDate(m.updatedAt)}
+          </time>
+        </span>
+      </button>
+      <button type="button" className="icon-button" aria-label={`Leggi il titolo ${m.title}`} onClick={() => void readText(m.title)}>
+        <Icon name="speak" />
+      </button>
+      <button type="button" className="icon-button danger-hover" aria-label={`Cancella ${m.title}`} onClick={() => void remove(m, i)}>
+        <Icon name="trash" />
+      </button>
+    </li>
+  ));
+  if (removed) {
+    // Where the map was, so the child sees what the tap did.
+    cards.splice(
+      Math.min(removed.index, cards.length),
+      0,
+      <li key={`removed-${removed.map.id}`} className="map-removed">
+        <p id="map-removed-text">Hai cancellato «{removed.map.title.trim() || 'Mappa senza titolo'}».</p>
+        <BigButton icon="undo" label="Annulla" aria-describedby="map-removed-text" autoFocus onClick={() => void undoRemove()} />
+      </li>,
+    );
+  }
 
   return (
     <main className="home">
@@ -208,7 +283,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         </section>
       )}
 
-      {maps && maps.length === 0 && (
+      {maps && maps.length === 0 && !removed && (
         <p className="empty">
           Non hai ancora mappe. Creane una, oppure guarda un{' '}
           <button type="button" className="link-button" onClick={() => setExamplesOpen(true)}>
@@ -220,31 +295,13 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       {welcomeOpen && <WelcomeDialog onClose={() => setWelcomeOpen(false)} onExamples={() => setExamplesOpen(true)} onTryBook={onStartFromBook} />}
       {examplesOpen && <ExamplesDialog onOpen={onOpen} onClose={() => setExamplesOpen(false)} />}
 
-      {maps && maps.length > 0 && (
+      {hasList && (
         <h2 className="section-title" id="maps-title">
           Continua da dove eri rimasto
         </h2>
       )}
-      <ul className="map-list" aria-labelledby={maps && maps.length > 0 ? 'maps-title' : undefined}>
-        {maps?.map(({ title, ...m }) => ({ ...m, title: title.trim() || 'Mappa senza titolo' })).map((m, i) => (
-          <li key={m.id} className={`map-card${i === 0 ? ' is-latest' : ''}`}>
-            <button type="button" className="map-open" onClick={() => onOpen(m.id)}>
-              <MapAvatar id={m.id} title={m.title} />
-              <span className="map-text">
-                <span className="map-title">{m.title}</span>
-                <time className="map-date" dateTime={new Date(m.updatedAt).toISOString()}>
-                  {friendlyDate(m.updatedAt)}
-                </time>
-              </span>
-            </button>
-            <button type="button" className="icon-button" aria-label={`Leggi il titolo ${m.title}`} onClick={() => void readText(m.title)}>
-              <Icon name="speak" />
-            </button>
-            <button type="button" className="icon-button danger-hover" aria-label={`Cancella ${m.title}`} onClick={() => void remove(m)}>
-              <Icon name="trash" />
-            </button>
-          </li>
-        ))}
+      <ul className="map-list" aria-labelledby={hasList ? 'maps-title' : undefined}>
+        {cards}
       </ul>
 
       <h2 className="section-title" id="start-title">
@@ -259,7 +316,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
 
       {maps && maps.length > 0 && !remind && (
         <section className="backup-card" aria-label="Copia di sicurezza">
-          <p className="muted">Le tue mappe sono salvate solo qui. Ogni tanto fanne una copia, su Drive o sul computer: con «Apri file» le ritrovi tutte.</p>
+          <p className="muted">{backupStatus(maps, savedAt)}</p>
           {saveAllButton}
         </section>
       )}

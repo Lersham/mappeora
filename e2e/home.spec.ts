@@ -97,13 +97,32 @@ test.describe('Schermata iniziale', () => {
     await expect(page.locator('.map-title')).toHaveText(['Le piante (qui) (copia)', 'Le piante (altra finestra)']);
   });
 
-  test('cancella una mappa dopo la conferma', async ({ page }) => {
+  test('cancella una mappa senza chiedere; «Annulla», al suo posto, la rimette', async ({ page }) => {
+    await newMap(page, 'Prima');
     await newMap(page, 'Da cancellare');
     await page.getByRole('button', { name: 'Mappe' }).click();
-    page.once('dialog', (d) => void d.accept());
     await page.getByRole('button', { name: 'Cancella Da cancellare' }).click();
+    // No browser «OK / Annulla»: the map is gone, and where it was...
+    await expect(page.locator('.map-title')).toHaveText(['Prima']);
+    const undo = page.getByRole('button', { name: 'Annulla' });
+    await expect(undo).toHaveAccessibleDescription('Hai cancellato «Da cancellare».');
+    await expect(undo).toBeFocused();
+    await expect(page.locator('.map-list > li').first()).toHaveClass('map-removed');
+    // ...«Annulla» brings it back, in its place, with the focus on it.
+    await undo.click();
+    await expect(page.locator('.map-title')).toHaveText(['Da cancellare', 'Prima']);
+    await expect(page.getByRole('button', { name: /^Da cancellare/ })).toBeFocused();
+    await expect(page.locator('.map-removed')).toHaveCount(0);
+
+    // Leaving the screen makes it final.
+    await page.getByRole('button', { name: 'Cancella Da cancellare' }).click();
+    await page.getByRole('button', { name: 'Cancella Prima' }).click();
     await expect(page.locator('.map-card')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Annulla' })).toHaveAccessibleDescription('Hai cancellato «Prima».');
+    await expect(page.getByText('Non hai ancora mappe')).toHaveCount(0);
+    await page.reload();
     await expect(page.getByText('Non hai ancora mappe')).toBeVisible();
+    await expect(page.locator('.map-removed')).toHaveCount(0);
   });
 
   test('apre la mappa di esempio sulla Rivoluzione francese', async ({ page }) => {

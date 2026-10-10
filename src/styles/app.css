@@ -492,6 +492,34 @@ textarea {
 .icon-button.danger-hover:hover {
   color: var(--danger);
 }
+/* A map just cancelled: an empty place, dashed, with «Annulla». */
+.map-removed {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  min-height: 72px;
+  padding: 10px 12px 10px 16px;
+  border: 2px dashed var(--border);
+  border-radius: 16px;
+}
+.map-removed p {
+  margin: 0;
+  color: var(--muted);
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+.map-removed .big-button {
+  flex-direction: row;
+  gap: 8px;
+  min-height: 48px;
+  padding: 6px 16px;
+}
+.map-removed .big-button-label {
+  font-size: 0.9rem;
+}
 @media (prefers-reduced-motion: reduce) {
   .home > *,
   .new-hero,
