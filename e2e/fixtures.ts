@@ -174,6 +174,20 @@ export const test = base.extend<{ consoleErrors: string[] }>({
       if (url.hostname === 'cdn.jsdelivr.net' && url.pathname.endsWith('.svg')) {
         return route.fulfill({ body: SVG, contentType: 'image/svg+xml', headers: { 'access-control-allow-origin': '*' } });
       }
+      if (url.hostname === 'it.wikipedia.org' && url.pathname === '/w/api.php') {
+        const q = url.searchParams.get('gsrsearch') ?? '';
+        const pages = /nulla/i.test(q)
+          ? []
+          : [`${q}`, `${q} (storia)`].map((title, i) => ({
+              title,
+              index: i + 1,
+              thumbnail: { source: `https://upload.wikimedia.org/wikipedia/commons/thumb/f/${i}/480px-${encodeURIComponent(title)}.png` },
+            }));
+        return route.fulfill({ json: pages.length ? { query: { pages } } : { batchcomplete: true }, headers: { 'access-control-allow-origin': '*' } });
+      }
+      if (url.hostname === 'upload.wikimedia.org') {
+        return route.fulfill({ body: PNG_1PX, contentType: 'image/png', headers: { 'access-control-allow-origin': '*' } });
+      }
       if (url.hostname === 'www.google.com') {
         return route.fulfill({ body: '<title>Google Immagini (finto)</title>', contentType: 'text/html' });
       }

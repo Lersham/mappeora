@@ -26,6 +26,39 @@ test.describe('Immagini nei concetti', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
+  test('cerca su Wikipedia dentro l’app: un tocco e l’immagine è nel concetto', async ({ page }) => {
+    await newMap(page, 'Il Colosseo');
+    await node(page, 'Il Colosseo').click();
+    await toolbar(page, 'Immagine');
+    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    // Already searching the concept's name.
+    const tile = page.getByRole('button', { name: 'Il Colosseo', exact: true });
+    await expect(tile).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Il Colosseo (storia)', exact: true })).toBeVisible();
+    await tile.click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(node(page, 'Il Colosseo').locator('.concept-photo')).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
+  });
+
+  test('se Wikipedia non ha immagini lo dice e indica Google', async ({ page }) => {
+    await newMap(page, 'Il Colosseo');
+    await node(page, 'Il Colosseo').click();
+    await toolbar(page, 'Immagine');
+    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('nulla da trovare');
+    await expect(page.getByRole('status').filter({ hasText: 'Su Wikipedia non c’è un’immagine' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cerca su Google' })).toBeEnabled();
+  });
+
+  test('senza internet Wikipedia non risponde e lo dice', async ({ page }) => {
+    await newMap(page, 'Il Colosseo');
+    await page.context().route(/it\.wikipedia\.org/, (route) => route.abort('internetdisconnected'));
+    await node(page, 'Il Colosseo').click();
+    await toolbar(page, 'Immagine');
+    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Wikipedia non risponde' })).toBeVisible();
+  });
+
   test('«Cerca su Google» apre Google Immagini con il filtro per ragazzi', async ({ page }) => {
     await newMap(page, 'Il Colosseo');
     await node(page, 'Il Colosseo').click();

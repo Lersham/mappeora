@@ -16,6 +16,7 @@ import { COLOR_NAMES, NODE_COLORS } from '../../lib/palette';
 import { useMapStore } from '../../store/mapStore';
 import { photoToDataUrl, pickPhoto, type PhotoSource } from '../../services/photo';
 import { PasteError, fromPasteEvent, openGoogleImages, pastedToDataUrl, readClipboardImage } from '../../services/webImage';
+import { searchWikiImages, type WikiImage } from '../../services/wikiImages';
 import type { MapNode, NodeShape } from '../../types/map';
 
 const GOOGLE_STEPS = [
@@ -53,6 +54,9 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
   const [illustrations, setIllustrations] = useState<Illustration[] | null>(null);
   const [suggested, setSuggested] = useState<Illustration[]>([]);
   const [busy, setBusy] = useState(false);
+  /** Wikipedia's pictures for `query`: `images` null when it cannot be reached. */
+  const [wiki, setWiki] = useState<{ query: string; images: WikiImage[] | null } | null>(null);
+  const [wikiError, setWikiError] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [showPasteBox, setShowPasteBox] = useState(false);
   /** Back from Google without a picture: «Incolla immagine» stands out. */
@@ -79,6 +83,19 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     };
   }, [query, tab]);
   useEffect(() => void illustrationsFor(SUGGESTED).then(setSuggested), []);
+
+  // Wikipedia is asked once the child stops typing for a moment.
+  useEffect(() => {
+    if (tab !== 'foto' || !query.trim()) return setWiki(null);
+    const search = new AbortController();
+    const t = setTimeout(() => {
+      void searchWikiImages(query, search.signal).then((images) => !search.signal.aborted && setWiki({ query, images }));
+    }, 400);
+    return () => {
+      clearTimeout(t);
+      search.abort();
+    };
+  }, [query, tab]);
 
   const choose = (image: MapNode['image']) => {
     pending.current?.abort();
@@ -121,6 +138,23 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     } catch {
       setBusy(false);
       setPhotoError('Non riesco a usare questa foto. Prova con un’altra.');
+    }
+  };
+
+  /** The picture is downloaded and saved inside the map, like a photo. */
+  const chooseWiki = async (i: WikiImage) => {
+    const download = new AbortController();
+    pending.current = download;
+    setBusy(true);
+    setWikiError(false);
+    const data = await toDataUrl(i.thumb, download.signal);
+    if (pending.current !== download) return;
+    try {
+      if (!data?.startsWith('data:image/')) throw new Error('not downloaded');
+      choose({ kind: 'foto', ref: await photoToDataUrl(data) });
+    } catch {
+      setBusy(false);
+      setWikiError(true);
     }
   };
 
@@ -260,14 +294,48 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
 
       {tab === 'foto' && (
         <>
-          <div className="photo-sources">
-            <BigButton icon="camera" label="Scatta una foto" disabled={busy} onClick={() => void addPhoto('camera')} />
-            <BigButton icon="gallery" label="Dalla galleria" disabled={busy} onClick={() => void addPhoto('gallery')} />
-          </div>
-          <p className="muted small">Una figura del libro, un esperimento, un disegno fatto da te.</p>
+          <h3 className="photo-web-title">Da Wikipedia</h3>
+          {searchRow}
+          {!query.trim() ? (
+            <p className="muted small">Scrivi o detta di che cosa cerchi l’immagine.</p>
+          ) : wiki?.query !== query ? (
+            <p className="muted small" role="status">
+              Cerco su Wikipedia…
+            </p>
+          ) : wiki.images === null ? (
+            <p className="muted small" role="status">
+              Wikipedia non risponde: controlla internet, oppure cerca su Google qui sotto.
+            </p>
+          ) : wiki.images.length === 0 ? (
+            <p className="muted small" role="status">
+              Su Wikipedia non c’è un’immagine per queste parole. Prova con altre, oppure cerca su Google qui sotto.
+            </p>
+          ) : (
+            <div className="picto-grid wiki-grid" aria-busy={busy}>
+              {wiki.images.map((i) => (
+                <button key={i.thumb} type="button" className="picto-tile wiki-tile" aria-label={i.title} title={i.title} disabled={busy} onClick={() => void chooseWiki(i)}>
+                  <img src={i.thumb} alt="" loading="lazy" />
+                  <span className="wiki-title" aria-hidden>
+                    {i.title}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {busy && (
+            <p className="muted" role="status">
+              Preparo l’immagine…
+            </p>
+          )}
+          {wikiError && (
+            <p className="field-error" role="alert">
+              Non riesco a scaricare questa immagine. Controlla internet e riprova, oppure scegline un’altra.
+            </p>
+          )}
+          <p className="credit">Le immagini di Wikipedia hanno licenze libere e appartengono ai loro autori.</p>
 
           <h3 className="photo-web-title">Da Google Immagini</h3>
-          {searchRow}
+          <p className="muted small">Non trovi quella giusta? Cercala su Google con le stesse parole.</p>
           <div className="photo-sources">
             <BigButton icon="search" label="Cerca su Google" disabled={busy || !query.trim()} onClick={searchGoogle} />
             <BigButton
@@ -314,6 +382,13 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
             </p>
           )}
           <p className="credit">Le immagini trovate su Google appartengono ai loro autori: usale solo per studiare.</p>
+
+          <h3 className="photo-web-title">Le tue foto</h3>
+          <div className="photo-sources">
+            <BigButton icon="camera" label="Scatta una foto" disabled={busy} onClick={() => void addPhoto('camera')} />
+            <BigButton icon="gallery" label="Dalla galleria" disabled={busy} onClick={() => void addPhoto('gallery')} />
+          </div>
+          <p className="muted small">Una figura del libro, un esperimento, un disegno fatto da te.</p>
         </>
       )}
 

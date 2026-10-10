@@ -1751,6 +1751,29 @@ textarea {
   margin: 16px 0 8px;
   font-size: 1.05rem;
 }
+/* Pictures from Wikipedia: photos, so larger tiles, with the article's name. */
+.wiki-grid {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+.wiki-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  aspect-ratio: auto;
+  height: auto;
+}
+.wiki-tile img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.wiki-title {
+  font-size: 0.8rem;
+  line-height: 1.25;
+}
 .photo-web-steps {
   margin: 4px 0 8px;
   padding-left: 1.4em;
