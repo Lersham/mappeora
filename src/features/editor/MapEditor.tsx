@@ -372,6 +372,19 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   };
 
   /**
+   * Room around the whole map when it is fitted to the screen: `p` of the
+   * screen on each side, and at the bottom at least what the floating
+   * toolbar hides (wide screens), so no concept ends up under it.
+   */
+  const fitPadding = (p: number) => {
+    const box = document.querySelector('.react-flow')?.getBoundingClientRect();
+    const dock = document.querySelector('.editor.has-dock .dock');
+    if (!box || !dock || getComputedStyle(dock).position !== 'absolute') return p;
+    const hidden = box.bottom - dock.getBoundingClientRect().top + 16;
+    return { x: p, top: p, bottom: `${Math.max(p * box.height, hidden)}px` as const };
+  };
+
+  /**
    * A sheet is tall. On a screen wider than it is tall (a computer, a
    * Chromebook, a tablet held sideways) the whole map fits the height: two
    * empty bands at its sides and names too small to read. Then the map is
@@ -408,7 +421,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     setTimeout(() => {
       const page = pageView();
       if (page) void setViewport(page, { duration: motion(400) });
-      else void fitView({ padding: 0.2, duration: motion(400) });
+      else void fitView({ padding: fitPadding(0.2), duration: motion(400) });
     }, delay);
 
   // Opening a map: its concepts take their final size bit by bit (pictures
@@ -424,7 +437,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       if (touched.current) return;
       const page = pageView();
       if (page) void setViewport(page);
-      else void fitView({ padding: 0.3, maxZoom: MAX_READ_ZOOM });
+      else void fitView({ padding: fitPadding(0.3), maxZoom: MAX_READ_ZOOM });
     }, 50);
     return () => clearTimeout(t);
   }, [measured, sizes, map.nodes]);
@@ -447,7 +460,13 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       const tooSmall = readable && text.onScreen < READABLE_PX;
       const [left, top] = [p.x * zoom + x, p.y * zoom + y];
       const m = 24;
-      if (!tooSmall && left >= m && top >= m && left + width * zoom <= box.width - m && top + height * zoom <= box.height - m) return;
+      // The bars floating over the map (on a wide screen, the toolbar; the
+      // tools of the concept in hand) hide what is under them.
+      const bottom = Math.min(
+        box.height,
+        ...[...document.querySelectorAll('.editor.has-dock .dock, .selection-bar')].map((el) => el.getBoundingClientRect().top - box.top),
+      );
+      if (!tooSmall && left >= m && top >= m && left + width * zoom <= box.width - m && top + height * zoom <= bottom - m) return;
       const z = tooSmall ? Math.min(MAX_READ_ZOOM, COMFORT_PX / text.px) : zoom;
       void setCenter(p.x + width / 2, p.y + height / 2, { zoom: z, duration: motion(300) });
     }, 150);
@@ -688,7 +707,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   };
 
   useBackHandler(exitReview, review.active);
-  const overview = () => void fitView({ padding: 0.15, duration: motion(500) }).then(fromTopIfTooBig);
+  const overview = () => void fitView({ padding: fitPadding(0.15), duration: motion(500) }).then(fromTopIfTooBig);
 
   // Review: follow the current concept and read it once it is visible.
   const current = review.active ? review.steps[review.index] : undefined;
@@ -783,7 +802,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const [toolbarRef, crowded] = useCrowded();
   // Where they do not all fit (a phone, large text): these go in «Altro» (see .toolbar-more).
   // Where they all fit they are in groups ('group-start'): what goes into the map,
-  // where it stays or leaves it, the map as a whole.
+  // then where it stays on the sheet.
   const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
     {
       key: 'outline',
@@ -794,7 +813,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       onClick: () => setDialog({ kind: 'outline' }),
     },
     { key: 'photo', icon: 'camera', label: 'Dal libro', onClick: () => setDialog({ kind: 'photo' }) },
-    { key: 'image', icon: 'image', label: 'Immagine', onClick: () => setDialog({ kind: 'style' }), disabled: !selectedNode },
     sheetMode
       ? {
           key: 'layout',
@@ -817,20 +835,36 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onClick: () => void tidy(),
           disabled: arranging,
         },
-    { key: 'delete', icon: 'trash', label: 'Elimina', variant: 'danger', onClick: () => selectedNode && actions.removeNodes([selectedNode.id]), disabled: !selectedNode },
-    { key: 'save', icon: 'save', label: 'Salva', className: 'group-start', onClick: () => setDialog({ kind: 'export' }) },
+  ];
+  // The map as a whole: in the top bar (on a phone, in «Altro»).
+  const mapTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
+    { key: 'save', icon: 'save', label: 'Salva', onClick: () => setDialog({ kind: 'export' }) },
     { key: 'settings', icon: 'palette', label: 'Aspetto', onClick: onOpenSettings },
   ];
 
+  /**
+   * «Solo la mappa»: every bar goes away, for studying the map or showing it
+   * on the classroom board. One button, Esc or the back button bring them back.
+   */
+  const [focus, setFocus] = useState(false);
+  const focusMode = focus && editing;
+  useBackHandler(() => setFocus(false), focusMode);
+  useEffect(() => {
+    if (!focusMode) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setFocus(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [focusMode]);
+
   return (
     <div
-      className={`editor${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}`}
+      className={`editor${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
       onPointerDownCapture={touch}
       onKeyDownCapture={touch}
       onWheelCapture={touch}
     >
       <header className="topbar">
-        <BigButton icon="back" label="Mappe" onClick={onBack} />
+        <BigButton icon="back" label="Mappe" aria-label="Mappe" title="Mappe" onClick={onBack} />
         {/* The pencil says the title can be changed: there is no hover on a tablet. */}
         <label className="title-field">
           <input
@@ -851,11 +885,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         </label>
         {editing ? (
           <>
-            <BigButton icon="undo" label="Annulla" disabled={!canUndo} onClick={() => mapHistory().undo()} />
-            <BigButton icon="redo" label="Ripeti" disabled={!canRedo} onClick={() => mapHistory().redo()} />
+            <BigButton icon="undo" label="Annulla" aria-label="Annulla" title="Annulla" disabled={!canUndo} onClick={() => mapHistory().undo()} />
+            <BigButton icon="redo" label="Ripeti" aria-label="Ripeti" title="Ripeti" disabled={!canRedo} onClick={() => mapHistory().redo()} />
+            {mapTools.map(({ key, ...t }) => (
+              <BigButton key={key} {...t} className={`topbar-map${key === 'save' ? ' group-start' : ''}`} />
+            ))}
           </>
         ) : (
-          <BigButton icon="close" label="Esci" onClick={exitReview} />
+          <BigButton icon="close" label="Esci" aria-label="Esci" title="Esci" onClick={exitReview} />
         )}
       </header>
 
@@ -924,8 +961,18 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             showInteractive={false}
             // A map too big to be seen whole: its top, not its middle (once
             // React Flow has done its own fit, which waits for a render).
-            onFitView={() => void fitView().then(fromTopIfTooBig)}
+            onFitView={() => void fitView({ padding: fitPadding(0.1) }).then(fromTopIfTooBig)}
           >
+            {editing && (
+              <ControlButton
+                className="focus-button"
+                onClick={() => setFocus(true)}
+                aria-label="Solo la mappa: nascondi i pulsanti"
+                title="Solo la mappa: nascondi i pulsanti"
+              >
+                <Icon name="focus" />
+              </ControlButton>
+            )}
             {editing && (
               <ControlButton
                 className="lock-button"
@@ -939,6 +986,13 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             )}
           </Controls>
         </ReactFlow>
+        {editing && selectedNode && (
+          // The concept in hand: its picture and colour, or away with it.
+          <div className="selection-bar" role="toolbar" aria-label="Concetto scelto">
+            <BigButton icon="image" label="Immagine" onClick={() => setDialog({ kind: 'style' })} />
+            <BigButton icon="trash" label="Elimina" variant="danger" onClick={() => actions.removeNodes([selectedNode.id])} />
+          </div>
+        )}
       </div>
 
       {review.active && review.mode === 'interrogazione' && current && (
@@ -957,20 +1011,25 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       {review.active ? (
         <ReviewBar onRepeat={() => current && void reader.readSteps([current])} onOverview={overview} onExit={exitReview} />
       ) : (
-        <nav ref={toolbarRef} className={`toolbar${crowded ? ' is-crowded' : ''}`} aria-label="Strumenti">
-          <BigButton icon="plus" label="Concetto" variant="primary" className={target('concetto')} onClick={() => addConcept()} />
-          <BigButton icon="mic" label="Detta" className={target('detta')} onClick={dictate} disabled={dictation.listening} />
-          {reader.active ? (
-            <BigButton icon="stop" label="Stop" onClick={() => void reader.stop()} />
-          ) : (
-            <BigButton icon="speak" label="Leggi" className={target('leggi')} onClick={reader.readMap} />
-          )}
-          <BigButton icon="brain" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
-          {moreTools.map(({ key, className = '', ...t }) => (
-            <BigButton key={key} {...t} className={`toolbar-extra ${className}`} />
-          ))}
-          <BigButton icon="menu" label="Altro" className="toolbar-more" aria-haspopup="dialog" onClick={() => setDialog({ kind: 'more' })} />
-        </nav>
+        <div className="dock">
+          <nav ref={toolbarRef} className={`toolbar${crowded ? ' is-crowded' : ''}`} aria-label="Strumenti">
+            <BigButton icon="plus" label="Concetto" variant="primary" className={target('concetto')} onClick={() => addConcept()} />
+            <BigButton icon="mic" label="Detta" className={target('detta')} onClick={dictate} disabled={dictation.listening} />
+            {reader.active ? (
+              <BigButton icon="stop" label="Stop" onClick={() => void reader.stop()} />
+            ) : (
+              <BigButton icon="speak" label="Leggi" className={target('leggi')} onClick={reader.readMap} />
+            )}
+            <BigButton icon="brain" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
+            {moreTools.map(({ key, className = '', ...t }) => (
+              <BigButton key={key} {...t} className={`toolbar-extra ${className}`} />
+            ))}
+            <BigButton icon="menu" label="Altro" className="toolbar-more" aria-haspopup="dialog" onClick={() => setDialog({ kind: 'more' })} />
+          </nav>
+        </div>
+      )}
+      {focusMode && (
+        <BigButton icon="close" label="Mostra i pulsanti" className="focus-exit" onClick={() => setFocus(false)} />
       )}
 
       <div className="editor-notices">
@@ -1021,7 +1080,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       {dialog?.kind === 'more' && (
         <Dialog title="Altro" onClose={() => setDialog(null)} className="more-tools" sheet>
           <div className="more-grid">
-            {moreTools.map(({ key, onClick, className: _group, ...t }) => (
+            {[...moreTools, ...mapTools].map(({ key, onClick, className: _group, ...t }) => (
               <BigButton
                 key={key}
                 {...t}

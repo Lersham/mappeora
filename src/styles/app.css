@@ -509,6 +509,7 @@ textarea {
 /* ---------- Editor ---------- */
 
 .editor {
+  position: relative;
   display: grid;
   grid-template-rows: auto 1fr auto;
   /* minmax(0, …) stops the scrollable toolbar from widening the page. */
@@ -581,7 +582,7 @@ textarea {
 /* Above the map: concepts scrolled under a bar never show through it (and
    tools that check contrast see the bar, not the concept behind). */
 .topbar,
-.toolbar,
+.dock,
 .tutorial {
   position: relative;
   z-index: 1;
@@ -660,6 +661,7 @@ textarea {
   visibility: hidden;
 }
 .canvas {
+  position: relative;
   min-height: 0;
 }
 /* Focusing a concept outside the visible area made the browser scroll these
@@ -685,11 +687,13 @@ textarea {
 }
 /* Where the whole toolbar fits, its tools come in groups: the first is the
    phone's bar, the others are what «Altro» holds. A hairline between them. */
-.toolbar .group-start {
+.toolbar .group-start,
+.topbar .group-start {
   position: relative;
   margin-left: 9px;
 }
-.toolbar .group-start::before {
+.toolbar .group-start::before,
+.topbar .group-start::before {
   content: '';
   position: absolute;
   left: -7px;
@@ -749,38 +753,123 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Phones: the title gets a line of its own instead of being cut short. */
-@media (max-width: 560px) {
-  .topbar {
-    flex-wrap: wrap;
-    row-gap: 0;
-    padding-block: max(6px, env(safe-area-inset-top)) 6px;
-  }
-  .topbar > .big-button:first-child {
-    margin-right: auto;
-  }
-  /* «Mappe», «Annulla» and «Ripeti» stay on one row with large text too:
-     each word under its icon. */
+/* Narrow screens: one row, the map gets the height. «Mappe», «Annulla» and
+   «Ripeti» show only their icon (the most familiar ones there are), their
+   word stays in aria-label and title; a long title ends with «…». */
+@media (max-width: 760px) {
   .topbar .big-button {
-    flex-direction: column;
     min-width: 44px;
     padding: 2px 8px;
-    gap: 2px;
+  }
+  .topbar .big-button-label {
+    display: none;
+  }
+}
+/* Phones: «Salva» and «Aspetto» are in «Altro». */
+@media (max-width: 560px) {
+  .topbar {
+    padding-block: max(4px, env(safe-area-inset-top)) 4px;
+  }
+  .topbar .big-button {
+    padding-inline: 6px;
   }
   .topbar .big-button-icon {
     font-size: min(1.3rem, 6.5vw);
   }
-  .topbar .big-button-label {
-    font-size: min(0.75rem, 3.4vw);
-    letter-spacing: normal;
-  }
-  .title-field {
-    order: 1;
-    flex-basis: 100%;
+  .topbar .topbar-map {
+    display: none;
   }
   .title-input {
     font-size: 1.05rem;
+    padding-inline: 4px;
   }
+}
+
+/* The concept in hand: its tools float at the bottom of the map, only while
+   it is chosen. On a phone at the right, clear of the zoom buttons. */
+.selection-bar {
+  position: absolute;
+  z-index: 5;
+  bottom: 8px;
+  right: 12px;
+  display: flex;
+  gap: 2px;
+  padding: 2px 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+}
+.selection-bar .big-button {
+  flex-direction: row;
+  gap: 6px;
+  min-height: 44px;
+  padding: 2px 12px;
+  background: transparent;
+}
+.selection-bar .big-button-label {
+  font-size: 0.85rem;
+}
+
+/* Wide screens: the toolbar floats over the map, as wide as its buttons,
+   and the map goes on under and beside it. Not with «Altro» (large text)
+   or the tutorial card, which sits below the map. */
+@media (min-width: 700px) {
+  .editor.has-dock:not(.is-reviewing) .dock {
+    position: absolute;
+    left: 50%;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100% - 24px);
+    z-index: 5;
+  }
+  .editor.has-dock .toolbar {
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 4px 18px rgb(0 0 0 / 0.12);
+  }
+  .editor.has-dock .toolbar .big-button {
+    flex: 0 0 auto;
+    padding-inline: 10px;
+  }
+  /* Just above the floating toolbar. */
+  .editor.has-dock .selection-bar {
+    bottom: 96px;
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+/* «Solo la mappa»: nothing but the concepts, and one way back. */
+.editor.is-focus {
+  grid-template-rows: minmax(0, 1fr);
+}
+.editor.is-focus > .topbar,
+.editor.is-focus > .dock,
+.editor.is-focus > .tutorial,
+.editor.is-focus .selection-bar,
+.editor.is-focus .react-flow__controls {
+  display: none;
+}
+.focus-exit.big-button {
+  position: absolute;
+  z-index: 5;
+  top: max(12px, env(safe-area-inset-top));
+  right: 12px;
+  flex-direction: row;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+}
+.focus-exit .big-button-label {
+  font-size: 0.85rem;
 }
 
 /* React Flow theming */
@@ -928,6 +1017,19 @@ textarea {
 .react-flow__controls-button {
   width: 44px;
   height: 44px;
+}
+/* On a touch screen two fingers zoom: «+» and «−» only take room over the map. */
+@media (pointer: coarse) {
+  .react-flow__controls-zoomin,
+  .react-flow__controls-zoomout {
+    display: none;
+  }
+}
+.react-flow__controls-button.focus-button svg {
+  width: 1.15rem;
+  max-width: none;
+  max-height: none;
+  fill: none;
 }
 
 /* ---------- Concept node ---------- */
