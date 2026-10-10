@@ -11,6 +11,11 @@ import { reviewVisibility, useReview } from '../../store/reviewStore';
 import { illustrationUrl } from '../../services/illustrations';
 import { Icon } from '../../components/Icon';
 
+/** Holding a concept this long (ms), then letting go, opens it for renaming. */
+const HOLD_MS = 500;
+/** A finger or mouse that moves more than this (px) is dragging or panning, not holding. */
+const HOLD_SLOP = 5;
+
 /** What a concept can ask of the editor. The same object for every concept, so they don't re-render for it. */
 export interface ConceptActions {
   /** Collapses/expands, keeping the concept where it is on screen. */
@@ -102,6 +107,20 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const [draft, setDraft] = useState(data.label);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Hold to rename (there is no double tap): after HOLD_MS the concept shows it is
+  // ready («armed»); renaming starts when the finger is lifted, so that the keyboard
+  // opens inside the gesture. What the lift sends after it (mouse events, click) is
+  // swallowed: it would select the concept again and take the focus off the field.
+  const hold = useRef<{ x: number; y: number; ready: boolean; timer: number } | null>(null);
+  const swallow = useRef(false);
+  const [armed, setArmed] = useState(false);
+  const cancelHold = () => {
+    if (hold.current) window.clearTimeout(hold.current.timer);
+    hold.current = null;
+    setArmed(false);
+  };
+  useEffect(() => () => window.clearTimeout(hold.current?.timer), []);
+
   useEffect(() => {
     if (!editing) return;
     // A concept just added stays invisible until React Flow has measured
@@ -120,7 +139,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
     return () => cancelAnimationFrame(frame);
   }, [editing]);
 
-  // A concept just made opens ready for typing: no double tap needed.
+  // A concept just made opens ready for typing: no long press needed.
   const editRequested = useMapStore((s) => s.editingId === id);
   useEffect(() => {
     if (!editRequested) return;
@@ -138,16 +157,46 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
 
   return (
     <div
-      className={`concept-node shape-${data.shape ?? 'rettangolo'}${selected ? ' is-selected' : ''}${isReading ? ' is-reading' : ''} review-${visibility}`}
+      className={`concept-node shape-${data.shape ?? 'rettangolo'}${selected ? ' is-selected' : ''}${isReading ? ' is-reading' : ''}${armed ? ' is-armed' : ''} review-${visibility}`}
       style={{ background: data.color }}
-      onDoubleClick={(e) => {
-        // A double tap on 🔊 or on «−», or a double click to select a word
-        // in the box, is not a request to rename.
-        if (reviewing || editing) return;
+      onPointerDown={(e) => {
+        swallow.current = false;
+        cancelHold();
+        if (reviewing || editing || !e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
+        // Holding 🔊 or «−», or the field itself, is not a request to rename.
         if (e.target instanceof Element && e.target.closest('button, textarea')) return;
+        const h = { x: e.clientX, y: e.clientY, ready: false, timer: 0 };
+        h.timer = window.setTimeout(() => {
+          h.ready = true;
+          setArmed(true);
+        }, HOLD_MS);
+        hold.current = h;
+      }}
+      onPointerMove={(e) => {
+        const h = hold.current;
+        if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > HOLD_SLOP) cancelHold();
+      }}
+      onPointerUp={() => {
+        const ready = hold.current?.ready;
+        cancelHold();
+        if (!ready) return;
+        swallow.current = true;
+        useMapStore.getState().select(id);
         setDraft(data.label);
         setEditing(true);
       }}
+      onPointerCancel={cancelHold}
+      onPointerLeave={cancelHold}
+      onMouseDownCapture={(e) => {
+        if (swallow.current) e.preventDefault();
+      }}
+      onClickCapture={(e) => {
+        if (!swallow.current) return;
+        swallow.current = false;
+        e.stopPropagation();
+      }}
+      // A long press on a touch screen would open the browser's own menu.
+      onContextMenu={(e) => e.preventDefault()}
     >
       {data.layout === 'foglio' ? <SheetHandles role={data.role ?? 'item'} kind="target" /> : <Handle type="target" position={Position.Top} />}
       {visibility === 'mystery' ? (

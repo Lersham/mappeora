@@ -25,7 +25,7 @@ export interface TutorialStep {
 export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     title: 'L’idea principale',
-    text: 'Tocca due volte il riquadro al centro e scrivi di che cosa parla la tua mappa. Per esempio: «Il sole». Poi premi Invio.',
+    text: 'Tieni premuto il riquadro al centro, poi alza il dito, e scrivi di che cosa parla la tua mappa. Per esempio: «Il sole». Poi premi Invio.',
     done: (now, start) => {
       const root = start.map.nodes[0];
       const label = now.map.nodes.find((n) => n.id === root?.id)?.label;
@@ -40,7 +40,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Dagli un nome',
-    text: 'Il riquadro nuovo è già pronto: scrivi un’idea che c’entra, per esempio «Luce e calore», e premi Invio. Per cambiare un nome più tardi, tocca due volte il riquadro.',
+    text: 'Il riquadro nuovo è già pronto: scrivi un’idea che c’entra, per esempio «Luce e calore», e premi Invio. Per cambiare un nome più tardi, tieni premuto il riquadro.',
     done: (now) => now.map.nodes.length > 1 && !now.map.nodes.some((n) => n.label === NEW_CONCEPT_LABEL),
   },
   {

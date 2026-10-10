@@ -19,7 +19,8 @@ Bastano 4 o 5 persone per trovare la maggior parte dei problemi di uso. È megli
 | # | Compito | Cosa osservare | Riuscito se |
 |---|---|---|---|
 | 1 | «Fai una mappa sul brano, partendo da una foto della pagina.» | Trova «Dal libro»? Capisce l'evidenziatore? | Almeno 4 concetti in 5 minuti |
-| 2 | «Aggiungi un concetto sotto quello principale e scrivigli un nome.» | Scrive subito nel riquadro aperto, o cerca il doppio tocco? | Fatto senza aiuto |
+| 2 | «Aggiungi un concetto sotto quello principale e scrivigli un nome.» | Scrive subito nel riquadro aperto? | Fatto senza aiuto |
+| 2b | «Cambia il nome di un concetto. Poi dagli un colore e un disegno.» | Scopre da solo che per il nome si **tiene premuto** e per colore e disegno si **tocca ancora** un concetto già scelto? Il dialogo si apre quando voleva solo toccarlo? Alza il dito al contorno tratteggiato o lo toglie troppo presto? | Fatto in 2 minuti, con al più un suggerimento |
 | 3 | «Scrivi sulla freccia come sono legati.» | Trova il «+» o la linea? | Parola di collegamento messa |
 | 4 | «Fatti leggere la mappa.» | Segue la parola illuminata? La voce è comprensibile? | Ascolta fino alla fine |
 | 4b | «Muovi la mappa con un dito e ingrandiscila con due, anche partendo da sopra un riquadro.» | Si sposta qualche concetto per sbaglio? Trova 🔒/🔓 quando vuole spostarne uno? | Nessun concetto spostato per sbaglio |
@@ -60,6 +61,11 @@ Per ogni casella: ✅, ❌ con una nota, oppure «lenta» con i secondi misurati
   - senza internet (su Android si usa il riconoscimento sul dispositivo, se c'è l'italiano offline);
   - con un permesso negato.
 - **«Dal libro»** con foto vere: un libro sul banco con la luce della finestra, una fotocopia, un quaderno a righe (la scrittura a mano non è supportata: deve dirlo con chiarezza).
+- **Gesti sul concetto** (un tocco sul concetto scelto apre «Immagine e colore»; tenerlo premuto mezzo secondo e alzare il dito apre il nome). Non sono mai stati provati su un dispositivo fisico, solo con un tocco emulato in Chromium:
+  - iPad e iPhone (Safari): la tastiera compare quando si alza il dito? Il menu o la lente di ingrandimento del testo non compaiono sul concetto?
+  - Android, app e Chrome: stessa domanda; nessun menu del browser dopo la pressione.
+  - Mouse (computer, Chromebook): tenere premuto funziona come sul touch.
+  - Un tocco lento sul concetto scelto apre il dialogo quando non si voleva? Se succede spesso, valutare di spostare «Immagine e colore» sulla pressione prolungata.
 - **Prestazioni:**
   - sul telefono economico, la mappa d'esempio (37 concetti) e una da 130 concetti;
   - trascinare, aggiungere, leggere;
