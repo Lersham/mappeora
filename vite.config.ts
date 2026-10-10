@@ -24,7 +24,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,woff2,webp}'],
         runtimeCaching: [
           {
             // OCR engine and Italian model (Tesseract.js), downloaded on first use.

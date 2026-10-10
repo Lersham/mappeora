@@ -1,5 +1,5 @@
 import { test, expect, say, spoken } from './fixtures';
-import { newMap, node, nodes, onScreen, rename, tapLink, toolbar } from './helpers';
+import { mascot, newMap, node, nodes, onScreen, rename, tapLink, toolbar } from './helpers';
 
 test.describe('Impara facendo', () => {
   test('dalla home costruisce una mappa vera, un passo alla volta', async ({ page }) => {
@@ -15,6 +15,7 @@ test.describe('Impara facendo', () => {
 
     await expect(coach.getByRole('heading', { name: 'L’idea principale' })).toBeVisible();
     await expect(coach).toContainText('Passo 1 di 9');
+    await mascot(coach, 'indica');
     await expect(page.locator('.title-input')).toHaveValue('La mia prima mappa');
     // Until the step is done there is only «Salta».
     await expect(coach.getByRole('button', { name: 'Avanti' })).toHaveCount(0);
@@ -22,7 +23,10 @@ test.describe('Impara facendo', () => {
     await expect.poll(() => spoken(page)).toContainEqual(expect.stringContaining('L’idea principale.'));
 
     await rename(page, 'La mia prima mappa', 'Il sole');
+    // Done: it cheers; on the next step it points again.
+    await mascot(coach, 'esulta');
     await next('Un nuovo concetto');
+    await mascot(coach, 'indica');
 
     const concept = bar.getByRole('button', { name: 'Concetto', exact: true });
     await expect(concept).toHaveClass(/tutorial-target/);

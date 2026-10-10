@@ -1,11 +1,12 @@
 import { test, expect, freshInstall, spoken } from './fixtures';
-import { fakeOcr, highlight, node, nodes, photographPage } from './helpers';
+import { fakeOcr, highlight, mascot, node, nodes, photographPage } from './helpers';
 
 test.describe('Benvenuto', () => {
   test('al primo avvio spiega l’app pagina per pagina, poi non si ripresenta', async ({ page }) => {
     await freshInstall(page);
     const welcome = page.getByRole('dialog', { name: 'Come funziona' });
     await expect(welcome.getByRole('heading', { name: 'Benvenuto in MappAmi' })).toBeVisible();
+    await mascot(welcome, 'mappa');
 
     await welcome.getByRole('button', { name: 'Ascolta' }).click();
     await expect.poll(() => spoken(page)).toContainEqual(expect.stringContaining('Benvenuto in MappAmi.'));

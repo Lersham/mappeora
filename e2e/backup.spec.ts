@@ -20,11 +20,12 @@ test.describe('Copia di sicurezza', () => {
     expect(json.format).toBe('mappeora-archivio');
     expect(json.maps.map((m: { title: string }) => m.title).sort()).toEqual(['Gli animali', 'Il ciclo dell’acqua', 'Le stagioni']);
     await expect(page.getByRole('status')).toContainText('Ho salvato 3 mappe');
-    // Done: the reminder makes room for the quiet card at the bottom.
+    // Done: the reminder makes room for the quiet card at the bottom, which
+    // says how things stand instead of warning.
     await expect(page.getByText('Fai una copia delle tue mappe')).toHaveCount(0);
+    await expect(reminder).toContainText('Ultima copia di sicurezza: oggi. È aggiornata');
 
     // One map is lost...
-    page.once('dialog', (d) => void d.accept());
     await page.getByRole('button', { name: 'Cancella Gli animali' }).click();
     await expect(page.locator('.map-card')).toHaveCount(2);
 
@@ -35,6 +36,8 @@ test.describe('Copia di sicurezza', () => {
     await expect(page.getByRole('status')).toHaveText('Ho ritrovato 1 mappa (2 c’erano già).');
     await expect(page.locator('.map-card')).toHaveCount(3);
     await expect(page.locator('.map-title')).toContainText(['Gli animali']);
+    // Back from the copy: nothing left to undo.
+    await expect(page.locator('.map-removed')).toHaveCount(0);
   });
 
   test('«Più tardi» rimanda il promemoria', async ({ page }) => {
@@ -46,6 +49,7 @@ test.describe('Copia di sicurezza', () => {
     await expect(page.locator('.map-card')).toHaveCount(3);
     await expect(page.getByText('Fai una copia delle tue mappe')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Salva tutte le mappe' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Copia di sicurezza' })).toContainText('Le tue mappe sono su questo dispositivo');
   });
 
   test('su iPhone e iPad, fuori dalla schermata Home, consiglia di aggiungerla', async ({ browser }) => {

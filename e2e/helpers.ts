@@ -12,6 +12,30 @@ export async function newMap(page: Page, title: string, template: TemplateName =
   await expect(page.locator('.title-input')).toHaveValue(title);
 }
 
+/** Many maps at once, from a safety copy opened on the home screen; the last title is the latest map. */
+export async function openCopy(page: Page, titles: string[]) {
+  const maps = titles.map((title, i) => ({
+    id: `m${i}`, title, createdAt: i + 1, updatedAt: Date.now() - (titles.length - i) * 60_000, template: 'libera', edges: [],
+    nodes: [{ id: 'a', label: title, position: { x: 0, y: 0 } }],
+  }));
+  await page.goto('/');
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Apri file' }).click();
+  await (await chooser).setFiles({
+    name: 'copia.mappami', mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ format: 'mappeora-archivio', version: 1, savedAt: 1, maps })),
+  });
+  await expect(page.getByRole('status')).toContainText(`Ho ritrovato ${titles.length} mappe`);
+}
+
+/** The MappAmi character in that pose, its picture really loaded (not a broken image). */
+export async function mascot(where: Page | Locator, pose: 'mappa' | 'indica' | 'esulta' | 'cerca' | 'ops') {
+  const img = where.locator('img.mascot');
+  await expect(img).toBeVisible();
+  await expect(img).toHaveAttribute('src', new RegExp(`${pose}-[\\w-]+\\.webp$`));
+  await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth)).toBeGreaterThan(0);
+}
+
 /** Like a person would: if the concept is off screen, look at the whole map. */
 export async function onScreen(page: Page, target: Locator): Promise<Locator> {
   const [box, canvas] = [await target.boundingBox(), await page.locator('.react-flow').boundingBox()];
