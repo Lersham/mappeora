@@ -21,7 +21,7 @@ import type { MapNode, NodeShape } from '../../types/map';
 const GOOGLE_STEPS = [
   'Premi «Cerca su Google»: si apre Google Immagini con il filtro per ragazzi.',
   'Tieni premuta l’immagine che ti piace e scegli «Copia immagine».',
-  'Torna qui e premi «Incolla immagine».',
+  'Torna qui: l’immagine arriva da sola. Se non arriva, premi «Incolla immagine».',
 ];
 
 /** Shown when the search finds nothing: common subjects at school. */
@@ -55,6 +55,10 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
   const [busy, setBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [showPasteBox, setShowPasteBox] = useState(false);
+  /** Back from Google without a picture: «Incolla immagine» stands out. */
+  const [pasteHint, setPasteHint] = useState(false);
+  /** Google is open: when the child comes back, the copied picture comes with them. */
+  const awayAtGoogle = useRef(false);
   /** The illustration being downloaded: dropped when the dialog closes. */
   const pending = useRef<AbortController | null>(null);
   useEffect(
@@ -137,6 +141,32 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     if (pasted === null) return setShowPasteBox(true);
     await usePasted(pasted);
   };
+
+  const searchGoogle = () => {
+    awayAtGoogle.current = true;
+    setPasteHint(false);
+    openGoogleImages(query);
+  };
+
+  // Back from Google (the app or tab shows again): the picture just copied
+  // goes in by itself, where the browser lets the app read the clipboard.
+  // Only a picture: text there may be anything copied before.
+  useEffect(() => {
+    if (tab !== 'foto') return;
+    const back = async () => {
+      if (!awayAtGoogle.current || document.visibilityState !== 'visible') return;
+      awayAtGoogle.current = false;
+      const pasted = await readClipboardImage();
+      if (pasted instanceof Blob || (typeof pasted === 'string' && /^data:image\//i.test(pasted.trim()))) void usePasted(pasted);
+      else setPasteHint(true);
+    };
+    window.addEventListener('focus', back);
+    document.addEventListener('visibilitychange', back);
+    return () => {
+      window.removeEventListener('focus', back);
+      document.removeEventListener('visibilitychange', back);
+    };
+  }, [tab]);
 
   // Ctrl+V / Cmd+V anywhere while the "Foto e Google" tab is open.
   useEffect(() => {
@@ -239,9 +269,20 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
           <h3 className="photo-web-title">Da Google Immagini</h3>
           {searchRow}
           <div className="photo-sources">
-            <BigButton icon="search" label="Cerca su Google" disabled={busy || !query.trim()} onClick={() => openGoogleImages(query)} />
-            <BigButton icon="paste" label="Incolla immagine" disabled={busy} onClick={() => void pasteFromClipboard()} />
+            <BigButton icon="search" label="Cerca su Google" disabled={busy || !query.trim()} onClick={searchGoogle} />
+            <BigButton
+              icon="paste"
+              label="Incolla immagine"
+              variant={pasteHint ? 'primary' : 'default'}
+              disabled={busy}
+              onClick={() => void pasteFromClipboard()}
+            />
           </div>
+          {pasteHint && (
+            <p className="muted small" role="status">
+              Hai copiato un’immagine? Premi «Incolla immagine».
+            </p>
+          )}
           <Listenable text={GOOGLE_STEPS.join(' ')} label="Ascolta come fare">
             <ol className="photo-web-steps muted small">
               {GOOGLE_STEPS.map((step) => (

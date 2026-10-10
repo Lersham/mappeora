@@ -14,7 +14,7 @@ test.describe('Impara facendo', () => {
     };
 
     await expect(coach.getByRole('heading', { name: 'L’idea principale' })).toBeVisible();
-    await expect(coach).toContainText('Passo 1 di 7');
+    await expect(coach).toContainText('Passo 1 di 8');
     await expect(page.locator('.title-input')).toHaveValue('La mia prima mappa');
     // Until the step is done there is only «Salta».
     await expect(coach.getByRole('button', { name: 'Avanti' })).toHaveCount(0);
@@ -45,6 +45,15 @@ test.describe('Impara facendo', () => {
     await say(page, 'Estate');
     await toolbar(page, 'Detta');
     await expect(node(page, 'Estate')).toBeVisible();
+    await next('Un’immagine');
+
+    await node(page, 'Estate').click();
+    const image = page.getByRole('toolbar', { name: 'Concetto scelto' }).getByRole('button', { name: 'Immagine', exact: true });
+    await expect(image).toHaveClass(/tutorial-target/);
+    await image.click();
+    await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('sole');
+    await page.locator('.illustration-tile').first().click();
+    await expect(node(page, 'Estate').locator('.concept-illustration, .concept-emoji')).toBeVisible();
     await next('Ce l’hai fatta!');
 
     await expect(coach.getByRole('button', { name: 'Chiudi' })).toHaveCount(0);
@@ -63,7 +72,7 @@ test.describe('Impara facendo', () => {
     const coach = page.getByRole('region', { name: 'Tutorial' });
     await coach.getByRole('button', { name: 'Salta' }).click();
     await expect(coach.getByRole('heading', { name: 'Un nuovo concetto' })).toBeVisible();
-    await expect(coach).toContainText('Passo 2 di 7');
+    await expect(coach).toContainText('Passo 2 di 8');
     await coach.getByRole('button', { name: 'Chiudi' }).click();
     await expect(coach).toHaveCount(0);
     await expect(page.locator('.tutorial-target')).toHaveCount(0);

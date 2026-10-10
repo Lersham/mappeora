@@ -989,7 +989,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         {editing && selectedNode && (
           // The concept in hand: its picture and colour, or away with it.
           <div className="selection-bar" role="toolbar" aria-label="Concetto scelto">
-            <BigButton icon="image" label="Immagine" onClick={() => setDialog({ kind: 'style' })} />
+            <BigButton icon="image" label="Immagine" className={target('immagine')} onClick={() => setDialog({ kind: 'style' })} />
             <BigButton icon="trash" label="Elimina" variant="danger" onClick={() => actions.removeNodes([selectedNode.id])} />
           </div>
         )}

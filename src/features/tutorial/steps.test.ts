@@ -55,6 +55,15 @@ describe('TUTORIAL_STEPS', () => {
     expect(step('Detta un concetto')(at(withChild('Estate')), at(first))).toBe(true);
   });
 
+  it('notices a picture put on a concept, not one already there', () => {
+    const done = step('Un’immagine');
+    const plain = withChild('Luce');
+    const pictured = (ref: string): ConceptMap => ({ ...plain, nodes: plain.nodes.map((n) => (n.id === 'b' ? { ...n, image: { kind: 'emoji', ref } } : n)) });
+    expect(done(at(plain), at(plain))).toBe(false);
+    expect(done(at(pictured('☀️')), at(plain))).toBe(true);
+    expect(done(at(pictured('☀️')), at(pictured('☀️')))).toBe(false);
+  });
+
   it('ends with a step that has nothing to check', () => {
     expect(TUTORIAL_STEPS.at(-1)?.done).toBeUndefined();
   });

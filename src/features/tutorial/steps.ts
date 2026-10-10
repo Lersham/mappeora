@@ -5,7 +5,7 @@ import { NEW_CONCEPT_LABEL } from '../../lib/mapFactory';
 export const TUTORIAL_TITLE = 'La mia prima mappa';
 
 /** The toolbar button a step asks for: it is highlighted. */
-export type TutorialTarget = 'concetto' | 'detta' | 'leggi';
+export type TutorialTarget = 'concetto' | 'detta' | 'leggi' | 'immagine';
 
 /** What the child has done so far, as the tutorial sees it. */
 export interface TutorialProgress {
@@ -60,6 +60,13 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     text: 'Premi «Detta» e di’ una parola, per esempio «Estate». MappAmi la scrive per te in un riquadro nuovo. Se non puoi usare il microfono, premi «Salta».',
     target: 'detta',
     done: (now, start) => now.map.nodes.length > start.map.nodes.length,
+  },
+  {
+    title: 'Un’immagine',
+    text: 'Tocca un riquadro e premi «Immagine». Scegli un disegno, oppure apri «Foto e Google» e premi «Cerca su Google»: tieni premuta l’immagine che ti piace, scegli «Copia immagine» e torna qui. L’immagine arriva da sola; se non arriva, premi «Incolla immagine».',
+    target: 'immagine',
+    done: (now, start) =>
+      now.map.nodes.some((n) => n.image && n.image.ref !== start.map.nodes.find((s) => s.id === n.id)?.image?.ref),
   },
   {
     title: 'Ce l’hai fatta!',

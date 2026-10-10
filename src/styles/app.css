@@ -2077,7 +2077,8 @@ textarea {
   }
 }
 /* The button the tutorial asks for. */
-.toolbar .tutorial-target {
+.toolbar .tutorial-target,
+.selection-bar .tutorial-target {
   outline: 4px solid var(--primary);
   outline-offset: -4px;
   animation: tutorial-glow 1.4s ease-in-out infinite;
@@ -2088,7 +2089,8 @@ textarea {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .toolbar .tutorial-target {
+  .toolbar .tutorial-target,
+  .selection-bar .tutorial-target {
     animation: none;
   }
 }
