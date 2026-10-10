@@ -30,7 +30,8 @@ test.describe('Immagini nei concetti', () => {
     await newMap(page, 'Il Colosseo');
     await node(page, 'Il Colosseo').click();
     await toolbar(page, 'Immagine');
-    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    // No drawing for «Il Colosseo»: the dialog opens on the photos by itself.
+    await expect(page.getByRole('button', { name: 'Foto', exact: true })).toHaveAttribute('aria-pressed', 'true');
     // Already searching the concept's name.
     const tile = page.getByRole('button', { name: 'Il Colosseo', exact: true });
     await expect(tile).toBeVisible();
@@ -44,7 +45,7 @@ test.describe('Immagini nei concetti', () => {
     await newMap(page, 'Il Colosseo');
     await node(page, 'Il Colosseo').click();
     await toolbar(page, 'Immagine');
-    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    await page.getByRole('button', { name: 'Foto', exact: true }).click();
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('nulla da trovare');
     await expect(page.getByRole('status').filter({ hasText: 'Su Wikipedia non c’è un’immagine' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Cerca su Google' })).toBeEnabled();
@@ -55,7 +56,7 @@ test.describe('Immagini nei concetti', () => {
     await page.context().route(/it\.wikipedia\.org/, (route) => route.abort('internetdisconnected'));
     await node(page, 'Il Colosseo').click();
     await toolbar(page, 'Immagine');
-    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    await page.getByRole('button', { name: 'Foto', exact: true }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Wikipedia non risponde' })).toBeVisible();
   });
 
@@ -63,7 +64,7 @@ test.describe('Immagini nei concetti', () => {
     await newMap(page, 'Il Colosseo');
     await node(page, 'Il Colosseo').click();
     await toolbar(page, 'Immagine');
-    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    await page.getByRole('button', { name: 'Foto', exact: true }).click();
     const popup = page.waitForEvent('popup');
     await page.getByRole('button', { name: 'Cerca su Google' }).click();
     const url = new URL((await popup).url());
@@ -77,7 +78,7 @@ test.describe('Immagini nei concetti', () => {
     await newMap(page, 'Il Colosseo');
     await node(page, 'Il Colosseo').click();
     await toolbar(page, 'Immagine');
-    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    await page.getByRole('button', { name: 'Foto', exact: true }).click();
     await page.evaluate(async (b64) => {
       const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': new Blob([bytes], { type: 'image/png' }) })]);
@@ -91,7 +92,7 @@ test.describe('Immagini nei concetti', () => {
     await newMap(page, 'Il Colosseo');
     await node(page, 'Il Colosseo').click();
     await toolbar(page, 'Immagine');
-    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    await page.getByRole('button', { name: 'Foto', exact: true }).click();
     const popup = page.waitForEvent('popup');
     await page.getByRole('button', { name: 'Cerca su Google' }).click();
     // On Google: «Copia immagine», then back to MappAmi.
@@ -109,7 +110,7 @@ test.describe('Immagini nei concetti', () => {
     await newMap(page, 'Il Colosseo');
     await node(page, 'Il Colosseo').click();
     await toolbar(page, 'Immagine');
-    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    await page.getByRole('button', { name: 'Foto', exact: true }).click();
     await page.evaluate(() => navigator.clipboard.writeText('un testo copiato prima'));
     const popup = page.waitForEvent('popup');
     await page.getByRole('button', { name: 'Cerca su Google' }).click();
@@ -125,7 +126,7 @@ test.describe('Immagini nei concetti', () => {
     await newMap(page, 'Il Colosseo');
     await node(page, 'Il Colosseo').click();
     await toolbar(page, 'Immagine');
-    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    await page.getByRole('button', { name: 'Foto', exact: true }).click();
     await page.evaluate(() => navigator.clipboard.writeText('ciao'));
     await page.getByRole('button', { name: 'Incolla immagine' }).click();
     await expect(page.getByRole('alert')).toContainText('Copia immagine');
@@ -135,7 +136,7 @@ test.describe('Immagini nei concetti', () => {
     await newMap(page, 'Il mio esperimento');
     await node(page, 'Il mio esperimento').click();
     await toolbar(page, 'Immagine');
-    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    await page.getByRole('button', { name: 'Foto', exact: true }).click();
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: 'Dalla galleria' }).click();
     await (await chooser).setFiles({ name: 'foto.png', mimeType: 'image/png', buffer: PNG_1PX });

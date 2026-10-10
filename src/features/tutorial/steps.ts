@@ -63,7 +63,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Un’immagine',
-    text: 'Tocca un riquadro e premi «Immagine». Scegli un disegno, oppure apri «Foto e Google» e tocca una foto di Wikipedia. Non c’è quella giusta? Premi «Cerca su Google», tieni premuta l’immagine, scegli «Copia immagine» e torna qui: arriva da sola.',
+    text: 'Tocca un riquadro e premi «Immagine». Scegli un disegno, oppure apri «Foto» e tocca una foto di Wikipedia. Non c’è quella giusta? Premi «Cerca su Google», tieni premuta l’immagine, scegli «Copia immagine» e torna qui: arriva da sola.',
     target: 'immagine',
     done: (now, start) =>
       now.map.nodes.some((n) => n.image && n.image.ref !== start.map.nodes.find((s) => s.id === n.id)?.image?.ref),

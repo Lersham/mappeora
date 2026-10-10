@@ -44,12 +44,18 @@ type Tab = 'illustrazioni' | 'foto';
 
 const TABS: { value: Tab; label: string }[] = [
   { value: 'illustrazioni', label: 'Illustrazioni' },
-  { value: 'foto', label: 'Foto e Google' },
+  { value: 'foto', label: 'Foto' },
 ];
 
 export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): void }) {
   const updateNode = useMapStore((s) => s.updateNode);
-  const [tab, setTab] = useState<Tab>('illustrazioni');
+  const [tab, setTabState] = useState<Tab>('illustrazioni');
+  /** The child picked a tab: the dialog no longer picks one for them. */
+  const tabChosen = useRef(false);
+  const setTab = (t: Tab) => {
+    tabChosen.current = true;
+    setTabState(t);
+  };
   const [query, setQuery] = useState(node.label);
   const [illustrations, setIllustrations] = useState<Illustration[] | null>(null);
   const [suggested, setSuggested] = useState<Illustration[]>([]);
@@ -83,6 +89,11 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     };
   }, [query, tab]);
   useEffect(() => void illustrationsFor(SUGGESTED).then(setSuggested), []);
+  // No drawing for this concept (a place, a person, an event): the
+  // dialog opens on the photos, where Wikipedia has them.
+  useEffect(() => {
+    void searchIllustrations(node.label).then((r) => r.length === 0 && !tabChosen.current && setTabState('foto'));
+  }, []);
 
   // Wikipedia is asked once the child stops typing for a moment.
   useEffect(() => {
@@ -202,7 +213,7 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     };
   }, [tab]);
 
-  // Ctrl+V / Cmd+V anywhere while the "Foto e Google" tab is open.
+  // Ctrl+V / Cmd+V anywhere while the "Foto" tab is open.
   useEffect(() => {
     if (tab !== 'foto') return;
     const onPaste = (e: ClipboardEvent) => {
