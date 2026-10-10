@@ -16,7 +16,6 @@ import { useStore } from 'zustand';
 import { beginStep, endStep, mapHistory, untracked, useMapStore } from '../../store/mapStore';
 import { reviewVisibility, useReview, type ReviewMode } from '../../store/reviewStore';
 import { ConceptNode, type ConceptActions, type ConceptFlowNode } from './ConceptNode';
-import { NoteDialog } from './NoteDialog';
 import { FreeEdge } from './FreeEdge';
 import { LadderEdge } from './LadderEdge';
 import { BusEdge } from './BusEdge';
@@ -101,7 +100,6 @@ type DialogState =
   | { kind: 'photo' }
   | { kind: 'outline' }
   | { kind: 'more' }
-  | { kind: 'note'; nodeId: string }
   | null;
 
 interface Props {
@@ -238,7 +236,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     () => ({
       toggle: (id) => latest.current.toggleInPlace(id),
       addNear: (id, where) => latest.current.addNear(id, where),
-      openNote: (id) => setDialog({ kind: 'note', nodeId: id }),
     }),
     [],
   );
@@ -286,7 +283,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           hasChildren: parents.has(n.id),
           collapsed: n.collapsed,
           hiddenBelow: collapse.hiddenBelow[n.id] ?? 0,
-          hasNote: !!n.note?.trim(),
           actions: conceptActions,
         },
       };
@@ -637,7 +633,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     afterBulkEdit();
   };
 
-  const doExport = async ({ kind, paper, pages, simple, print, notes }: ExportChoice) => {
+  const doExport = async ({ kind, paper, pages, simple, print }: ExportChoice) => {
     const run = ++exportRun.current;
     const cancelled = () => exportRun.current !== run;
     setExporting(true);
@@ -656,13 +652,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           title: map.title,
           usesPictograms: map.nodes.some((n) => n.image?.kind === 'arasaac'),
           cancelled,
-          // In the order the map is read, as on screen.
-          notes: notes
-            ? readingOrder(visiblePart(map), { depthFirst: sheetTemplate }).flatMap(({ nodeId }) => {
-                const n = map.nodes.find((x) => x.id === nodeId);
-                return n?.note?.trim() ? [{ label: n.label, note: n.note.trim() }] : [];
-              })
-            : undefined,
         });
       }
       // Only this dialog: the child may have opened another meanwhile.
@@ -1010,18 +999,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       {dialog?.kind === 'export' && (
         <ExportDialog
           busy={exporting}
-          hasNotes={visiblePart(map).nodes.some((n) => n.note?.trim())}
           error={exportError}
           onExport={doExport}
           onClose={closeExport}
         />
       )}
       {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
-      {dialog?.kind === 'note' &&
-        (() => {
-          const node = map.nodes.find((n) => n.id === dialog.nodeId);
-          return node ? <NoteDialog node={node} readOnly={review.active} onClose={() => setDialog(null)} /> : null;
-        })()}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'outline' && (
         <OutlineDialog

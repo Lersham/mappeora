@@ -23,6 +23,7 @@ export interface MapNode {
   color?: string;
   shape?: NodeShape;
   image?: NodeImage;
+  /** Left by the removed «Approfondimento»: not shown, but kept so older maps and files lose nothing. */
   note?: string;
   /** Hides the concepts below this one (see lib/collapse.ts). */
   collapsed?: boolean;

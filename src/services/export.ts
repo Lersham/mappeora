@@ -37,8 +37,6 @@ export interface ExportOptions {
   usesPictograms: boolean;
   /** True once «Annulla» was pressed: the file is then never handed over. */
   cancelled?: () => boolean;
-  /** PDF only: the concepts' «Approfondimenti», on the last page(s). Never with `simple`. */
-  notes?: { label: string; note: string }[];
 }
 
 interface RenderedMap {
@@ -95,7 +93,7 @@ function labelRects(flow: HTMLElement, viewport: HTMLElement): Rect[] {
 }
 
 /** Renders the whole map (not just the visible area) to a PNG. */
-async function renderMap(nodes: Node[], background: string, simple: boolean, withNotes: boolean): Promise<RenderedMap> {
+async function renderMap(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
   const flow = document.querySelector<HTMLElement>('.react-flow');
   const el = flow?.querySelector<HTMLElement>('.react-flow__viewport');
   if (!flow || !el) throw new Error('viewport-not-found');
@@ -113,8 +111,6 @@ async function renderMap(nodes: Node[], background: string, simple: boolean, wit
     y: (height - bounds.height) / 2 - bounds.y,
   };
   flow.classList.toggle('export-simple', simple);
-  // The 📝 on a concept only makes sense with the page of notes.
-  flow.classList.toggle('export-no-notes', !withNotes);
   flow.classList.add('exporting');
   try {
     const dataUrl = await toPng(el, {
@@ -139,7 +135,7 @@ async function renderMap(nodes: Node[], background: string, simple: boolean, wit
     );
     return { dataUrl, width, height, breaks };
   } finally {
-    flow.classList.remove('export-simple', 'export-no-notes', 'exporting');
+    flow.classList.remove('export-simple', 'exporting');
   }
 }
 
@@ -196,7 +192,6 @@ interface TextStyle {
 }
 const TITLE: TextStyle = { weight: TITLE_WEIGHT, size: 16, gap: TITLE_LINE };
 const DATE: TextStyle = { weight: 400, size: 10, gap: 0 };
-const NOTES_HEADING = 'Approfondimenti';
 
 /** Words on lines at most `width` wide; a longer word (a web address) is cut where it must. */
 export function wrapText(text: string, width: number, measure: (text: string) => number): string[] {
@@ -243,7 +238,7 @@ interface Lettering {
 }
 
 /**
- * jsPDF only has its own fonts: the words (header, «Approfondimenti») are
+ * jsPDF only has its own fonts: the words (header, date) are
  * drawn as pictures in the child's reading font, spacing and capitals, like
  * the map.
  */
@@ -307,7 +302,7 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const footer = opts.usesPictograms ? 8 : 4;
   const date = new Date().toLocaleDateString('it-IT');
   const pageLabel = (page: number, count: number) => (count > 1 ? `${date} · pagina ${page + 1} di ${count}` : date);
-  const write = await lettering([opts.title, pageLabel(0, 2), NOTES_HEADING, ...(opts.notes ?? []).flatMap((n) => [n.label, n.note])]);
+  const write = await lettering([opts.title, pageLabel(0, 2)]);
   // The title stops before the widest date on its right ("pagina 4 di 4").
   const dateRoom = write.width(pageLabel(opts.pages - 1, opts.pages), DATE.weight, DATE.size) + 6;
   const fitTitle = (doc: Pdf) =>
@@ -354,54 +349,11 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
       doc.text(ARASAAC_CREDIT, margin, pageH - margin + 2, { maxWidth: boxW });
     }
   }
-  if (!opts.simple && opts.notes?.length) addNotes(doc, write, opts.notes, opts.title, opts.paper, plan.orientation, margin);
   return doc;
 }
 
-/** «Approfondimenti»: each concept's note, in reading order, after the map. */
-function addNotes(doc: Pdf, write: Lettering, notes: { label: string; note: string }[], title: string, paper: Paper, orientation: 'portrait' | 'landscape', margin: number) {
-  doc.addPage(paper, orientation);
-  const width = doc.internal.pageSize.getWidth() - margin * 2;
-  const top = margin + 6;
-  const bottom = doc.internal.pageSize.getHeight() - margin;
-  const head: TextStyle = { weight: TITLE_WEIGHT, size: 12, gap: write.line(12) };
-  const body: TextStyle = { weight: 400, size: 11, gap: write.line(11) };
-  const measure = (s: TextStyle) => (text: string) => write.width(text, s.weight, s.size);
-
-  const heading = titleLines(`${NOTES_HEADING} – ${title}`, width, measure(TITLE));
-  put(doc, write, heading, TITLE, margin, top);
-  let y = top + heading.length * TITLE_LINE + 4;
-  /** Lines one below the other, going on to a new sheet when this one is full. */
-  const block = (lines: string[], s: TextStyle) => {
-    for (let i = 0; i < lines.length; ) {
-      if (y > bottom) {
-        doc.addPage(paper, orientation);
-        y = top;
-      }
-      const part = lines.slice(i, i + Math.floor((bottom - y) / s.gap) + 1);
-      put(doc, write, part, s, margin, y);
-      y += part.length * s.gap;
-      i += part.length;
-    }
-  };
-
-  for (const { label, note } of notes) {
-    const name = wrapText(label, width, measure(head));
-    // The child's own line breaks stay.
-    const text = note.split('\n').flatMap((p) => wrapText(p, width, measure(body)));
-    if (y + Math.min(name.length * head.gap + text.length * body.gap + 6, 40) > bottom) {
-      doc.addPage(paper, orientation);
-      y = top;
-    }
-    block(name.length > 0 ? name : ['-'], head);
-    block(text, body);
-    y += 6;
-  }
-}
-
 export async function exportMap(nodes: Node[], background: string, opts: ExportOptions): Promise<void> {
-  const withNotes = opts.format === 'pdf' && !opts.simple && !!opts.notes?.length;
-  const img = await renderMap(nodes, background, opts.simple, withNotes);
+  const img = await renderMap(nodes, background, opts.simple);
   if (opts.cancelled?.()) return;
   const base = `${slug(opts.title) || 'mappa'}${opts.simple ? '-verifica' : ''}`;
   if (opts.format === 'png') return shareFile(img.dataUrl, `${base}.png`, opts.title);

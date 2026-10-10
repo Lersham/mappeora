@@ -17,8 +17,6 @@ export interface ConceptActions {
   toggle(id: string): void;
   /** A new concept under this one (`child`) or next to it (`sibling`), ready for typing. */
   addNear(id: string, where: 'child' | 'sibling'): void;
-  /** Opens the concept's «Approfondimento». */
-  openNote(id: string): void;
 }
 
 export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'collapsed'> & {
@@ -28,8 +26,6 @@ export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image
   hasChildren?: boolean;
   /** How many concepts this one hides while collapsed. */
   hiddenBelow?: number;
-  /** The concept has an «Approfondimento». */
-  hasNote?: boolean;
   actions?: ConceptActions;
 };
 export type ConceptFlowNode = Node<ConceptNodeData, 'concept'>;
@@ -160,21 +156,6 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
         </span>
       ) : (
         <>
-          {/* Always there when the concept has one; to add one, only on the concept in hand. */}
-          {(data.hasNote || (selected && !reviewing)) && (
-            <button
-              type="button"
-              className={`concept-note-mark nodrag${data.hasNote ? '' : ' is-empty'}`}
-              aria-label={data.hasNote ? `Approfondimento: ${data.label}` : `Aggiungi un approfondimento a ${data.label}`}
-              title={data.hasNote ? 'Approfondimento' : 'Aggiungi un approfondimento'}
-              onClick={(e) => {
-                e.stopPropagation();
-                data.actions?.openNote(id);
-              }}
-            >
-              <Icon name="note" />
-            </button>
-          )}
           {data.image && <NodeImageView image={data.image} />}
           {editing ? (
             <textarea
