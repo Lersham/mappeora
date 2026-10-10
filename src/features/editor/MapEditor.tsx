@@ -1042,7 +1042,9 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
                 ? `Tocca il concetto da collegare a «${labelOf(picking.from)}».`
                 : `Tocca il concetto sotto cui mettere «${labelOf(picking.from)}».`}
             </p>
-            <BigButton icon="close" label="Annulla" onClick={() => setPicking(null)} />
+            <button type="button" className="pick-banner-close" aria-label="Esci" title="Esci" onClick={() => setPicking(null)}>
+              <Icon name="close" />
+            </button>
           </div>
         )}
       </div>

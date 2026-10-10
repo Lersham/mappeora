@@ -380,12 +380,12 @@ test.describe('Editor: la barra del concetto scelto', () => {
     await expect(page.locator('.pick-banner')).toHaveCount(0);
   });
 
-  test('«Annulla», Esc o un tocco sulla mappa vuota lasciano perdere', async ({ page }) => {
+  test('la ✕, Esc o un tocco sulla mappa vuota lasciano perdere', async ({ page }) => {
     await sampleMap(page);
     const edges = await page.locator('.react-flow__edge').count();
     const bar = await choose(page, 'Vapore');
     await bar.getByRole('button', { name: 'Collega', exact: true }).click();
-    await page.locator('.pick-banner').getByRole('button', { name: 'Annulla' }).click();
+    await page.locator('.pick-banner').getByRole('button', { name: 'Esci' }).click();
     await expect(page.locator('.pick-banner')).toHaveCount(0);
     await bar.getByRole('button', { name: 'Collega', exact: true }).click();
     await page.keyboard.press('Escape');
