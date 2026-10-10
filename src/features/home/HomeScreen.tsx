@@ -79,7 +79,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         setRemind(backupDue(list));
         setListError(null);
       })
-      .catch(() => setListError('Non riesco a leggere le mappe salvate. Chiudi l’app e riaprila.'));
+      .catch(() => setListError('Non riesco a mostrare le tue mappe. Chiudi l’app e riaprila.'));
   useEffect(refresh, []);
 
   const remove = async (m: MapSummary) => {
@@ -87,7 +87,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     try {
       await storage().remove(m.id);
     } catch {
-      setListError(`Non sono riuscito a cancellare "${m.title}". Riprova.`);
+      setListError(`Non ce l’ho fatta a cancellare "${m.title}". Riprova.`);
       return;
     }
     refresh();
@@ -126,7 +126,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       setRemind(false);
       setBackupNote(`${n === 1 ? 'Ho salvato 1 mappa' : `Ho salvato ${n} mappe`} in un file. Tienilo al sicuro: con «Apri file» le ritrovi tutte.`);
     } catch (e) {
-      if (!(e instanceof Error && /cancel/i.test(e.message))) setListError('Non sono riuscito a salvare le mappe. Riprova.');
+      if (!(e instanceof Error && /cancel/i.test(e.message))) setListError('Non ce l’ho fatta a salvare le mappe. Riprova.');
     } finally {
       setSaving(false);
     }
@@ -177,7 +177,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         <section className="home-notice" aria-label="Consiglio per iPhone e iPad">
           <p>
             <strong>Su iPhone e iPad</strong> aggiungi MappAmi alla schermata Home: tocca Condividi <Icon name="share" className="inline-icon" /> e poi «Aggiungi alla
-            schermata Home». Così il browser non cancella le tue mappe.
+            schermata Home». Così le tue mappe restano al sicuro.
           </p>
           <BigButton
             icon="check"
@@ -192,7 +192,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       {remind && maps && maps.length > 0 && (
         <section className="home-notice" aria-label="Copia di sicurezza">
           <p>
-            <strong>Fai una copia delle tue mappe.</strong> Sono solo su questo dispositivo: se si rompe o si cancellano i dati, si perdono.
+            <strong>Fai una copia delle tue mappe.</strong> Sono salvate solo qui: se perdi il telefono o il computer, o cancelli tutto, spariscono.
           </p>
           <div className="home-notice-actions">
             {saveAllButton}
@@ -259,7 +259,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
 
       {maps && maps.length > 0 && !remind && (
         <section className="backup-card" aria-label="Copia di sicurezza">
-          <p className="muted">Le mappe sono solo su questo dispositivo. Ogni tanto salvane una copia (su Drive, sul computer): con «Apri file» le ritrovi tutte.</p>
+          <p className="muted">Le tue mappe sono salvate solo qui. Ogni tanto fanne una copia, su Drive o sul computer: con «Apri file» le ritrovi tutte.</p>
           {saveAllButton}
         </section>
       )}
