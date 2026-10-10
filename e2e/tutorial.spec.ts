@@ -1,5 +1,5 @@
 import { test, expect, say, spoken } from './fixtures';
-import { newMap, node, nodes, rename, tapLink, toolbar } from './helpers';
+import { newMap, node, nodes, onScreen, rename, tapLink, toolbar } from './helpers';
 
 test.describe('Impara facendo', () => {
   test('dalla home costruisce una mappa vera, un passo alla volta', async ({ page }) => {
@@ -14,7 +14,7 @@ test.describe('Impara facendo', () => {
     };
 
     await expect(coach.getByRole('heading', { name: 'L’idea principale' })).toBeVisible();
-    await expect(coach).toContainText('Passo 1 di 8');
+    await expect(coach).toContainText('Passo 1 di 9');
     await expect(page.locator('.title-input')).toHaveValue('La mia prima mappa');
     // Until the step is done there is only «Salta».
     await expect(coach.getByRole('button', { name: 'Avanti' })).toHaveCount(0);
@@ -54,6 +54,13 @@ test.describe('Impara facendo', () => {
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('sole');
     await page.locator('.illustration-tile').first().click();
     await expect(node(page, 'Estate').locator('.concept-illustration, .concept-emoji')).toBeVisible();
+    await next('Collega due idee');
+
+    // «Estate» is still the concept in hand: «Collega», then another concept.
+    const collega = page.getByRole('toolbar', { name: 'Concetto scelto' }).getByRole('button', { name: 'Collega', exact: true });
+    await expect(collega).toHaveClass(/tutorial-target/);
+    await collega.click();
+    await (await onScreen(page, node(page, 'Luce e calore'))).click();
     await next('Ce l’hai fatta!');
 
     await expect(coach.getByRole('button', { name: 'Chiudi' })).toHaveCount(0);
@@ -72,7 +79,7 @@ test.describe('Impara facendo', () => {
     const coach = page.getByRole('region', { name: 'Tutorial' });
     await coach.getByRole('button', { name: 'Salta' }).click();
     await expect(coach.getByRole('heading', { name: 'Un nuovo concetto' })).toBeVisible();
-    await expect(coach).toContainText('Passo 2 di 8');
+    await expect(coach).toContainText('Passo 2 di 9');
     await coach.getByRole('button', { name: 'Chiudi' }).click();
     await expect(coach).toHaveCount(0);
     await expect(page.locator('.tutorial-target')).toHaveCount(0);

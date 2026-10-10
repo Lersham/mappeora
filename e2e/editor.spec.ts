@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { test, expect, spoken } from './fixtures';
 import { addConcept, boxes, holdOn, newMap, node, nodes, onScreen, overlapping, rename, sampleMap, settled, showAll, tapLink, toolbar } from './helpers';
 
@@ -194,8 +195,6 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
 
   test('ogni ramo ha le linee del suo colore; i pallini per collegare solo sul concetto scelto', async ({ page, isMobile }) => {
     await sampleMap(page);
-    // On a phone the concepts start locked, with no dots at all: free them first.
-    if (isMobile) await page.getByRole('button', { name: /^Concetti bloccati/ }).click();
     const colours = await page.locator('.react-flow__edge-path.branch-line').evaluateAll((paths) => [
       ...new Set(paths.map((p) => [...p.classList].find((c) => /^branch-\d$/.test(c)))),
     ]);
@@ -208,7 +207,8 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
         .locator('.react-flow__handle:not(.handle-hidden)')
         .first()
         .evaluate((h) => getComputedStyle(h).opacity);
-    await expect.poll(() => handleOpacity('Vapore')).toBe('1');
+    // On a touch screen lines are drawn with «Collega»: no dots at all.
+    await expect.poll(() => handleOpacity('Vapore')).toBe(isMobile ? '0' : '1');
     await expect.poll(() => handleOpacity('Neve')).toBe('0');
   });
 
@@ -319,11 +319,11 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
 });
 
 test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
-  test('bloccati di partenza: il dito su un concetto muove la mappa; 🔓 li libera, e la scelta resta', async ({ page, isMobile }) => {
-    test.skip(!isMobile, 'il blocco di partenza vale per i touch screen');
+  test('sul foglio il dito su un concetto muove la mappa; «Sposta» libera i concetti', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'vale per i touch screen');
     await sampleMap(page);
-    const lock = page.getByRole('button', { name: /^Concetti bloccati/ });
-    await expect(lock).toBeVisible();
+    // No lock to find: on the A4 sheet the concepts stay where the sheet puts them.
+    await expect(page.locator('.lock-button')).toHaveCount(0);
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(0);
 
     // One finger from «Calore del sole» downwards: the whole map follows, nothing changes order.
@@ -345,14 +345,94 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
       expect(at(after, b.label).y - at(after, 'Calore del sole').y, b.label).toBeCloseTo(b.y - start.y, 0);
     }
 
-    await lock.click();
-    await expect(page.getByRole('alert')).toContainText('Ora puoi spostare i concetti');
-    await expect(page.getByRole('button', { name: /^Concetti liberi/ })).toBeVisible();
+    await toolbar(page, 'Sposta');
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(9);
-    // Remembered on the device, for every map.
-    await page.reload();
-    await page.locator('.map-open').first().click();
-    await expect(page.getByRole('button', { name: /^Concetti liberi/ })).toBeVisible();
+  });
+});
+
+test.describe('Editor: la barra del concetto scelto', () => {
+  /** Chooses a concept that is not the one in hand (a tap on that one opens «Immagine e colore»). */
+  const choose = async (page: Page, label: string) => {
+    await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
+    await (await onScreen(page, node(page, label))).click();
+    return page.getByRole('toolbar', { name: 'Concetto scelto' });
+  };
+  const link = (page: Page, from: string, to: string) => page.getByRole('group', { name: new RegExp(`^Collegamento da «${from}» a «${to}»`) });
+
+  test('«Nome» riapre il nome da riscrivere', async ({ page }) => {
+    await sampleMap(page);
+    await (await choose(page, 'Vapore')).getByRole('button', { name: 'Nome', exact: true }).click();
+    const input = page.getByRole('textbox', { name: 'Testo del concetto' });
+    await expect(input).toBeFocused();
+    await input.fill('Vapore acqueo');
+    await input.press('Enter');
+    await expect(node(page, 'Vapore acqueo')).toBeVisible();
+  });
+
+  test('«Collega» e poi un altro concetto: nasce la freccia', async ({ page }) => {
+    await sampleMap(page);
+    const edges = await page.locator('.react-flow__edge').count();
+    await (await choose(page, 'Vapore')).getByRole('button', { name: 'Collega', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Tocca il concetto da collegare a «Vapore»' })).toBeVisible();
+    await (await onScreen(page, node(page, 'Nuvole'))).click();
+    await expect(page.locator('.react-flow__edge')).toHaveCount(edges + 1);
+    await expect(link(page, 'Vapore', 'Nuvole')).toHaveCount(1);
+    await expect(page.locator('.pick-banner')).toHaveCount(0);
+  });
+
+  test('«Annulla», Esc o un tocco sulla mappa vuota lasciano perdere', async ({ page }) => {
+    await sampleMap(page);
+    const edges = await page.locator('.react-flow__edge').count();
+    const bar = await choose(page, 'Vapore');
+    await bar.getByRole('button', { name: 'Collega', exact: true }).click();
+    await page.locator('.pick-banner').getByRole('button', { name: 'Annulla' }).click();
+    await expect(page.locator('.pick-banner')).toHaveCount(0);
+    await bar.getByRole('button', { name: 'Collega', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.pick-banner')).toHaveCount(0);
+    await expect(page.locator('.react-flow__edge')).toHaveCount(edges);
+  });
+
+  test('«Cambia ramo» mette il concetto sotto un altro; mai sotto il suo stesso ramo', async ({ page }) => {
+    await sampleMap(page);
+    await (await choose(page, 'Neve')).getByRole('button', { name: 'Cambia ramo', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Tocca il concetto sotto cui mettere «Neve»' })).toBeVisible();
+    await (await onScreen(page, node(page, 'Condensazione'))).click();
+    await expect(link(page, 'Condensazione', 'Neve')).toHaveCount(1);
+    await expect(link(page, 'Precipitazione', 'Neve')).toHaveCount(0);
+
+    await (await choose(page, 'Precipitazione')).getByRole('button', { name: 'Cambia ramo', exact: true }).click();
+    await (await onScreen(page, node(page, 'Pioggia'))).click();
+    await expect(page.getByRole('alert')).toContainText('è nel ramo di «Precipitazione»');
+    await expect(link(page, 'Precipitazione', 'Pioggia')).toHaveCount(1);
+  });
+
+  test('«Elimina» un concetto con altri sotto chiede: solo lui (i figli salgono) o tutto il ramo', async ({ page }) => {
+    await sampleMap(page);
+    await (await choose(page, 'Evaporazione')).getByRole('button', { name: 'Elimina', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Elimina «Evaporazione»' });
+    await dialog.getByRole('button', { name: /^Solo «Evaporazione»/ }).click();
+    await expect(nodes(page)).toHaveCount(8);
+    await expect(link(page, 'Il ciclo dell’acqua', 'Calore del sole')).toHaveCount(1);
+    await expect(link(page, 'Il ciclo dell’acqua', 'Vapore')).toHaveCount(1);
+
+    await page.getByRole('button', { name: 'Annulla', exact: true }).click();
+    await expect(nodes(page)).toHaveCount(9);
+    await (await choose(page, 'Evaporazione')).getByRole('button', { name: 'Elimina', exact: true }).click();
+    await dialog.getByRole('button', { name: /^Tutto il ramo/ }).click();
+    await expect(nodes(page)).toHaveCount(6);
+
+    // A concept with nothing under it goes at once.
+    await (await choose(page, 'Neve')).getByRole('button', { name: 'Elimina', exact: true }).click();
+    await expect(nodes(page)).toHaveCount(5);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('l’idea principale con concetti sotto non si elimina da sola', async ({ page }) => {
+    await sampleMap(page);
+    await (await choose(page, 'Il ciclo dell’acqua')).getByRole('button', { name: 'Elimina', exact: true }).click();
+    await expect(page.getByRole('dialog')).toContainText('È l’idea principale della mappa');
+    await expect(page.getByRole('dialog').getByRole('button', { name: /Tutto il ramo/ })).toHaveCount(0);
   });
 });
 

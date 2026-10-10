@@ -64,6 +64,16 @@ describe('TUTORIAL_STEPS', () => {
     expect(done(at(pictured('☀️')), at(pictured('☀️')))).toBe(false);
   });
 
+  it('notices two concepts already there being linked, not a new concept', () => {
+    const done = step('Collega due idee');
+    const two = withChild('Luce');
+    const three: ConceptMap = { ...two, nodes: [...two.nodes, { id: 'c', label: 'Estate', position: { x: 0, y: 200 } }], edges: [...two.edges, { id: 'f', source: root.id, target: 'c' }] };
+    const linked: ConceptMap = { ...three, edges: [...three.edges, { id: 'g', source: 'c', target: 'b' }] };
+    expect(done(at(linked), at(three))).toBe(true);
+    expect(done(at(three), at(two))).toBe(false); // a new concept, with its own line
+    expect(done(at(three), at(three))).toBe(false);
+  });
+
   it('ends with a step that has nothing to check', () => {
     expect(TUTORIAL_STEPS.at(-1)?.done).toBeUndefined();
   });

@@ -809,6 +809,78 @@ textarea {
 }
 .selection-bar .big-button-label {
   font-size: 0.85rem;
+  white-space: nowrap;
+}
+/* Phones: the five tools share the width, each word under its icon, like the
+   toolbar below; the zoom buttons go up out of their way. */
+@media (max-width: 699px) {
+  .selection-bar {
+    left: 8px;
+    right: 8px;
+    padding: 2px 4px;
+  }
+  .selection-bar .big-button {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 4px 2px;
+  }
+  .selection-bar .big-button-icon {
+    font-size: min(1.35rem, 6.5vw);
+  }
+  /* «Cambia ramo» goes on two lines rather than being cut. */
+  .selection-bar .big-button-label {
+    max-width: 100%;
+    font-size: min(0.75rem, 3vw);
+    letter-spacing: normal;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: normal;
+    hyphens: none;
+  }
+  .canvas:has(.selection-bar) .react-flow__panel.react-flow__controls {
+    bottom: 76px;
+  }
+}
+
+/* «Collega», «Cambia ramo»: one line says what to tap, and how to stop. */
+.pick-banner {
+  position: absolute;
+  z-index: 6;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 16px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 14px;
+  background: var(--surface);
+  border: 2px solid var(--primary);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.15);
+}
+.pick-banner p {
+  margin: 0;
+  font-weight: 600;
+}
+.pick-banner .big-button {
+  flex-direction: row;
+  gap: 6px;
+  min-height: 44px;
+  padding: 2px 12px;
+  background: transparent;
+}
+.is-picking .react-flow__node {
+  cursor: crosshair;
+}
+.is-picking .react-flow__node:hover .concept-node {
+  outline: 3px dashed var(--primary);
+  outline-offset: 3px;
 }
 
 /* Wide screens: the toolbar floats over the map, as wide as its buttons,
@@ -976,18 +1048,12 @@ textarea {
   opacity: 0;
   pointer-events: none;
 }
-.react-flow__controls-button.lock-button {
-  font-size: 1.15rem;
-}
-/* React Flow fills the svg of its buttons: a line icon must stay a line. */
-.react-flow__controls-button.lock-button svg {
-  width: 1em;
-  max-width: none;
-  max-height: none;
-  fill: none;
-}
-.react-flow__controls-button.lock-button[aria-pressed='false'] {
-  background: color-mix(in srgb, var(--highlight) 45%, var(--surface));
+/* On a touch screen lines are drawn with «Collega»: no dots to drag. */
+@media (pointer: coarse) {
+  .react-flow__node .react-flow__handle:not(.handle-hidden) {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 .react-flow__handle {
   width: 16px;

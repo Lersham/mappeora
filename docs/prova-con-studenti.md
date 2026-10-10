@@ -23,7 +23,8 @@ Bastano 4 o 5 persone per trovare la maggior parte dei problemi di uso. È megli
 | 2b | «Cambia il nome di un concetto. Poi dagli un colore e un disegno.» | Scopre da solo che per il nome si **tiene premuto** e per colore e disegno si **tocca ancora** un concetto già scelto? Il dialogo si apre quando voleva solo toccarlo? Alza il dito al contorno tratteggiato o lo toglie troppo presto? | Fatto in 2 minuti, con al più un suggerimento |
 | 3 | «Scrivi sulla freccia come sono legati.» | Trova il «+» o la linea? | Parola di collegamento messa |
 | 4 | «Fatti leggere la mappa.» | Segue la parola illuminata? La voce è comprensibile? | Ascolta fino alla fine |
-| 4b | «Muovi la mappa con un dito e ingrandiscila con due, anche partendo da sopra un riquadro.» | Si sposta qualche concetto per sbaglio? Trova 🔒/🔓 quando vuole spostarne uno? | Nessun concetto spostato per sbaglio |
+| 4b | «Muovi la mappa con un dito e ingrandiscila con due, anche partendo da sopra un riquadro.» | Si sposta qualche concetto per sbaglio? | Nessun concetto spostato per sbaglio |
+| 4c | «Togli il concetto "…" ma tieni quelli che ha sotto.» Poi: «Sposta "…" sotto "…"» e «Collega "…" con "…"». | Trova la barra del concetto? Capisce «Solo questo» / «Tutto il ramo»? Legge la riga «Tocca il concetto…»? | Ciascuno in 3 tocchi al massimo, senza aiuto |
 | 5 | «Guarda questa mappa grande sul telefono e dimmi cosa c'è sotto "Le cause".» (esempio della Rivoluzione francese) | Tocca il concetto? Il ramo si avvicina? Capisce da che ramo viene un ramo sotto l'altro (colori delle linee)? | Risponde correttamente |
 | 6 | «Ripassa la mappa come se fossi interrogato.» | Trova «Ripassa» → «Interrogazione»? Usa le frecce? | Arriva al quinto concetto |
 | 7 | «Stampala per portarla alla verifica.» | Trova «Salva» → PDF → «Versione per la verifica»? | PDF salvato |

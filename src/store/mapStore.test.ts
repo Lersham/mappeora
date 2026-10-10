@@ -36,6 +36,30 @@ describe('mapStore', () => {
     }
   });
 
+  it('removing a concept with children lifts them under its parent, in one undo step', () => {
+    const root = state().map!.nodes[0];
+    const a = state().addChild(root.id, 'Evaporazione');
+    const b = state().addChild(a, 'Vapore');
+    expect(state().removeLiftingChildren(a)).toBe(true);
+    expect(state().map!.edges).toEqual([expect.objectContaining({ source: root.id, target: b })]);
+    mapHistory().undo();
+    expect(state().map!.nodes.map((n) => n.label)).toContain('Evaporazione');
+    // the main concept keeps the ones under it: it is not taken away alone
+    expect(state().removeLiftingChildren(root.id)).toBe(false);
+  });
+
+  it('removes a whole branch, or moves it under another concept', () => {
+    const root = state().map!.nodes[0];
+    const a = state().addChild(root.id, 'A');
+    const b = state().addChild(root.id, 'B');
+    const c = state().addChild(a, 'C');
+    expect(state().moveUnder(a, b)).toBe(true);
+    expect(state().map!.edges).toContainEqual(expect.objectContaining({ source: b, target: a }));
+    expect(state().moveUnder(b, c)).toBe(false); // under its own branch
+    state().removeBranch(a);
+    expect(state().map!.nodes.map((n) => n.label).sort()).toEqual(['Acqua', 'B']);
+  });
+
   it('removing a node also removes its edges', () => {
     const root = state().map!.nodes[0];
     const id = state().addChild(root.id);
