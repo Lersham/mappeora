@@ -124,4 +124,14 @@ test.describe('Schermata iniziale', () => {
     await page.getByRole('link', { name: 'Torna a MappAmi' }).first().click();
     await expect(page.getByRole('heading', { name: 'Le mie mappe' })).toBeVisible();
   });
+
+  test('i crediti (licenza delle illustrazioni) si aprono dalla schermata iniziale e riportano all’app', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('link', { name: 'Crediti' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Crediti e licenze' })).toBeVisible();
+    await expect(page.getByText('Fluent Emoji').first()).toBeVisible();
+    await expect(page.getByText('Copyright (c) Microsoft Corporation.')).toBeVisible();
+    await page.getByRole('link', { name: 'Torna a MappAmi' }).click();
+    await expect(page.getByRole('heading', { name: 'Le mie mappe' })).toBeVisible();
+  });
 });

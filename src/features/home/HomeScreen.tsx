@@ -212,6 +212,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         <a href={`${import.meta.env.BASE_URL}privacy.html`}>
           <Icon name="lock" className="inline-icon" /> Privacy
         </a>
+        <a href={`${import.meta.env.BASE_URL}crediti.html`}>Crediti</a>
       </footer>
     </main>
   );
