@@ -16,7 +16,6 @@ import { useStore } from 'zustand';
 import { beginStep, endStep, mapHistory, untracked, useMapStore } from '../../store/mapStore';
 import { reviewVisibility, useReview, type ReviewMode } from '../../store/reviewStore';
 import { ConceptNode, type ConceptActions, type ConceptFlowNode } from './ConceptNode';
-import { NoteDialog } from './NoteDialog';
 import { FreeEdge } from './FreeEdge';
 import { LadderEdge } from './LadderEdge';
 import { BusEdge } from './BusEdge';
@@ -101,7 +100,6 @@ type DialogState =
   | { kind: 'photo' }
   | { kind: 'outline' }
   | { kind: 'more' }
-  | { kind: 'note'; nodeId: string }
   | null;
 
 interface Props {
@@ -238,7 +236,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     () => ({
       toggle: (id) => latest.current.toggleInPlace(id),
       addNear: (id, where) => latest.current.addNear(id, where),
-      openNote: (id) => setDialog({ kind: 'note', nodeId: id }),
     }),
     [],
   );
@@ -286,7 +283,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           hasChildren: parents.has(n.id),
           collapsed: n.collapsed,
           hiddenBelow: collapse.hiddenBelow[n.id] ?? 0,
-          hasNote: !!n.note?.trim(),
           actions: conceptActions,
         },
       };
@@ -492,6 +488,18 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
    */
   const closer = useRef<number | undefined>(undefined);
   const cancelCloser = () => window.clearTimeout(closer.current);
+  /** The concept in hand when the finger went down: a tap on it again is a request to restyle it. */
+  const heldOnPress = useRef<string | null>(null);
+  /**
+   * Same wait as for «bringCloser»: a double tap (to rename) must not open the dialog.
+   * And never over another one: a button tapped in the meantime wins.
+   */
+  const openStyleSoon = () => {
+    cancelCloser();
+    closer.current = window.setTimeout(() => {
+      if (!useReview.getState().active && !dragging.current) setDialog((d) => d ?? { kind: 'style' });
+    }, 350);
+  };
   const bringCloser = (id: string) => {
     cancelCloser();
     closer.current = window.setTimeout(() => {
@@ -628,7 +636,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     afterBulkEdit();
   };
 
-  const doExport = async ({ kind, paper, pages, simple, print, notes }: ExportChoice) => {
+  const doExport = async ({ kind, paper, pages, simple, print }: ExportChoice) => {
     const run = ++exportRun.current;
     const cancelled = () => exportRun.current !== run;
     setExporting(true);
@@ -647,13 +655,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           title: map.title,
           usesPictograms: map.nodes.some((n) => n.image?.kind === 'arasaac'),
           cancelled,
-          // In the order the map is read, as on screen.
-          notes: notes
-            ? readingOrder(visiblePart(map), { depthFirst: sheetTemplate }).flatMap(({ nodeId }) => {
-                const n = map.nodes.find((x) => x.id === nodeId);
-                return n?.note?.trim() ? [{ label: n.label, note: n.note.trim() }] : [];
-              })
-            : undefined,
         });
       }
       // Only this dialog: the child may have opened another meanwhile.
@@ -858,7 +859,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         )}
       </header>
 
-      <div className="canvas" ref={canvasRef}>
+      <div className="canvas" ref={canvasRef} onPointerDownCapture={() => (heldOnPress.current = useMapStore.getState().selectedId)}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -885,8 +886,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             cancelCloser();
             actions.select(null);
           }}
-          onNodeClick={(_, node) => {
-            if (!review.active) return bringCloser(node.id);
+          onNodeClick={(e, node) => {
+            if (!review.active) {
+              const again = heldOnPress.current === node.id && !(e.target as Element).closest('button, textarea, input');
+              return again ? openStyleSoon() : bringCloser(node.id);
+            }
             if (review.mode !== 'interrogazione') return;
             const i = review.order[node.id];
             if (i !== undefined) review.goTo(i);
@@ -998,18 +1002,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       {dialog?.kind === 'export' && (
         <ExportDialog
           busy={exporting}
-          hasNotes={visiblePart(map).nodes.some((n) => n.note?.trim())}
           error={exportError}
           onExport={doExport}
           onClose={closeExport}
         />
       )}
       {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
-      {dialog?.kind === 'note' &&
-        (() => {
-          const node = map.nodes.find((n) => n.id === dialog.nodeId);
-          return node ? <NoteDialog node={node} readOnly={review.active} onClose={() => setDialog(null)} /> : null;
-        })()}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'outline' && (
         <OutlineDialog

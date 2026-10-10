@@ -23,7 +23,6 @@ export interface MapNode {
   color?: string;
   shape?: NodeShape;
   image?: NodeImage;
-  note?: string;
   /** Hides the concepts below this one (see lib/collapse.ts). */
   collapsed?: boolean;
 }

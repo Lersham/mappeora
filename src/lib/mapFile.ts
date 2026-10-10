@@ -95,8 +95,6 @@ function readNode(v: unknown): MapNode | undefined {
   if (SHAPES.includes(v.shape as NodeShape)) node.shape = v.shape as NodeShape;
   const image = readImage(v.image);
   if (image) node.image = image;
-  const note = str(v.note);
-  if (note) node.note = note;
   if (v.collapsed === true) node.collapsed = true;
   return node;
 }

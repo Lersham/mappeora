@@ -815,55 +815,6 @@ textarea {
   font-size: 1.25rem;
   cursor: pointer;
 }
-.concept-note-mark {
-  position: absolute;
-  /* On the right, below 🔊 and clear of «−»: the top-left corner is where
-     the line and its «+» come in. */
-  top: 22px;
-  right: -36px;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 2px solid var(--primary);
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--primary);
-  font-size: 1.05rem;
-  cursor: pointer;
-}
-/* On the concept in hand, to write its first «Approfondimento». */
-.concept-note-mark.is-empty {
-  border-style: dashed;
-  opacity: 0.75;
-}
-.exporting .concept-note-mark.is-empty,
-.export-no-notes .concept-note-mark,
-.export-simple .concept-note-mark {
-  display: none;
-}
-.note-concept {
-  margin: 0 0 8px;
-  font-weight: 700;
-  white-space: pre-line;
-}
-.note-text {
-  margin: 0 0 16px;
-  font-size: 1.15rem;
-  white-space: pre-line;
-}
-.note-row {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  margin: 8px 0 16px;
-}
-.note-input {
-  min-height: 8em;
-  resize: vertical;
-  font: inherit;
-}
 .spoken-word {
   background: var(--highlight);
   color: inherit;
@@ -1000,7 +951,7 @@ textarea {
   border-radius: 12px;
   background: var(--surface);
   /* On a small phone with large text «OpenDyslexic», one long word in its
-     own wide font, still fits the window. */
+     own wide font,still fits the window. */
   font-size: min(1rem, 5.2vw);
   cursor: pointer;
 }
@@ -1075,7 +1026,7 @@ textarea {
 
 .dialog-title {
   margin: 0 0 16px;
-  /* On a phone with large text «Approfondimento» still fits the window. */
+  /* On a phone with large text a long title still fits the window. */
   font-size: min(1.4rem, 6vw);
   overflow-wrap: break-word;
 }

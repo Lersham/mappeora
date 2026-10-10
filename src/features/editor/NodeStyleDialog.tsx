@@ -170,6 +170,36 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
 
   return (
     <Dialog title="Immagine e colore" onClose={onClose} className="style-dialog">
+      <fieldset>
+        <legend>Colore</legend>
+        <div className="choice-row">
+          {[...NODE_COLORS, '#ffffff'].map((c) => (
+            <button
+              key={c}
+              type="button"
+              className="color-swatch"
+              style={{ background: c }}
+              aria-label={`Colore ${COLOR_NAMES[c] ?? c}`}
+              title={COLOR_NAMES[c]}
+              aria-pressed={node.color === c}
+              onClick={() => updateNode(node.id, { color: c })}
+            />
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Forma</legend>
+        <div className="choice-row">
+          {SHAPES.map((s) => (
+            <button key={s.value} type="button" className="choice" aria-pressed={(node.shape ?? 'rettangolo') === s.value} onClick={() => updateNode(node.id, { shape: s.value })}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+
+      <h3 className="photo-web-title">Immagine</h3>
       <div className="choice-row" role="group" aria-label="Scegli da dove">
         {TABS.map((t) => (
           <button key={t.value} type="button" className="choice" aria-pressed={tab === t.value} onClick={() => setTab(t.value)}>
@@ -245,35 +275,6 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
           <p className="credit">Le immagini trovate su Google appartengono ai loro autori: usale solo per studiare.</p>
         </>
       )}
-
-      <fieldset>
-        <legend>Colore</legend>
-        <div className="choice-row">
-          {[...NODE_COLORS, '#ffffff'].map((c) => (
-            <button
-              key={c}
-              type="button"
-              className="color-swatch"
-              style={{ background: c }}
-              aria-label={`Colore ${COLOR_NAMES[c] ?? c}`}
-              title={COLOR_NAMES[c]}
-              aria-pressed={node.color === c}
-              onClick={() => updateNode(node.id, { color: c })}
-            />
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Forma</legend>
-        <div className="choice-row">
-          {SHAPES.map((s) => (
-            <button key={s.value} type="button" className="choice" aria-pressed={(node.shape ?? 'rettangolo') === s.value} onClick={() => updateNode(node.id, { shape: s.value })}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
 
       <div className="dialog-actions">
         {node.image && <BigButton icon="image-off" label="Togli immagine" onClick={() => choose(undefined)} />}

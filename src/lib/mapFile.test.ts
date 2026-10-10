@@ -110,12 +110,11 @@ describe('mapFile', () => {
   it('reads a safety copy of all the maps, keeping their ids and dates', () => {
     const a = { ...createMap('Le stagioni'), updatedAt: 1000 };
     const b = createMap('Il ciclo dell’acqua');
-    b.nodes[0].note = 'Evaporazione, condensazione, precipitazione.';
     const { archive, maps } = parseAnyMapFile(serializeArchive([a, b]));
     expect(archive).toBe(true);
     expect(maps.map((m) => m.id)).toEqual([a.id, b.id]);
     expect(maps[0].updatedAt).toBe(1000);
-    expect(maps[1].nodes[0].note).toBe('Evaporazione, condensazione, precipitazione.');
+    expect(maps[1].title).toBe('Il ciclo dell’acqua');
   });
 
   it('opens a single map file as a new copy, and skips broken maps in a safety copy', () => {
