@@ -28,6 +28,14 @@ export async function openCopy(page: Page, titles: string[]) {
   await expect(page.getByRole('status')).toContainText(`Ho ritrovato ${titles.length} mappe`);
 }
 
+/** The MappAmi character in that pose, its picture really loaded (not a broken image). */
+export async function mascot(where: Page | Locator, pose: 'mappa' | 'indica' | 'esulta' | 'cerca' | 'ops') {
+  const img = where.locator('img.mascot');
+  await expect(img).toBeVisible();
+  await expect(img).toHaveAttribute('src', new RegExp(`${pose}-[\\w-]+\\.webp$`));
+  await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth)).toBeGreaterThan(0);
+}
+
 /** Like a person would: if the concept is off screen, look at the whole map. */
 export async function onScreen(page: Page, target: Locator): Promise<Locator> {
   const [box, canvas] = [await target.boundingBox(), await page.locator('.react-flow').boundingBox()];

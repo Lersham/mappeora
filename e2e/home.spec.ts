@@ -1,5 +1,5 @@
 import { test, expect, say } from './fixtures';
-import { addConcept, newMap, node, nodes, openCopy, toolbar, type TemplateName } from './helpers';
+import { addConcept, mascot, newMap, node, nodes, openCopy, toolbar, type TemplateName } from './helpers';
 
 test.describe('Schermata iniziale', () => {
   const templates: [TemplateName, number][] = [
@@ -122,6 +122,7 @@ test.describe('Schermata iniziale', () => {
     await expect(page.getByText('Non hai ancora mappe')).toHaveCount(0);
     await page.reload();
     await expect(page.getByText('Non hai ancora mappe')).toBeVisible();
+    await mascot(page.locator('.empty'), 'indica');
     await expect(page.locator('.map-removed')).toHaveCount(0);
   });
 
@@ -140,16 +141,20 @@ test.describe('Schermata iniziale', () => {
     await expect(page.locator('.map-title')).toHaveText(['Il vulcano']);
     await expect(search).toHaveAccessibleDescription('Ho trovato 1 mappa.');
     await expect(more).toHaveCount(0);
+    const feedback = page.locator('.map-search-feedback');
+    await expect(feedback.locator('.mascot')).toHaveCount(0);
     await search.fill('perche');
     await expect(page.locator('.map-title')).toHaveText(['Perché piove?']);
     await search.fill('dinosauri');
     await expect(page.locator('.map-card')).toHaveCount(0);
     await expect(page.getByText('Non trovo mappe con «dinosauri» nel titolo.')).toBeVisible();
+    await mascot(feedback, 'cerca');
     // ...or by voice.
     await say(page, 'Le stagioni');
     await page.getByRole('button', { name: 'Cerca con la voce' }).click();
     await expect(search).toHaveValue('Le stagioni');
     await expect(page.locator('.map-title')).toHaveText(['Le stagioni']);
+    await expect(feedback.locator('.mascot')).toHaveCount(0);
     await search.fill('');
     await expect(page.locator('.map-card')).toHaveCount(5);
 

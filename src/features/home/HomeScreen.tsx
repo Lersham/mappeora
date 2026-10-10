@@ -13,6 +13,7 @@ import { Icon, type IconName } from '../../components/Icon';
 import { friendlyDate } from '../../lib/friendlyDate';
 import { titleMatches } from '../../lib/searchText';
 import { MicButton } from '../../components/MicButton';
+import { Mascot } from '../../components/Mascot';
 
 /** One of the ways to start, with a line that says what it does. The line is the
  *  button's description (aria-describedby), not its name: the name stays the single word. */
@@ -299,13 +300,16 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       )}
 
       {maps && maps.length === 0 && !removed && (
-        <p className="empty">
-          Non hai ancora mappe. Creane una, oppure guarda un{' '}
-          <button type="button" className="link-button" onClick={() => setExamplesOpen(true)}>
-            esempio
-          </button>
-          .
-        </p>
+        <div className="empty">
+          <Mascot pose="indica" className="empty-mascot" />
+          <p>
+            Non hai ancora mappe. Creane una, oppure guarda un{' '}
+            <button type="button" className="link-button" onClick={() => setExamplesOpen(true)}>
+              esempio
+            </button>
+            .
+          </p>
+        </div>
       )}
       {welcomeOpen && <WelcomeDialog onClose={() => setWelcomeOpen(false)} onExamples={() => setExamplesOpen(true)} onTryBook={onStartFromBook} />}
       {examplesOpen && <ExamplesDialog onOpen={onOpen} onClose={() => setExamplesOpen(false)} />}
@@ -330,14 +334,17 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         </div>
       )}
       {long && (
-        <p className="map-search-result" id="map-search-result" aria-live="polite">
-          {searching &&
-            (found.length === 0
-              ? `Non trovo mappe con «${query.trim()}» nel titolo. Prova con un’altra parola.`
-              : found.length === 1
-                ? 'Ho trovato 1 mappa.'
-                : `Ho trovato ${found.length} mappe.`)}
-        </p>
+        <div className="map-search-feedback">
+          {searching && found.length === 0 && <Mascot pose="cerca" className="search-mascot" />}
+          <p className="map-search-result" id="map-search-result" aria-live="polite">
+            {searching &&
+              (found.length === 0
+                ? `Non trovo mappe con «${query.trim()}» nel titolo. Prova con un’altra parola.`
+                : found.length === 1
+                  ? 'Ho trovato 1 mappa.'
+                  : `Ho trovato ${found.length} mappe.`)}
+          </p>
+        </div>
       )}
       <ul className="map-list" aria-labelledby={hasList ? 'maps-title' : undefined}>
         {cards}

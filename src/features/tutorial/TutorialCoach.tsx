@@ -5,6 +5,7 @@ import { useReading } from '../../store/readingStore';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { TUTORIAL_STEPS, type TutorialProgress } from './steps';
 import { Icon } from '../../components/Icon';
+import { Mascot } from '../../components/Mascot';
 
 interface Props {
   index: number;
@@ -36,6 +37,7 @@ export function TutorialCoach({ index, onNext, onClose }: Props) {
 
   return (
     <section className={`tutorial${done ? ' is-done' : ''}`} aria-label="Tutorial">
+      <Mascot pose={done ? 'esulta' : 'indica'} className="tutorial-mascot" />
       <p className="tutorial-count">
         Passo {index + 1} di {TUTORIAL_STEPS.length}
       </p>

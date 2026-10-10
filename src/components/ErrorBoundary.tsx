@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { Mascot } from './Mascot';
 
 interface Props {
   children: ReactNode;
@@ -22,6 +23,7 @@ export class ErrorBoundary extends Component<Props, { failed: boolean }> {
     if (!this.state.failed) return this.props.children;
     return (
       <main className="home crash" role="alert">
+        <Mascot pose="ops" className="crash-mascot" />
         <h1 className="home-title">Qualcosa è andato storto</h1>
         <p>Le mappe salvate sono al sicuro. Puoi tornare all’elenco e riaprirle.</p>
         <div className="crash-actions">

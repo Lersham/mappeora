@@ -353,6 +353,19 @@ textarea {
   color: var(--muted);
   text-align: center;
 }
+.empty p {
+  margin: 0;
+}
+/* The MappAmi character: its height is set where it is used, its width follows. */
+.mascot {
+  display: block;
+  width: auto;
+  max-width: 100%;
+}
+.empty-mascot {
+  height: 96px;
+  margin: 0 auto 8px;
+}
 .home-footer {
   display: flex;
   flex-wrap: wrap;
@@ -528,6 +541,15 @@ textarea {
 /* Kept in the page while empty: a live region must be there before it speaks. */
 .map-search-result:empty {
   margin: 0;
+}
+.map-search-feedback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.search-mascot {
+  height: 72px;
+  margin: 0 0 12px;
 }
 .map-more {
   display: flex;
@@ -2084,6 +2106,9 @@ textarea {
   font-size: 4rem;
   line-height: 1;
 }
+.welcome-mascot {
+  height: 96px;
+}
 .welcome-title {
   margin: 4px 0 0;
   font-size: 1.3rem;
@@ -2121,6 +2146,10 @@ textarea {
 .welcome-dots .current {
   color: var(--primary);
 }
+.crash-mascot {
+  height: 140px;
+  margin-top: 24px;
+}
 .crash-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2131,15 +2160,21 @@ textarea {
 
 .tutorial {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 2px 16px;
   padding: 10px 16px;
   border-top: 3px solid var(--primary);
   background: var(--surface);
 }
+.tutorial-mascot {
+  grid-column: 1;
+  grid-row: 1 / span 4;
+  align-self: center;
+  height: 72px;
+}
 .tutorial > p,
 .tutorial > h2 {
-  grid-column: 1;
+  grid-column: 2;
   margin: 0;
 }
 .tutorial-count {
@@ -2159,16 +2194,26 @@ textarea {
   display: none;
 }
 .tutorial-actions {
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1 / span 4;
   align-self: center;
   display: flex;
   gap: 8px;
 }
 @media (max-width: 900px) {
+  /* Beside the step number and title only: the card takes no more height from the map. */
   .tutorial {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 10px;
     padding: 8px 12px;
+  }
+  .tutorial-mascot {
+    grid-row: 1 / span 2;
+    height: 44px;
+  }
+  .tutorial > .tutorial-text,
+  .tutorial > .tutorial-status {
+    grid-column: 1 / -1;
   }
   .tutorial-count {
     font-size: 0.8rem;
@@ -2181,7 +2226,7 @@ textarea {
     line-height: 1.4;
   }
   .tutorial-actions {
-    grid-column: 1;
+    grid-column: 1 / -1;
     grid-row: auto;
     flex-wrap: wrap;
     margin-top: 4px;
