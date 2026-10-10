@@ -6,6 +6,8 @@ interface Props {
   onClose(): void;
   children: ReactNode;
   className?: string;
+  /** On a phone, comes up from the bottom: a menu opened from the bottom bar. */
+  sheet?: boolean;
 }
 
 /** Dialogs open now, oldest first. */
@@ -97,10 +99,10 @@ export function useModal(onClose: () => void) {
 }
 
 /** Modal card; closes with Esc, Android's Back or by tapping outside. */
-export function Dialog({ title, onClose, children, className = '' }: Props) {
+export function Dialog({ title, onClose, children, className = '', sheet = false }: Props) {
   const modal = useModal(onClose);
   return (
-    <div className="overlay" role="dialog" aria-modal="true" aria-label={title} {...modal}>
+    <div className={`overlay${sheet ? ' is-sheet' : ''}`} role="dialog" aria-modal="true" aria-label={title} {...modal}>
       <div className={`overlay-card ${className}`}>
         <h2 className="dialog-title">{title}</h2>
         {children}

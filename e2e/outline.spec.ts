@@ -80,6 +80,9 @@ test.describe('Strumenti', () => {
 
     await bar.getByRole('button', { name: 'Altro' }).click();
     const more = page.getByRole('dialog', { name: 'Altro' });
+    // It comes up from the bottom, where the bar it was opened from is (once it has slid in).
+    const card = more.locator('.overlay-card');
+    await expect.poll(async () => card.boundingBox().then((b) => Math.round(b!.y + b!.height))).toBe(page.viewportSize()!.height);
     for (const name of ['Scaletta', 'Dal libro', 'Immagine', 'Sposta', 'Elimina', 'Salva', 'Aspetto'])
       await expect(more.getByRole('button', { name, exact: true })).toBeVisible();
     await more.getByRole('button', { name: 'Chiudi' }).click();

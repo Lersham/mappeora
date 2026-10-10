@@ -10,6 +10,7 @@ import { backupDue, homeScreenHintNeeded, homeScreenHintSeen, restoreMaps, saveA
 import { ExamplesDialog } from './ExamplesDialog';
 import { WelcomeDialog, welcomeNeeded } from './WelcomeDialog';
 import { Icon } from '../../components/Icon';
+import { friendlyDate } from '../../lib/friendlyDate';
 
 interface Props {
   onOpen(id: string): void;
@@ -186,7 +187,9 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
           <li key={m.id} className="map-card">
             <button type="button" className="map-open" onClick={() => onOpen(m.id)}>
               <span className="map-title">{m.title}</span>
-              <span className="map-date">{new Date(m.updatedAt).toLocaleDateString('it-IT')}</span>
+              <time className="map-date" dateTime={new Date(m.updatedAt).toISOString()}>
+                {friendlyDate(m.updatedAt)}
+              </time>
             </button>
             <button type="button" className="icon-button" aria-label={`Leggi il titolo ${m.title}`} onClick={() => void readText(m.title)}>
               <Icon name="speak" />

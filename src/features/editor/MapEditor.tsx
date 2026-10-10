@@ -6,6 +6,7 @@ import {
   Controls,
   ReactFlow,
   ReactFlowProvider,
+  useNodesInitialized,
   useReactFlow,
   type Edge,
   type EdgeChange,
@@ -34,6 +35,7 @@ import { Dialog } from '../../components/Dialog';
 import { DictationOverlay } from '../../components/DictationOverlay';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { useDictation } from '../../hooks/useDictation';
+import { useCrowded } from '../../hooks/useCrowded';
 import { autoLayout } from '../../services/layout';
 import { exportMap, saveMapFile } from '../../services/export';
 import { readingOrder } from '../../lib/readingOrder';
@@ -59,13 +61,15 @@ const READABLE_PX = 12;
 /** …to this size, comfortable to read on a phone. */
 const COMFORT_PX = 16;
 const MAX_READ_ZOOM = 1.2;
+/** The farthest the map can be seen from. */
+const MIN_ZOOM = 0.2;
 
 const LOCK_KEY = 'mappeora-concetti-bloccati';
 
 /**
  * On a touch screen the concepts start locked: a finger that lands on one
  * while moving or zooming the map must not drag it away. With a mouse the
- * difference is clear (drag the empty sheet to move, the wheel to zoom), so
+ * difference is clear (drag the empty sheet or turn the wheel to move), so
  * there they start free. The child's choice is remembered on the device.
  */
 function lockedAtStart(): boolean {
@@ -117,7 +121,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const canUndo = useStore(useMapStore.temporal, (t) => t.pastStates.length > 0);
   const canRedo = useStore(useMapStore.temporal, (t) => t.futureStates.length > 0);
   const review = useReview();
-  const { fitView, getNodes, getEdges, setCenter, getZoom, getInternalNode, getViewport, setViewport } = useReactFlow();
+  const { fitView, getNodes, getNodesBounds, getEdges, setCenter, getZoom, getInternalNode, getViewport, setViewport } = useReactFlow();
   const reader = useReadAloud();
   const dictation = useDictation();
   const [arranging, setArranging] = useState(false);
@@ -372,6 +376,65 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   };
 
   /**
+   * A sheet is tall. On a screen wider than it is tall (a computer, a
+   * Chromebook, a tablet held sideways) the whole map fits the height: two
+   * empty bands at its sides and names too small to read. Then the map is
+   * shown as wide as the screen, from the top, like a page: the rest is a
+   * scroll away. Null when the whole map reads fine, or when the screen is
+   * no wider than the sheet (a phone, a tablet held upright: no bands, and
+   * a tap brings a branch close). `mustFit`: only when the whole map cannot
+   * be seen even from afar.
+   */
+  const pageView = (mustFit = false) => {
+    const box = document.querySelector('.react-flow')?.getBoundingClientRect();
+    const visible = getNodes().filter((n) => !n.hidden);
+    if (!box || visible.length === 0) return null;
+    const b = getNodesBounds(visible);
+    const px = Math.min(...visible.map((n) => textOnScreen(n.id).px));
+    const pad = 32;
+    const whole = Math.min(MAX_READ_ZOOM, (box.width - pad * 2) / b.width, (box.height - pad * 2) / b.height);
+    const wide = Math.min(MAX_READ_ZOOM, (box.width - pad * 2) / b.width);
+    const top = (zoom: number) => ({ x: (box.width - b.width * zoom) / 2 - b.x * zoom, y: pad - b.y * zoom, zoom });
+    // Too big to be seen whole even from afar (large text on a phone): from
+    // the top, where the main concept is, not centred and cut at both ends.
+    if (whole < MIN_ZOOM) return top(Math.max(MIN_ZOOM, wide));
+    if (mustFit || px * whole >= READABLE_PX || wide < whole * 1.5) return null;
+    return top(wide);
+  };
+
+  const fromTopIfTooBig = () => {
+    const page = pageView(true);
+    if (page) void setViewport(page);
+  };
+
+  /** After «Riordina», «Scaletta», a review: the page view if the map needs it, else all of it. */
+  const showMap = (delay: number) =>
+    setTimeout(() => {
+      const page = pageView();
+      if (page) void setViewport(page, { duration: motion(400) });
+      else void fitView({ padding: 0.2, duration: motion(400) });
+    }, delay);
+
+  // Opening a map: its concepts take their final size bit by bit (pictures
+  // load, the sheet makes room for them), and a view worked out at the
+  // first frame cut the sides of a large map. The first view follows them
+  // for a moment, until the child touches the map.
+  const measured = useNodesInitialized();
+  const openedAt = useRef(performance.now());
+  const touched = useRef(false);
+  useEffect(() => {
+    if (!measured || touched.current || performance.now() - openedAt.current > 1500) return;
+    const t = setTimeout(() => {
+      if (touched.current) return;
+      const page = pageView();
+      if (page) void setViewport(page);
+      else void fitView({ padding: 0.3, maxZoom: MAX_READ_ZOOM });
+    }, 50);
+    return () => clearTimeout(t);
+  }, [measured, sizes, map.nodes]);
+  const touch = () => void (touched.current = true);
+
+  /**
    * A new concept can land outside the visible part of the map: once the
    * layout has placed it, move the view just enough to show it. One about
    * to be written also comes close enough to read what is typed.
@@ -495,7 +558,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     // hand goes back on the sheet.
     if (sheetTemplate) {
       if (!sheetMode) actions.setFreeLayout(false);
-      return void setTimeout(() => void fitView({ padding: 0.2, duration: motion(400) }), 150);
+      return void showMap(150);
     }
     await arrange();
   };
@@ -523,7 +586,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       if (followUp) untracked(() => actions.applyPositions(fresh));
       else actions.applyPositions(fresh);
       // Give React Flow a frame to render the new positions before fitting.
-      setTimeout(() => void fitView({ padding: 0.2, duration: motion(400) }), 50);
+      showMap(50);
     } catch {
       setNotice('Non sono riuscito a riordinare la mappa. Riprova.');
     } finally {
@@ -532,8 +595,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   };
 
   /** After «Dal libro» or «Scaletta»: a sheet orders itself, a map placed by hand stays so. */
-  const afterBulkEdit = () =>
-    setTimeout(() => void (sheetTemplate ? fitView({ padding: 0.2, duration: motion(400) }) : arrange({ followUp: true })), 150);
+  const afterBulkEdit = () => (sheetTemplate ? showMap(150) : setTimeout(() => void arrange({ followUp: true }), 150));
 
   const dictate = async () => {
     const command = parseVoiceCommand(await dictation.start());
@@ -621,11 +683,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     void reader.stop();
     review.exit();
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
-    setTimeout(() => void fitView({ padding: 0.2, duration: motion(400) }), 50);
+    showMap(50);
   };
 
   useBackHandler(exitReview, review.active);
-  const overview = () => void fitView({ padding: 0.15, duration: motion(500) });
+  const overview = () => void fitView({ padding: 0.15, duration: motion(500) }).then(fromTopIfTooBig);
 
   // Review: follow the current concept and read it once it is visible.
   const current = review.active ? review.steps[review.index] : undefined;
@@ -717,9 +779,19 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   const editing = !review.active;
 
-  // On a phone only the main tools fit: these go in «Altro» (see .toolbar-more).
+  const [toolbarRef, crowded] = useCrowded();
+  // Where they do not all fit (a phone, large text): these go in «Altro» (see .toolbar-more).
+  // Where they all fit they are in groups ('group-start'): what goes into the map,
+  // where it stays or leaves it, the map as a whole.
   const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
-    { key: 'outline', icon: 'outline', label: 'Scaletta', title: 'Scrivi la mappa come un elenco puntato', onClick: () => setDialog({ kind: 'outline' }) },
+    {
+      key: 'outline',
+      icon: 'outline',
+      label: 'Scaletta',
+      title: 'Scrivi la mappa come un elenco puntato',
+      className: 'group-start',
+      onClick: () => setDialog({ kind: 'outline' }),
+    },
     { key: 'photo', icon: 'camera', label: 'Dal libro', onClick: () => setDialog({ kind: 'photo' }) },
     { key: 'image', icon: 'image', label: 'Immagine', onClick: () => setDialog({ kind: 'style' }), disabled: !selectedNode },
     sheetMode
@@ -728,6 +800,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           icon: 'hand',
           label: 'Sposta',
           title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
+          className: 'group-start',
           onClick: () => {
             actions.setFreeLayout(true);
             // «Sposta» is asking to move concepts: they can't stay locked.
@@ -739,32 +812,42 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           icon: 'tidy',
           label: 'Riordina',
           title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4.' : undefined,
+          className: 'group-start',
           onClick: () => void tidy(),
           disabled: arranging,
         },
     { key: 'delete', icon: 'trash', label: 'Elimina', variant: 'danger', onClick: () => selectedNode && actions.removeNodes([selectedNode.id]), disabled: !selectedNode },
-    { key: 'save', icon: 'save', label: 'Salva', onClick: () => setDialog({ kind: 'export' }) },
+    { key: 'save', icon: 'save', label: 'Salva', className: 'group-start', onClick: () => setDialog({ kind: 'export' }) },
     { key: 'settings', icon: 'palette', label: 'Aspetto', onClick: onOpenSettings },
   ];
 
   return (
-    <div className={`editor${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}`}>
+    <div
+      className={`editor${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}`}
+      onPointerDownCapture={touch}
+      onKeyDownCapture={touch}
+      onWheelCapture={touch}
+    >
       <header className="topbar">
         <BigButton icon="back" label="Mappe" onClick={onBack} />
-        <input
-          className="title-input"
-          value={map.title}
-          maxLength={1000}
-          aria-label="Titolo della mappa"
-          readOnly={!editing}
-          // The whole title is one undo step, not one per letter.
-          onFocus={() => editing && beginStep()}
-          onBlur={() => {
-            if (!map.title.trim()) actions.setTitle(map.nodes[0]?.label.trim() || NEW_MAP_TITLE);
-            endStep();
-          }}
-          onChange={(e) => actions.setTitle(e.target.value)}
-        />
+        {/* The pencil says the title can be changed: there is no hover on a tablet. */}
+        <label className="title-field">
+          <input
+            className="title-input"
+            value={map.title}
+            maxLength={1000}
+            aria-label="Titolo della mappa"
+            readOnly={!editing}
+            // The whole title is one undo step, not one per letter.
+            onFocus={() => editing && beginStep()}
+            onBlur={() => {
+              if (!map.title.trim()) actions.setTitle(map.nodes[0]?.label.trim() || NEW_MAP_TITLE);
+              endStep();
+            }}
+            onChange={(e) => actions.setTitle(e.target.value)}
+          />
+          {editing && <Icon name="edit" className="title-edit-icon" />}
+        </label>
         {editing ? (
           <>
             <BigButton icon="undo" label="Annulla" disabled={!canUndo} onClick={() => mapHistory().undo()} />
@@ -823,13 +906,22 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           // the two taps of a double tap, so renaming it failed.
           autoPanOnNodeFocus={false}
           fitView
-          fitViewOptions={{ padding: 0.3, maxZoom: 1.2 }}
-          minZoom={0.2}
+          fitViewOptions={{ padding: 0.3, maxZoom: MAX_READ_ZOOM }}
+          minZoom={MIN_ZOOM}
+          // The wheel and two fingers on a touchpad scroll the sheet, like a
+          // page; Ctrl + wheel, a pinch and the buttons zoom.
+          panOnScroll
+          panOnScrollSpeed={1}
           proOptions={{ hideAttribution: true }}
           ariaLabelConfig={MAP_ARIA_LABELS}
         >
           <Background gap={24} />
-          <Controls showInteractive={false}>
+          <Controls
+            showInteractive={false}
+            // A map too big to be seen whole: its top, not its middle (once
+            // React Flow has done its own fit, which waits for a render).
+            onFitView={() => void fitView().then(fromTopIfTooBig)}
+          >
             {editing && (
               <ControlButton
                 className="lock-button"
@@ -861,7 +953,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       {review.active ? (
         <ReviewBar onRepeat={() => current && void reader.readSteps([current])} onOverview={overview} onExit={exitReview} />
       ) : (
-        <nav className="toolbar" aria-label="Strumenti">
+        <nav ref={toolbarRef} className={`toolbar${crowded ? ' is-crowded' : ''}`} aria-label="Strumenti">
           <BigButton icon="plus" label="Concetto" variant="primary" className={target('concetto')} onClick={() => addConcept()} />
           <BigButton icon="mic" label="Detta" className={target('detta')} onClick={dictate} disabled={dictation.listening} />
           {reader.active ? (
@@ -870,8 +962,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             <BigButton icon="speak" label="Leggi" className={target('leggi')} onClick={reader.readMap} />
           )}
           <BigButton icon="brain" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
-          {moreTools.map(({ key, ...t }) => (
-            <BigButton key={key} {...t} className="toolbar-extra" />
+          {moreTools.map(({ key, className = '', ...t }) => (
+            <BigButton key={key} {...t} className={`toolbar-extra ${className}`} />
           ))}
           <BigButton icon="menu" label="Altro" className="toolbar-more" aria-haspopup="dialog" onClick={() => setDialog({ kind: 'more' })} />
         </nav>
@@ -929,9 +1021,9 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         />
       )}
       {dialog?.kind === 'more' && (
-        <Dialog title="Altro" onClose={() => setDialog(null)} className="more-tools">
+        <Dialog title="Altro" onClose={() => setDialog(null)} className="more-tools" sheet>
           <div className="more-grid">
-            {moreTools.map(({ key, onClick, ...t }) => (
+            {moreTools.map(({ key, onClick, className: _group, ...t }) => (
               <BigButton
                 key={key}
                 {...t}
@@ -953,7 +1045,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
 function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): void; onClose(): void }) {
   return (
-    <Dialog title="Ripassa" onClose={onClose} className="review-start">
+    <Dialog title="Ripassa" onClose={onClose} className="review-start" sheet>
       <OptionCard icon="👣" name="Un passo alla volta" description="La mappa appare un concetto alla volta, letto ad alta voce." onClick={() => onStart('passo')} />
       <OptionCard icon="🙈" name="Indovina" description="Il concetto è nascosto: prova a ricordarlo, poi premi «Scopri»." onClick={() => onStart('quiz')} />
       <OptionCard

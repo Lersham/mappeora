@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
 import { MicButton } from '../../components/MicButton';
@@ -27,7 +27,22 @@ export function OutlineDialog({ onDone, onClose }: { onDone(): void; onClose(): 
   });
   const [rows, setRows] = useState(initial);
   const [focusId, setFocusId] = useState<string | null>(null);
-  const inputs = useRef(new Map<string, HTMLInputElement>());
+  const inputs = useRef(new Map<string, HTMLTextAreaElement>());
+
+  // A line is as tall as its words. Where the browser cannot do it by itself
+  // (field-sizing in app.css), it is measured here.
+  useLayoutEffect(() => {
+    if (CSS.supports('field-sizing', 'content')) return;
+    const fit = () => {
+      for (const el of inputs.current.values()) {
+        el.style.height = 'auto';
+        el.style.height = `${el.offsetHeight - el.clientHeight + el.scrollHeight}px`;
+      }
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [rows]);
 
   useEffect(() => {
     if (!focusId) return;
@@ -96,7 +111,7 @@ export function OutlineDialog({ onDone, onClose }: { onDone(): void; onClose(): 
     if (!changed || window.confirm('Chiudere la scaletta senza cambiare la mappa? Le righe scritte andranno perse.')) onClose();
   };
 
-  const onKey = (e: KeyboardEvent<HTMLInputElement>, i: number) => {
+  const onKey = (e: KeyboardEvent<HTMLTextAreaElement>, i: number) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       done();
@@ -128,25 +143,30 @@ export function OutlineDialog({ onDone, onClose }: { onDone(): void; onClose(): 
             <span className="outline-bullet" aria-hidden>
               {r.depth === 0 ? '●' : '–'}
             </span>
-            <input
+            {/* A field of more lines only so that a long concept wraps: Enter still makes a new row. */}
+            <textarea
               ref={(el) => void (el ? inputs.current.set(r.id, el) : inputs.current.delete(r.id))}
               className="text-field outline-input"
+              rows={1}
               value={r.label}
               aria-label={`Riga ${i + 1}, livello ${r.depth + 1}`}
               placeholder="Scrivi un concetto"
               enterKeyHint="next"
-              onChange={(e) => setLabel(r.id, e.target.value)}
+              onChange={(e) => setLabel(r.id, e.target.value.replace(/\s*\n\s*/g, ' '))}
               onKeyDown={(e) => onKey(e, i)}
             />
-            <button type="button" className="outline-tool outline-tools-start" aria-label="Sposta a sinistra" disabled={r.depth === 0} onClick={() => shift(i, -1)}>
-              <Icon name="outdent" />
-            </button>
-            <button type="button" className="outline-tool" aria-label="Sposta a destra" disabled={i === 0 || r.depth > rows[i - 1].depth} onClick={() => shift(i, 1)}>
-              <Icon name="indent" />
-            </button>
-            <button type="button" className="outline-tool" aria-label="Togli la riga" onClick={() => remove(i)}>
-              <Icon name="trash" />
-            </button>
+            {/* Together: if they go under the line, they go all three. */}
+            <span className="outline-tools">
+              <button type="button" className="outline-tool" aria-label="Sposta a sinistra" disabled={r.depth === 0} onClick={() => shift(i, -1)}>
+                <Icon name="outdent" />
+              </button>
+              <button type="button" className="outline-tool" aria-label="Sposta a destra" disabled={i === 0 || r.depth > rows[i - 1].depth} onClick={() => shift(i, 1)}>
+                <Icon name="indent" />
+              </button>
+              <button type="button" className="outline-tool" aria-label="Togli la riga" onClick={() => remove(i)}>
+                <Icon name="trash" />
+              </button>
+            </span>
           </li>
         ))}
       </ol>

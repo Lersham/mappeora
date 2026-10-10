@@ -227,6 +227,94 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await expect.poll(() => onScreenPx('Le cause'), { timeout: 5000 }).toBeGreaterThanOrEqual(12);
     await expect(node(page, 'Le cause')).toBeInViewport();
   });
+
+  test('sul telefono una mappa grande si apre tutta, anche se le immagini arrivano dopo', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'sullo schermo largo si apre come una pagina');
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Esempi', exact: true }).click();
+    await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
+    await expect(nodes(page)).toHaveCount(37);
+    await settled(page);
+    const canvas = (await page.locator('.react-flow').boundingBox())!;
+    for (const b of await boxes(page)) {
+      expect(b.x, b.label).toBeGreaterThanOrEqual(canvas.x - 1);
+      expect(b.x + b.w, b.label).toBeLessThanOrEqual(canvas.x + canvas.width + 1);
+    }
+  });
+
+  test('sullo schermo largo una mappa lunga si apre come una pagina: larga quanto lo schermo, leggibile, e la rotella la scorre', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, 'sul telefono si vede tutta, e un tocco avvicina un ramo');
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Esempi', exact: true }).click();
+    await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
+    await expect(nodes(page)).toHaveCount(37);
+    await settled(page);
+    const onScreenPx = (label: string) =>
+      node(page, label)
+        .locator('.concept-label')
+        .evaluate((el) => (parseFloat(getComputedStyle(el).fontSize) * el.getBoundingClientRect().height) / (el as HTMLElement).offsetHeight);
+    // The main concept on top, names that can be read, no empty bands at the sides.
+    await expect(node(page, 'La Rivoluzione francese')).toBeInViewport();
+    expect(await onScreenPx('Le cause')).toBeGreaterThanOrEqual(12);
+    const canvas = (await page.locator('.react-flow').boundingBox())!;
+    const all = await boxes(page);
+    const width = Math.max(...all.map((b) => b.x + b.w)) - Math.min(...all.map((b) => b.x));
+    expect(width).toBeGreaterThan(canvas.width * 0.8);
+
+    // The wheel scrolls down the sheet, like a page: it does not zoom.
+    const zoom = () => page.locator('.react-flow__viewport').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).a);
+    const before = await zoom();
+    const top = (await node(page, 'Le cause').boundingBox())!.y;
+    await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
+    await page.mouse.wheel(0, 300);
+    await expect.poll(async () => (await node(page, 'Le cause').boundingBox())!.y).toBeLessThan(top - 100);
+    expect(await zoom()).toBeCloseTo(before, 3);
+
+    // The button still shows all of it, from afar.
+    await showAll(page);
+    expect(await onScreenPx('Le cause')).toBeLessThan(12);
+  });
+
+  test('sul telefono con il testo grande una mappa troppo grande per starci tutta si apre dalla cima, con il concetto principale', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!isMobile, 'sullo schermo largo si apre come una pagina');
+    await page.addInitScript(() => {
+      if (!localStorage.getItem('mappeora-settings')) {
+        const state = { font: 'opendyslexic', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
+        localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+      }
+    });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Esempi', exact: true }).click();
+    await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
+    await expect(nodes(page)).toHaveCount(37);
+    await settled(page);
+    // Not centred and cut at both ends: the main concept, whole, under the bar.
+    const main = node(page, 'La Rivoluzione francese');
+    const insideCanvas = async () => {
+      const [b, c] = [(await main.boundingBox())!, (await page.locator('.react-flow').boundingBox())!];
+      return b.y >= c.y && b.y + b.height <= c.y + c.height;
+    };
+    expect(await insideCanvas()).toBe(true);
+    // «Mostra tutta la mappa» too.
+    await page.locator('.react-flow__controls-fitview').click();
+    await expect.poll(insideCanvas).toBe(true);
+  });
+
+  test('sullo schermo largo la barra in alto è una riga sottile: ogni parola accanto alla sua icona', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'sul telefono il titolo ha una riga sua');
+    await newMap(page, 'I vulcani');
+    expect((await page.locator('.topbar').boundingBox())!.height).toBeLessThanOrEqual(52);
+    const back = page.locator('.topbar').getByRole('button', { name: 'Mappe' });
+    const [icon, word] = [(await back.locator('.big-button-icon').boundingBox())!, (await back.locator('.big-button-label').boundingBox())!];
+    expect(icon.x + icon.width).toBeLessThanOrEqual(word.x);
+    expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  });
 });
 
 test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
