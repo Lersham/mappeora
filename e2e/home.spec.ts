@@ -116,6 +116,17 @@ test.describe('Schermata iniziale', () => {
     await expect(page.locator('.map-title')).toHaveText(['La Rivoluzione francese']);
   });
 
+  test('i quattro modi per iniziare sono nominati e spiegati; «Dal libro» apre subito la foto', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('group', { name: 'Altri modi per iniziare' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Nuova mappa' })).toHaveAccessibleDescription(/foglio vuoto/);
+    for (const name of ['Dal libro', 'Impara facendo', 'Esempi', 'Apri file']) {
+      await expect(page.getByRole('button', { name, exact: true })).toHaveAccessibleDescription(/\S/);
+    }
+    await page.getByRole('button', { name: 'Dal libro', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Dal libro' })).toBeVisible();
+  });
+
   test('l’informativa privacy si apre dalla schermata iniziale e riporta all’app', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('link', { name: 'Privacy' }).click();

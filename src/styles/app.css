@@ -115,92 +115,224 @@ textarea {
 
 .home {
   /* Wider with larger text, like the windows: the same words per line. */
-  max-width: calc(720px * var(--text-scale) / 1.15);
+  max-width: calc(760px * var(--text-scale) / 1.15);
   margin: 0 auto;
-  padding: max(16px, env(safe-area-inset-top)) 16px 32px;
+  padding: max(16px, env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
+}
+/* A touch of the primary colour behind the top, fading into the paper. */
+.home::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  height: 260px;
+  z-index: -1;
+  background: radial-gradient(70% 100% at 50% 0, color-mix(in srgb, var(--primary) 6%, transparent), transparent);
+  pointer-events: none;
+}
+.home > * {
+  animation: home-in 0.35s ease-out both;
+}
+.home > :nth-child(2) { animation-delay: 0.03s; }
+.home > :nth-child(3) { animation-delay: 0.06s; }
+.home > :nth-child(4) { animation-delay: 0.09s; }
+@keyframes home-in {
+  from { opacity: 0; transform: translateY(8px); }
 }
 .home-header {
   display: flex;
-  flex-wrap: wrap; /* large text: the buttons go under the name */
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap; /* large text: the buttons go under the name */
+  gap: 8px 12px;
 }
 .home-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 12px 0;
-  font-size: 1.4rem;
-  font-weight: 600;
+  margin: 8px 0;
+  font-size: 1.35rem;
+  font-weight: 700;
   color: var(--primary);
 }
 .home-brand img {
   flex: none;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--text) 18%, transparent);
 }
 .home-title {
-  font-size: 1.8rem;
-  margin: 8px 0 16px;
+  font-size: 1.9rem;
+  line-height: 1.2;
+  margin: 20px 0 2px;
+}
+.home-lead {
+  margin: 0 0 20px;
+  color: var(--muted);
 }
 .home-header-tools {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-left: auto;
 }
-/* «Come funziona» and «Aspetto» are used now and then: smaller than the
-   buttons that start a map, still with an icon and a word, and no frame. */
+/* «Come funziona» and «Aspetto»: small pills, icon and word side by side. */
 .home-header-tools .big-button {
+  flex-direction: row;
+  gap: 8px;
+  min-width: 0;
   min-height: 44px;
-  padding: 4px 10px;
-  gap: 0;
-  background: transparent;
+  padding: 4px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.home-header-tools .big-button:hover:not(:disabled) {
+  background: var(--tint);
 }
 .home-header-tools .big-button-icon {
   font-size: 1.1rem;
 }
 .home-header-tools .big-button-label {
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   line-height: 1.3;
 }
 @media (max-width: 520px) {
-  .home-brand {
-    font-size: 1.2rem;
-  }
   .home-brand img {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
   }
   .home-title {
-    font-size: 1.4rem;
+    font-size: 1.6rem;
+    margin-top: 16px;
+  }
+  .home-header-tools {
+    gap: 6px;
   }
   .home-header-tools .big-button {
-    padding: 4px 8px;
-  }
-  .home-header-tools .big-button-icon {
-    font-size: min(1.1rem, 5.5vw);
+    gap: 6px;
+    padding: 4px 10px;
   }
   .home-header-tools .big-button-label {
-    font-size: min(0.875rem, 3.9vw);
+    font-size: 0.85rem;
     letter-spacing: normal;
   }
 }
-.home-actions {
-  display: grid;
-  gap: 12px;
-}
-/* «Nuova mappa» is the one big button. The others share a row, so on a phone
-   the maps stay in sight; a button goes to a new line only when one of its
-   words would not fit (large text), never cutting a word. */
-.home-more {
+
+/* The one big thing to do. */
+.new-hero {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 88px;
+  padding: 14px 20px;
+  border: 0;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 78%, #7a4fa3));
+  color: var(--primary-text);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 32%, transparent);
+  transition: transform 0.12s, box-shadow 0.12s;
 }
-.home-more .big-button {
-  flex: 1 1 0;
-  min-width: min-content;
+.new-hero:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--primary) 40%, transparent);
 }
+.new-hero:active {
+  transform: scale(0.99);
+}
+.new-hero-plus {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--primary-text) 22%, transparent);
+  font-size: 1.8rem;
+}
+.tile-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.new-hero-label {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+.new-hero-hint {
+  font-size: 0.9rem;
+  opacity: 0.92;
+}
+
+.section-title {
+  margin: 28px 0 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* The other ways to start: a coloured badge, a name, one line that says what
+   it does. A list on a phone, two columns when there is room. */
+.start-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+@media (min-width: 640px) {
+  .start-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.start-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 76px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+.start-tile:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--tone, var(--primary)) 45%, var(--line));
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--text) 10%, transparent);
+}
+.start-tile:active {
+  transform: scale(0.99);
+}
+.tile-badge,
+.map-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--tone) 16%, var(--surface));
+  color: var(--tone);
+  font-size: 1.5rem;
+}
+.tile-label {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.tile-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+.tile-go {
+  flex: none;
+  margin-left: auto;
+  color: var(--muted);
+}
+
 .link-button {
   /* A link inside a sentence: the touch area grows, the line does not. */
   padding: 12px 4px;
@@ -212,19 +344,13 @@ textarea {
   text-decoration: underline;
   cursor: pointer;
 }
-.home-new {
-  width: 100%;
-  flex-direction: row;
-  gap: 12px;
-  min-height: 72px;
-}
-.home-new .big-button-label {
-  font-size: 1.2rem;
-}
 .empty {
+  margin: 8px 0 0;
+  padding: 20px 16px;
+  border: 2px dashed var(--border);
+  border-radius: 16px;
   color: var(--muted);
   text-align: center;
-  margin-top: 32px;
 }
 .home-footer {
   display: flex;
@@ -234,7 +360,12 @@ textarea {
   margin-top: 40px;
 }
 .home-footer a {
-  padding: 12px 8px;
+  display: inline-block;
+  padding: 12px 16px;
+  color: var(--muted);
+}
+.home-footer a:hover {
+  color: var(--primary);
 }
 /* A reminder that matters (a safety copy, the Home screen on iPhone). */
 .home-notice {
@@ -242,50 +373,69 @@ textarea {
   gap: 12px;
   margin-top: 16px;
   padding: 16px;
-  border: 2px solid var(--focus);
+  border: 1px solid color-mix(in srgb, var(--focus) 55%, var(--line));
+  border-left: 6px solid var(--focus);
   border-radius: 16px;
   background: color-mix(in srgb, var(--highlight) 22%, var(--surface));
 }
 .home-notice p {
   margin: 0;
+  font-size: 0.95rem;
 }
 .home-notice-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
+.home-notice .big-button,
+.backup-card .big-button {
+  flex-direction: row;
+  gap: 8px;
+  min-height: 48px;
+  padding: 6px 16px;
+}
+.home-notice .big-button-label,
+.backup-card .big-button-label {
+  font-size: 0.9rem;
+}
 .backup-card {
   display: grid;
   gap: 12px;
   justify-items: start;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 2px dashed var(--border);
+  margin-top: 28px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
 }
 .backup-card p {
   margin: 0;
+  font-size: 0.9rem;
 }
 .backup-note {
   margin: 12px 0 0;
   font-weight: 600;
 }
-.home-footer a {
-  display: inline-block;
-  padding: 12px 16px;
-  color: var(--primary);
-}
 .map-list {
   list-style: none;
   padding: 0;
-  margin: 24px 0 0;
+  margin: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr); /* a long title must not widen the page */
-  gap: 12px;
+  gap: 10px;
+}
+@media (min-width: 640px) {
+  .map-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .map-card.is-latest {
+    grid-column: 1 / -1;
+  }
 }
 .map-card {
   display: flex;
-  /* Large text: when a word of the title needs the room, 🔊 and 🗑️ go under
-     it, on the right, instead of off the screen. */
+  /* Large text: when a word of the title needs the room, the 🔊 and the bin go
+     under it, on the right, instead of off the screen. */
   flex-wrap: wrap;
   justify-content: flex-end;
   align-items: center;
@@ -293,30 +443,66 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 16px;
   padding-right: 4px;
+  transition: box-shadow 0.12s, border-color 0.12s;
+}
+.map-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--line));
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--text) 10%, transparent);
+}
+/* The map you worked on last: the one you most likely want. */
+.map-card.is-latest {
+  border-left: 6px solid var(--primary);
 }
 .map-open {
   flex: 1;
   max-width: 100%; /* also caps the flex minimum: a very long word wraps */
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  gap: 14px;
   min-height: 72px;
-  padding: 12px 16px;
+  padding: 10px 12px;
   border: none;
   background: none;
   text-align: left;
   cursor: pointer;
 }
+.map-text {
+  display: grid;
+  min-width: 0;
+}
 .map-title {
-  font-size: min(1.15rem, 6.5vw);
+  font-size: min(1.1rem, 6vw);
   font-weight: 600;
   /* Only a word longer than the whole card is broken. */
   max-width: 100%;
   overflow-wrap: break-word;
 }
+.map-card.is-latest .map-title {
+  font-size: min(1.2rem, 5.6vw);
+}
+.map-card .icon-button {
+  min-width: 48px;
+  min-height: 48px;
+}
 .map-date {
   color: var(--muted);
   font-size: 0.85rem;
+}
+.icon-button.danger-hover:hover {
+  color: var(--danger);
+}
+@media (prefers-reduced-motion: reduce) {
+  .home > *,
+  .new-hero,
+  .start-tile,
+  .map-card {
+    animation: none;
+    transition: none;
+  }
+  .new-hero:hover,
+  .start-tile:hover {
+    transform: none;
+  }
 }
 
 /* ---------- Editor ---------- */

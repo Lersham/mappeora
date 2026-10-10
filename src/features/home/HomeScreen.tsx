@@ -9,8 +9,42 @@ import { MapFileError, parseAnyMapFile } from '../../lib/mapFile';
 import { backupDue, homeScreenHintNeeded, homeScreenHintSeen, restoreMaps, saveAllMaps, snoozeBackup } from '../../services/backup';
 import { ExamplesDialog } from './ExamplesDialog';
 import { WelcomeDialog, welcomeNeeded } from './WelcomeDialog';
-import { Icon } from '../../components/Icon';
+import { Icon, type IconName } from '../../components/Icon';
 import { friendlyDate } from '../../lib/friendlyDate';
+
+/** One of the ways to start, with a line that says what it does. The line is the
+ *  button's description (aria-describedby), not its name: the name stays the single word. */
+function StartTile({ icon, label, hint, tone, onClick }: { icon: IconName; label: string; hint: string; tone: number; onClick(): void }) {
+  const hintId = `start-${tone}`;
+  return (
+    <button type="button" className="start-tile" aria-label={label} aria-describedby={hintId} onClick={onClick}>
+      <span className="tile-badge" style={{ '--tone': `var(--branch-${tone})` } as React.CSSProperties} aria-hidden>
+        <Icon name={icon} />
+      </span>
+      <span className="tile-text">
+        <span className="tile-label">{label}</span>
+        <span className="tile-hint" id={hintId}>
+          {hint}
+        </span>
+      </span>
+      <Icon name="forward" className="tile-go" />
+    </button>
+  );
+}
+
+/** A soft colour and the first letter of the title, so each map is easy to spot. */
+function MapAvatar({ id, title }: { id: string; title: string }) {
+  let h = 0;
+  for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 6;
+  // «Il sistema solare» → S, not I: skip the article.
+  const word = title.replace(/^(?:(?:il|lo|la|le|gli|i|un|uno|una)\s+|(?:l|un)['’]\s*)/iu, '');
+  const letter = (word.match(/[\p{L}\p{N}]/u)?.[0] ?? '•').toUpperCase();
+  return (
+    <span className="map-avatar" style={{ '--tone': `var(--branch-${h})` } as React.CSSProperties} aria-hidden>
+      {letter}
+    </span>
+  );
+}
 
 interface Props {
   onOpen(id: string): void;
@@ -115,15 +149,19 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         </div>
       </header>
       <h1 className="home-title">Le mie mappe</h1>
+      <p className="home-lead">Cosa vuoi studiare oggi?</p>
 
-      <div className="home-actions">
-        <BigButton icon="plus" label="Nuova mappa" variant="primary" className="home-new" onClick={onCreate} />
-        <div className="home-more">
-          <BigButton icon="folder" label="Apri file" onClick={() => void importFile()} />
-          <BigButton icon="book" label="Esempi" onClick={() => setExamplesOpen(true)} />
-          <BigButton icon="graduation" label="Impara facendo" title="Costruisci la tua prima mappa passo passo, con una guida" onClick={onStartTutorial} />
-        </div>
-      </div>
+      <button type="button" className="new-hero" aria-label="Nuova mappa" aria-describedby="new-hero-hint" onClick={onCreate}>
+        <span className="new-hero-plus" aria-hidden>
+          <Icon name="plus" />
+        </span>
+        <span className="tile-text">
+          <span className="new-hero-label">Nuova mappa</span>
+          <span className="new-hero-hint" id="new-hero-hint">
+            Parti da un foglio vuoto o da un modello
+          </span>
+        </span>
+      </button>
       {[error, importError, listError].filter(Boolean).map((message) => (
         <p key={message} className="field-error" role="alert">
           {message}
@@ -172,7 +210,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
 
       {maps && maps.length === 0 && (
         <p className="empty">
-          Non hai ancora mappe. Creane una, oppure apri un{' '}
+          Non hai ancora mappe. Creane una, oppure guarda un{' '}
           <button type="button" className="link-button" onClick={() => setExamplesOpen(true)}>
             esempio
           </button>
@@ -182,24 +220,42 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       {welcomeOpen && <WelcomeDialog onClose={() => setWelcomeOpen(false)} onExamples={() => setExamplesOpen(true)} onTryBook={onStartFromBook} />}
       {examplesOpen && <ExamplesDialog onOpen={onOpen} onClose={() => setExamplesOpen(false)} />}
 
-      <ul className="map-list">
-        {maps?.map(({ title, ...m }) => ({ ...m, title: title.trim() || 'Mappa senza titolo' })).map((m) => (
-          <li key={m.id} className="map-card">
+      {maps && maps.length > 0 && (
+        <h2 className="section-title" id="maps-title">
+          Continua da dove eri rimasto
+        </h2>
+      )}
+      <ul className="map-list" aria-labelledby={maps && maps.length > 0 ? 'maps-title' : undefined}>
+        {maps?.map(({ title, ...m }) => ({ ...m, title: title.trim() || 'Mappa senza titolo' })).map((m, i) => (
+          <li key={m.id} className={`map-card${i === 0 ? ' is-latest' : ''}`}>
             <button type="button" className="map-open" onClick={() => onOpen(m.id)}>
-              <span className="map-title">{m.title}</span>
-              <time className="map-date" dateTime={new Date(m.updatedAt).toISOString()}>
-                {friendlyDate(m.updatedAt)}
-              </time>
+              <MapAvatar id={m.id} title={m.title} />
+              <span className="map-text">
+                <span className="map-title">{m.title}</span>
+                <time className="map-date" dateTime={new Date(m.updatedAt).toISOString()}>
+                  {friendlyDate(m.updatedAt)}
+                </time>
+              </span>
             </button>
             <button type="button" className="icon-button" aria-label={`Leggi il titolo ${m.title}`} onClick={() => void readText(m.title)}>
               <Icon name="speak" />
             </button>
-            <button type="button" className="icon-button" aria-label={`Cancella ${m.title}`} onClick={() => void remove(m)}>
+            <button type="button" className="icon-button danger-hover" aria-label={`Cancella ${m.title}`} onClick={() => void remove(m)}>
               <Icon name="trash" />
             </button>
           </li>
         ))}
       </ul>
+
+      <h2 className="section-title" id="start-title">
+        Altri modi per iniziare
+      </h2>
+      <div className="start-grid" role="group" aria-labelledby="start-title">
+        <StartTile icon="camera" tone={0} label="Dal libro" hint="Fotografa una pagina: il testo diventa mappa" onClick={onStartFromBook} />
+        <StartTile icon="graduation" tone={3} label="Impara facendo" hint="Costruisci la tua prima mappa, passo passo" onClick={onStartTutorial} />
+        <StartTile icon="book" tone={2} label="Esempi" hint="Mappe già pronte da guardare e provare" onClick={() => setExamplesOpen(true)} />
+        <StartTile icon="folder" tone={1} label="Apri file" hint="Riprendi una mappa o una copia di sicurezza" onClick={() => void importFile()} />
+      </div>
 
       {maps && maps.length > 0 && !remind && (
         <section className="backup-card" aria-label="Copia di sicurezza">
