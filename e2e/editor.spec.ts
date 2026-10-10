@@ -1,5 +1,5 @@
 import { test, expect, spoken } from './fixtures';
-import { addConcept, boxes, newMap, node, nodes, onScreen, overlapping, rename, sampleMap, settled, showAll, tapLink, toolbar } from './helpers';
+import { addConcept, boxes, holdOn, newMap, node, nodes, onScreen, overlapping, rename, sampleMap, settled, showAll, tapLink, toolbar } from './helpers';
 
 test.describe('Editor', () => {
   test('aggiunge, rinomina, annulla, ripete ed elimina concetti', async ({ page }) => {
@@ -137,7 +137,7 @@ test.describe('Editor', () => {
     expect(overlapping(b)).toEqual([]);
   });
 
-  test('rinomina con doppio clic e il titolo resta quello della mappa', async ({ page }) => {
+  test('rinomina tenendo premuto e il titolo resta quello della mappa', async ({ page }) => {
     await newMap(page, 'Le stagioni');
     await rename(page, 'Le stagioni', 'Le quattro stagioni');
     await expect(page.locator('.title-input')).toHaveValue('Le stagioni');
@@ -356,8 +356,8 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
   });
 });
 
-test.describe('Editor: toccare un concetto per cambiarne immagine e colore', () => {
-  test('un secondo tocco sul concetto scelto apre «Immagine e colore»; il primo no', async ({ page }) => {
+test.describe('Editor: un tocco per immagine e colore, tenere premuto per rinominare', () => {
+  test('il primo tocco seleziona; un secondo tocco apre «Immagine e colore» subito', async ({ page }) => {
     await newMap(page, 'Gli animali');
     await settled(page);
     const target = await onScreen(page, node(page, 'Gli animali'));
@@ -374,19 +374,40 @@ test.describe('Editor: toccare un concetto per cambiarne immagine e colore', () 
     await expect(dialog).toHaveCount(0);
   });
 
-  test('il doppio tocco rinomina e non apre il dialogo, anche sul concetto scelto', async ({ page }) => {
+  test('tenendo premuto un concetto (anche non scelto) si rinomina, senza aprire il dialogo', async ({ page }) => {
     await newMap(page, 'Gli animali');
     await settled(page);
-    await (await onScreen(page, node(page, 'Gli animali'))).click({ delay: 60 }); // already in hand
     await rename(page, 'Gli animali', 'I mammiferi');
     await page.waitForTimeout(600);
     await expect(page.getByRole('dialog', { name: 'Immagine e colore' })).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Testo del concetto' })).toHaveCount(0);
+    // Chosen by the hold itself: «Elimina» is now enabled.
+    await expect(node(page, 'I mammiferi')).toHaveClass(/is-selected/);
   });
-  test('al tocco vero (telefono): selezionare, doppio tocco e secondo tocco si distinguono', async ({ page, isMobile }) => {
+
+  test('un tocco breve non rinomina e un dito che si muove non rinomina', async ({ page }) => {
+    await newMap(page, 'Gli animali');
+    await settled(page);
+    const target = await onScreen(page, node(page, 'Gli animali'));
+    await target.click({ delay: 100 });
+    await page.waitForTimeout(700);
+    await expect(page.getByRole('textbox', { name: 'Testo del concetto' })).toHaveCount(0);
+    // Held, but dragged away before letting go.
+    const box = (await target.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 30, box.y + box.height / 2 + 30, { steps: 4 });
+    await page.waitForTimeout(700);
+    await page.mouse.up();
+    await expect(page.getByRole('textbox', { name: 'Testo del concetto' })).toHaveCount(0);
+  });
+
+  test('al tocco vero (telefono): tocco, secondo tocco e pressione prolungata si distinguono', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'il tocco vero si prova sul telefono');
     await newMap(page, 'Gli animali');
     await settled(page);
     const dialog = page.getByRole('dialog', { name: 'Immagine e colore' });
+    const field = page.getByRole('textbox', { name: 'Testo del concetto' });
     const target = await onScreen(page, node(page, 'Gli animali'));
 
     await target.tap(); // selects
@@ -398,11 +419,14 @@ test.describe('Editor: toccare un concetto per cambiarne immagine e colore', () 
     await dialog.getByRole('button', { name: 'Fatto' }).click();
     await expect(dialog).toHaveCount(0);
 
-    // Double tap on the concept in hand: rename, no dialog.
-    await target.tap();
-    await target.tap();
-    await expect(page.getByRole('textbox', { name: 'Testo del concetto' })).toBeFocused();
+    // Held: the name opens, with the keyboard's field focused and kept open after the lift.
+    await holdOn(page, target);
+    await expect(field).toBeFocused();
     await page.waitForTimeout(600);
+    await expect(field).toBeFocused();
     await expect(dialog).toHaveCount(0);
+    await field.fill('I mammiferi');
+    await field.press('Enter');
+    await expect(node(page, 'I mammiferi')).toBeVisible();
   });
 });

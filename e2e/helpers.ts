@@ -28,7 +28,9 @@ export const nodes = (page: Page): Locator => page.locator('.concept-node');
 
 /** Adds a concept under `parent` and names it: a new concept opens ready for typing. */
 export async function addConcept(page: Page, parent: string, label: string) {
-  await (await onScreen(page, node(page, parent))).click();
+  const target = await onScreen(page, node(page, parent));
+  // «Concetto» adds under the concept in hand: tapping it again would open «Immagine e colore».
+  if (!(await node(page, parent).first().evaluate((el) => el.classList.contains('is-selected')))) await target.click();
   await page.getByRole('button', { name: 'Concetto', exact: true }).click();
   const input = page.getByRole('textbox', { name: 'Testo del concetto' });
   await expect(input).toBeFocused();
@@ -39,12 +41,33 @@ export async function addConcept(page: Page, parent: string, label: string) {
   await settled(page);
 }
 
+/**
+ * Holds a concept for `ms` and lets go: it opens for renaming. With a real
+ * touch where the device has a screen for it (as on a phone), else with the mouse.
+ */
+export async function holdOn(page: Page, target: Locator, ms = 700) {
+  const box = await target.boundingBox();
+  if (!box) throw new Error('concept not on screen');
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  if (await page.evaluate(() => navigator.maxTouchPoints > 0)) {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    await page.waitForTimeout(ms);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp.detach();
+  } else {
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.waitForTimeout(ms);
+    await page.mouse.up();
+  }
+}
+
 export async function rename(page: Page, from: string, to: string) {
   // A new concept slides into place right after being added: wait for it.
   await settled(page);
-  // Human-speed taps: a 3 ms simulated tap ends while the app is still
-  // handling the selection made by the first one.
-  await (await onScreen(page, node(page, from).last())).dblclick({ delay: 60 });
+  await holdOn(page, await onScreen(page, node(page, from).last()));
   const input = page.getByRole('textbox', { name: 'Testo del concetto' });
   await input.fill(to);
   await input.press('Enter');

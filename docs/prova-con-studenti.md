@@ -19,7 +19,7 @@ Bastano 4 o 5 persone per trovare la maggior parte dei problemi di uso. È megli
 | # | Compito | Cosa osservare | Riuscito se |
 |---|---|---|---|
 | 1 | «Fai una mappa sul brano, partendo da una foto della pagina.» | Trova «Dal libro»? Capisce l'evidenziatore? | Almeno 4 concetti in 5 minuti |
-| 2 | «Aggiungi un concetto sotto quello principale e scrivigli un nome.» | Scrive subito nel riquadro aperto, o cerca il doppio tocco? | Fatto senza aiuto |
+| 2 | «Aggiungi un concetto sotto quello principale e scrivigli un nome.» | Scrive subito nel riquadro aperto? | Fatto senza aiuto |
 | 3 | «Scrivi sulla freccia come sono legati.» | Trova il «+» o la linea? | Parola di collegamento messa |
 | 4 | «Fatti leggere la mappa.» | Segue la parola illuminata? La voce è comprensibile? | Ascolta fino alla fine |
 | 4b | «Muovi la mappa con un dito e ingrandiscila con due, anche partendo da sopra un riquadro.» | Si sposta qualche concetto per sbaglio? Trova 🔒/🔓 quando vuole spostarne uno? | Nessun concetto spostato per sbaglio |
