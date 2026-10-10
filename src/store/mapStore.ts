@@ -6,6 +6,7 @@ import { colorForDepth } from '../lib/palette';
 import { collapseInfo } from '../lib/collapse';
 import { fromOutline, type OutlineRow } from '../lib/outline';
 import { spanningTree } from '../lib/tree';
+import { moveUnder, removeBranch, removeLiftingChildren } from '../lib/branch';
 import { DEFAULT_SIZE } from '../lib/ladder';
 import { NEW_CONCEPT_LABEL } from '../lib/mapFactory';
 
@@ -35,6 +36,12 @@ interface MapState {
   /** `auto`: placed by the automatic layout, not an edit by the child. */
   applyPositions(positions: Record<string, MapNode['position']>, opts?: { auto?: boolean }): void;
   removeNodes(ids: string[]): void;
+  /** Removes `id`; the concepts under it go up one level. False when it has no parent to give them to. */
+  removeLiftingChildren(id: string): boolean;
+  /** Removes `id` and everything below it. */
+  removeBranch(id: string): void;
+  /** Puts `id` (and its branch) under `parent`. False when it cannot go there. */
+  moveUnder(id: string, parent: string): boolean;
   connect(source: string, target: string): void;
   updateEdge(id: string, patch: Partial<Omit<MapEdge, 'id'>>): void;
   removeEdges(ids: string[]): void;
@@ -179,6 +186,29 @@ export const useMapStore = create<MapState>()(
           ),
           selectedId: s.selectedId && gone.has(s.selectedId) ? null : s.selectedId,
         }));
+      },
+
+      removeLiftingChildren: (id) => {
+        const map = get().map;
+        const next = map && removeLiftingChildren(map, id);
+        if (!next) return false;
+        set((s) => ({ ...edit(s, () => next), selectedId: s.selectedId === id ? null : s.selectedId }));
+        return true;
+      },
+
+      removeBranch: (id) => {
+        const map = get().map;
+        if (!map) return;
+        const next = removeBranch(map, id);
+        set((s) => ({ ...edit(s, () => next), selectedId: next.nodes.some((n) => n.id === s.selectedId) ? s.selectedId : null }));
+      },
+
+      moveUnder: (id, parent) => {
+        const map = get().map;
+        const next = map && moveUnder(map, id, parent);
+        if (!next) return false;
+        set((s) => edit(s, () => ({ edges: next.edges })));
+        return true;
       },
 
       connect: (source, target) =>

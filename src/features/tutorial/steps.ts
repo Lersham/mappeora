@@ -5,7 +5,7 @@ import { NEW_CONCEPT_LABEL } from '../../lib/mapFactory';
 export const TUTORIAL_TITLE = 'La mia prima mappa';
 
 /** The toolbar button a step asks for: it is highlighted. */
-export type TutorialTarget = 'concetto' | 'detta' | 'leggi' | 'immagine';
+export type TutorialTarget = 'concetto' | 'detta' | 'leggi' | 'immagine' | 'collega';
 
 /** What the child has done so far, as the tutorial sees it. */
 export interface TutorialProgress {
@@ -67,6 +67,12 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     target: 'immagine',
     done: (now, start) =>
       now.map.nodes.some((n) => n.image && n.image.ref !== start.map.nodes.find((s) => s.id === n.id)?.image?.ref),
+  },
+  {
+    title: 'Collega due idee',
+    text: 'Quando tocchi un riquadro, in basso compare la sua barra: Nome, Immagine, Collega, Cambia ramo, Elimina. Tutto quello che serve per quel riquadro è lì. Premi «Collega» e poi tocca un altro riquadro: nasce una freccia tra i due.',
+    target: 'collega',
+    done: (now, start) => now.map.nodes.length === start.map.nodes.length && now.map.edges.length > start.map.edges.length,
   },
   {
     title: 'Ce l’hai fatta!',

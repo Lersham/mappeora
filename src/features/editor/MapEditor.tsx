@@ -40,6 +40,7 @@ import { exportMap, saveMapFile } from '../../services/export';
 import { readingOrder } from '../../lib/readingOrder';
 import { carryHidden, collapseInfo, visiblePart } from '../../lib/collapse';
 import { spanningTree } from '../../lib/tree';
+import { branchOf as branchIds, cannotMoveUnder, childrenOf } from '../../lib/branch';
 import { layoutOf, templateInfo } from '../../lib/templates';
 import { NEW_MAP_TITLE } from '../../lib/mapFactory';
 import type { ConceptMap, MapNode } from '../../types/map';
@@ -63,23 +64,11 @@ const MAX_READ_ZOOM = 1.2;
 /** The farthest the map can be seen from. */
 const MIN_ZOOM = 0.2;
 
-const LOCK_KEY = 'mappeora-concetti-bloccati';
-
 /**
- * On a touch screen the concepts start locked: a finger that lands on one
- * while moving or zooming the map must not drag it away. With a mouse the
- * difference is clear (drag the empty sheet or turn the wheel to move), so
- * there they start free. The child's choice is remembered on the device.
+ * A touch screen: a finger that lands on a concept while moving or zooming
+ * the map must not drag it away, and lines are drawn with «Collega».
  */
-function lockedAtStart(): boolean {
-  try {
-    const saved = localStorage.getItem(LOCK_KEY);
-    if (saved !== null) return saved === '1';
-  } catch {
-    // Storage blocked: fall back to the device.
-  }
-  return window.matchMedia?.('(pointer: coarse)').matches ?? false;
-}
+const TOUCH = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
 
 /** Where a new concept goes when none is selected: under the main one. */
 function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined {
@@ -100,6 +89,7 @@ type DialogState =
   | { kind: 'photo' }
   | { kind: 'outline' }
   | { kind: 'more' }
+  | { kind: 'delete'; id: string }
   | null;
 
 interface Props {
@@ -149,17 +139,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   }, []);
   /** A line is being drawn from a concept: every connection point shows. */
   const [connecting, setConnecting] = useState(false);
-  /** Concepts locked: touching them selects, dragging moves the map, never the concept. */
-  const [locked, setLockedState] = useState(lockedAtStart);
-  const setLocked = (value: boolean, say = true) => {
-    setLockedState(value);
-    try {
-      localStorage.setItem(LOCK_KEY, value ? '1' : '0');
-    } catch {
-      // Not remembered: the next visit starts from the device's default.
-    }
-    if (say) showNotice(value ? 'Concetti bloccati: puoi muovere e ingrandire la mappa senza spostarli.' : 'Ora puoi spostare i concetti trascinandoli. Tocca il lucchetto per bloccarli di nuovo.');
-  };
   const noticeTimer = useRef<number | undefined>(undefined);
   /** A short message that goes away by itself. */
   const showNotice = (text: string) => {
@@ -167,6 +146,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     window.clearTimeout(noticeTimer.current);
     noticeTimer.current = window.setTimeout(() => setNotice((now) => (now === text ? null : now)), 5000);
   };
+  /** «Collega» or «Cambia ramo»: the next concept tapped is the other end. */
+  const [picking, setPicking] = useState<{ kind: 'link' | 'branch'; from: string } | null>(null);
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
   const [tutorialStep, setTutorialStep] = useState<number | null>(tutorial ? 0 : null);
   const tutorialTarget = tutorialStep === null ? undefined : TUTORIAL_STEPS[tutorialStep]?.target;
@@ -177,6 +158,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const sheetTemplate = templateInfo(map.template).layout === 'foglio';
   const layout = layoutOf(map);
   const sheetMode = layout === 'foglio';
+  /**
+   * On a touch screen the concepts on the A4 sheet stay where the sheet puts
+   * them: a finger moves and zooms the map, a tap selects. «Sposta» frees them.
+   */
+  const locked = TOUCH && sheetMode;
   const collapse = useMemo(() => collapseInfo(map), [map]);
   // Only a concept on screen can be the one in hand.
   const selectedNode = map.nodes.find((n) => n.id === selectedId && !collapse.hidden.has(n.id));
@@ -373,14 +359,19 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   /**
    * Room around the whole map when it is fitted to the screen: `p` of the
-   * screen on each side, and at the bottom at least what the floating
-   * toolbar hides (wide screens), so no concept ends up under it.
+   * screen on each side, and at the bottom at least what the floating bars
+   * hide, so no concept ends up under them.
    */
   const fitPadding = (p: number) => {
     const box = document.querySelector('.react-flow')?.getBoundingClientRect();
-    const dock = document.querySelector('.editor.has-dock .dock');
-    if (!box || !dock || getComputedStyle(dock).position !== 'absolute') return p;
-    const hidden = box.bottom - dock.getBoundingClientRect().top + 16;
+    if (!box) return p;
+    // What floats over the bottom of the map: the toolbar on a wide screen,
+    // the tools of the concept in hand.
+    const over = [...document.querySelectorAll('.editor.has-dock .dock, .selection-bar')].filter(
+      (el) => getComputedStyle(el).position === 'absolute',
+    );
+    if (over.length === 0) return p;
+    const hidden = box.bottom - Math.min(...over.map((el) => el.getBoundingClientRect().top)) + 16;
     return { x: p, top: p, bottom: `${Math.max(p * box.height, hidden)}px` as const };
   };
 
@@ -789,6 +780,66 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   const editing = !review.active;
 
+  const labelOf = (id: string) => useMapStore.getState().map?.nodes.find((n) => n.id === id)?.label ?? '';
+  /** The other end of «Collega» or «Cambia ramo», tapped on the map. */
+  const pickTarget = (id: string) => {
+    const pick = picking;
+    setPicking(null);
+    if (!pick || id === pick.from) return;
+    const current = useMapStore.getState().map;
+    if (!current) return;
+    if (pick.kind === 'link') {
+      if (current.edges.some((e) => (e.source === pick.from && e.target === id) || (e.source === id && e.target === pick.from))) {
+        return showNotice(`«${labelOf(pick.from)}» e «${labelOf(id)}» sono già collegati.`);
+      }
+      actions.connect(pick.from, id);
+      showNotice('Collegati. Tocca il «+» sulla freccia per scrivere come sono legati.');
+    } else {
+      const why = cannotMoveUnder(current, pick.from, id);
+      if (why === 'below') return showNotice(`«${labelOf(id)}» è nel ramo di «${labelOf(pick.from)}»: scegli un concetto fuori dal ramo.`);
+      if (why === 'already') return showNotice(`«${labelOf(pick.from)}» è già sotto «${labelOf(id)}».`);
+      actions.moveUnder(pick.from, id);
+    }
+    // After React Flow has selected the concept tapped: the one the child
+    // started from stays in hand.
+    setTimeout(() => actions.select(pick.from));
+    reveal(pick.from);
+  };
+  // Esc, or the back button, puts «Collega» and «Cambia ramo» away.
+  useBackHandler(() => setPicking(null), picking !== null);
+  useEffect(() => {
+    if (!picking) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setPicking(null);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [picking]);
+  // Nothing to pick from any more (deleted, undone, a review began).
+  useEffect(() => {
+    if (picking && (!editing || !map.nodes.some((n) => n.id === picking.from))) setPicking(null);
+  }, [picking, editing, map.nodes]);
+
+  /** «Elimina»: a concept with others under it asks what to do with them. */
+  const deleteConcept = (id: string) => {
+    const current = useMapStore.getState().map;
+    if (!current) return;
+    if (childrenOf(current, id).length === 0) return actions.removeNodes([id]);
+    setDialog({ kind: 'delete', id });
+  };
+
+  // The tools of the concept in hand cover the bottom of the map: a concept
+  // under them comes up just enough to be seen.
+  useEffect(() => {
+    if (!selectedId || !editing) return;
+    const t = setTimeout(() => {
+      const bar = document.querySelector('.selection-bar')?.getBoundingClientRect();
+      const el = document.querySelector(`.react-flow__node[data-id="${CSS.escape(selectedId)}"]`)?.getBoundingClientRect();
+      if (!bar || !el || el.bottom <= bar.top - 8 || el.top >= bar.bottom) return;
+      const { x, y, zoom } = getViewport();
+      void setViewport({ x, y: y - (el.bottom - bar.top + 16), zoom }, { duration: motion(200) });
+    }, 80);
+    return () => clearTimeout(t);
+  }, [selectedId, editing]);
+
   const [toolbarRef, crowded] = useCrowded();
   // Where they do not all fit (a phone, large text): these go in «Altro» (see .toolbar-more).
   // Where they all fit they are in groups ('group-start'): what goes into the map,
@@ -812,8 +863,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           className: 'group-start',
           onClick: () => {
             actions.setFreeLayout(true);
-            // «Sposta» is asking to move concepts: they can't stay locked.
-            if (locked) setLocked(false, false);
           },
         }
       : {
@@ -848,7 +897,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   return (
     <div
-      className={`editor${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
+      className={`editor${picking ? ' is-picking' : ''}${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
       onPointerDownCapture={(e) => {
         touch();
         // A press anywhere but on a concept (a button, the map) is something
@@ -916,9 +965,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           }}
           onPaneClick={() => {
             cancelCloser();
+            // Tapping the empty map puts «Collega» or «Cambia ramo» away, nothing else.
+            if (picking) return setPicking(null);
             actions.select(null);
           }}
           onNodeClick={(e, node) => {
+            if (picking && !review.active) return pickTarget(node.id);
             if (!review.active) {
               const again = heldOnPress.current === node.id && !(e.target as Element).closest('button, textarea, input');
               if (!again) return bringCloser(node.id);
@@ -933,7 +985,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onConnectEnd={() => setConnecting(false)}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
           nodesDraggable={editing && !locked}
-          nodesConnectable={editing && !locked}
+          nodesConnectable={editing && !TOUCH}
           elementsSelectable={editing}
           // Our own handler (above): one undo step, and never behind a dialog.
           deleteKeyCode={null}
@@ -971,24 +1023,26 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
                 <Icon name="focus" />
               </ControlButton>
             )}
-            {editing && (
-              <ControlButton
-                className="lock-button"
-                onClick={() => setLocked(!locked)}
-                aria-pressed={locked}
-                aria-label={locked ? 'Concetti bloccati: tocca per poterli spostare' : 'Concetti liberi: tocca per bloccarli'}
-                title={locked ? 'Concetti bloccati: tocca per poterli spostare' : 'Concetti liberi: tocca per bloccarli'}
-              >
-                <Icon name={locked ? 'lock' : 'unlock'} />
-              </ControlButton>
-            )}
           </Controls>
         </ReactFlow>
-        {editing && selectedNode && (
-          // The concept in hand: its picture and colour, or away with it.
+        {editing && selectedNode && !picking && (
+          // Everything about the concept in hand, in one place.
           <div className="selection-bar" role="toolbar" aria-label="Concetto scelto">
+            <BigButton icon="edit" label="Nome" onClick={() => useMapStore.getState().startEditing(selectedNode.id)} />
             <BigButton icon="image" label="Immagine" className={target('immagine')} onClick={() => setDialog({ kind: 'style' })} />
-            <BigButton icon="trash" label="Elimina" variant="danger" onClick={() => actions.removeNodes([selectedNode.id])} />
+            <BigButton icon="link" label="Collega" className={target('collega')} onClick={() => setPicking({ kind: 'link', from: selectedNode.id })} />
+            <BigButton icon="branch" label="Cambia ramo" onClick={() => setPicking({ kind: 'branch', from: selectedNode.id })} />
+            <BigButton icon="trash" label="Elimina" variant="danger" onClick={() => deleteConcept(selectedNode.id)} />
+          </div>
+        )}
+        {picking && (
+          <div className="pick-banner" role="status">
+            <p>
+              {picking.kind === 'link'
+                ? `Tocca il concetto da collegare a «${labelOf(picking.from)}».`
+                : `Tocca il concetto sotto cui mettere «${labelOf(picking.from)}».`}
+            </p>
+            <BigButton icon="close" label="Annulla" onClick={() => setPicking(null)} />
           </div>
         )}
       </div>
@@ -1064,6 +1118,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onClose={closeExport}
         />
       )}
+      {dialog?.kind === 'delete' && (
+        <DeleteDialog
+          id={dialog.id}
+          onClose={() => setDialog(null)}
+        />
+      )}
       {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'outline' && (
@@ -1095,6 +1155,49 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         </Dialog>
       )}
     </div>
+  );
+}
+
+/** A concept with others under it: only it (they go up a level), or all of them. */
+function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
+  const map = useMapStore((s) => s.map);
+  if (!map) return null;
+  const label = map.nodes.find((n) => n.id === id)?.label ?? '';
+  const below = branchIds(map, id).size - 1;
+  const parent = spanningTree(map).parent.get(id);
+  const parentLabel = map.nodes.find((n) => n.id === parent)?.label;
+  const { removeLiftingChildren, removeBranch } = useMapStore.getState();
+  const n = below === 1 ? 'il concetto' : `i ${below} concetti`;
+  return (
+    <Dialog title={`Elimina «${label}»`} onClose={onClose} className="delete-dialog" sheet>
+      {parentLabel ? (
+        <>
+          <OptionCard
+            icon="⬆️"
+            name={`Solo «${label}»`}
+            description={`${below === 1 ? 'Il concetto che c’è sotto sale' : `I ${below} concetti che ci sono sotto salgono`} di un livello, sotto «${parentLabel}».`}
+            onClick={() => {
+              removeLiftingChildren(id);
+              onClose();
+            }}
+          />
+          <OptionCard
+            icon="🗑️"
+            name="Tutto il ramo"
+            description={`«${label}» e ${n} sotto.`}
+            onClick={() => {
+              removeBranch(id);
+              onClose();
+            }}
+          />
+        </>
+      ) : (
+        <p>È l’idea principale della mappa: finché ha concetti sotto non si può eliminare. Puoi cambiarle nome con «Nome».</p>
+      )}
+      <div className="dialog-actions">
+        <BigButton icon="close" label="Annulla" onClick={onClose} />
+      </div>
+    </Dialog>
   );
 }
 

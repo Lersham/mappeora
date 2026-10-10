@@ -7,6 +7,8 @@ export interface SpanningTree {
   depth: Map<string, number>;
   /** Links that go down or across the map: all but those closing a cycle. */
   forward: MapEdge[];
+  /** The concept each one hangs from in the tree (none for a root). */
+  parent: Map<string, string>;
 }
 
 /**
@@ -44,5 +46,5 @@ export function spanningTree(map: Graph): SpanningTree {
     for (let id: string | undefined = of; id !== undefined; id = parent.get(id)) if (id === candidate) return true;
     return false;
   };
-  return { depth, forward: edges.filter((e) => !isAncestorOrSelf(e.target, e.source)) };
+  return { depth, forward: edges.filter((e) => !isAncestorOrSelf(e.target, e.source)), parent };
 }
