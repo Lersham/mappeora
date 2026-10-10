@@ -354,3 +354,31 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
     await expect(page.getByRole('button', { name: /^Concetti liberi/ })).toBeVisible();
   });
 });
+
+test.describe('Editor: toccare un concetto per cambiarne immagine e colore', () => {
+  test('un secondo tocco sul concetto scelto apre «Immagine e colore»; il primo no', async ({ page }) => {
+    await newMap(page, 'Gli animali');
+    await settled(page);
+    const target = await onScreen(page, node(page, 'Gli animali'));
+    const dialog = page.getByRole('dialog', { name: 'Immagine e colore' });
+
+    await target.click({ delay: 60 }); // selects
+    await page.waitForTimeout(600);
+    await expect(dialog).toHaveCount(0);
+
+    await target.click({ delay: 60 }); // the one in hand: restyle
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Colore giallo' }).click();
+    await dialog.getByRole('button', { name: 'Fatto' }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+
+  test('il doppio tocco rinomina e non apre il dialogo, anche sul concetto scelto', async ({ page }) => {
+    await newMap(page, 'Gli animali');
+    await settled(page);
+    await (await onScreen(page, node(page, 'Gli animali'))).click({ delay: 60 }); // already in hand
+    await rename(page, 'Gli animali', 'I mammiferi');
+    await page.waitForTimeout(600);
+    await expect(page.getByRole('dialog', { name: 'Immagine e colore' })).toHaveCount(0);
+  });
+});

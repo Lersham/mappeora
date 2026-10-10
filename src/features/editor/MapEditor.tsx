@@ -492,6 +492,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
    */
   const closer = useRef<number | undefined>(undefined);
   const cancelCloser = () => window.clearTimeout(closer.current);
+  /** The concept in hand when the finger went down: a tap on it again is a request to restyle it. */
+  const heldOnPress = useRef<string | null>(null);
+  /** Same wait as for «bringCloser»: a double tap (to rename) must not open the dialog. */
+  const openStyleSoon = () => {
+    cancelCloser();
+    closer.current = window.setTimeout(() => {
+      if (!useReview.getState().active && !dragging.current) setDialog({ kind: 'style' });
+    }, 350);
+  };
   const bringCloser = (id: string) => {
     cancelCloser();
     closer.current = window.setTimeout(() => {
@@ -858,7 +867,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         )}
       </header>
 
-      <div className="canvas" ref={canvasRef}>
+      <div className="canvas" ref={canvasRef} onPointerDownCapture={() => (heldOnPress.current = useMapStore.getState().selectedId)}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -885,8 +894,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             cancelCloser();
             actions.select(null);
           }}
-          onNodeClick={(_, node) => {
-            if (!review.active) return bringCloser(node.id);
+          onNodeClick={(e, node) => {
+            if (!review.active) {
+              const again = heldOnPress.current === node.id && !(e.target as Element).closest('button, textarea, input');
+              return again ? openStyleSoon() : bringCloser(node.id);
+            }
             if (review.mode !== 'interrogazione') return;
             const i = review.order[node.id];
             if (i !== undefined) review.goTo(i);
