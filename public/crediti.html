@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
+    <title>Crediti e licenze – MappAmi</title>
+    <meta name="description" content="Crediti e licenze dei materiali di terzi usati da MappAmi: illustrazioni, caratteri e lettura del testo dalle foto." />
+    <style>
+      :root {
+        --bg: #fdf8ec;
+        --card: #ffffff;
+        --text: #1f2a36;
+        --muted: #4b5866;
+        --accent: #2b54b0;
+        --line: #e4dccb;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #1b2129;
+          --card: #252d37;
+          --text: #eef1f4;
+          --muted: #b9c2cc;
+          --accent: #8db8e8;
+          --line: #3a4553;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 1.125rem/1.65 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        letter-spacing: 0.01em;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 1.5rem 16px 4rem;
+      }
+      h1 {
+        font-size: 2rem;
+        line-height: 1.2;
+        margin: 1rem 0 0.25rem;
+      }
+      h2 {
+        font-size: 1.35rem;
+        margin: 2.25rem 0 0.5rem;
+      }
+      p,
+      li {
+        max-width: 65ch;
+      }
+      li + li {
+        margin-top: 0.5rem;
+      }
+      a {
+        color: var(--accent);
+      }
+      .back {
+        display: inline-block;
+        padding: 0.6rem 1rem;
+        border-radius: 0.75rem;
+        background: var(--card);
+        border: 2px solid var(--line);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .updated {
+        color: var(--muted);
+        margin-top: 0;
+      }
+      .short {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 1rem;
+        padding: 0.5rem 1.25rem 1rem;
+      }
+      .short ul {
+        padding-left: 1.25rem;
+      }
+      pre {
+        max-width: 65ch;
+        margin: 0.5rem 0 0;
+        padding: 1rem;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+        font: 0.95rem/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="back" href="./">← Torna a MappAmi</a>
+
+      <h1>Crediti e licenze</h1>
+      <p class="updated">MappAmi usa materiali creati da altri, con la loro licenza. Grazie a chi li ha condivisi.</p>
+
+      <h2>Illustrazioni</h2>
+      <p>
+        Le illustrazioni 3D che puoi aggiungere ai concetti sono <strong>Fluent Emoji</strong> di Microsoft
+        (<a href="https://github.com/microsoft/fluentui-emoji" rel="noopener">github.com/microsoft/fluentui-emoji</a>), con licenza MIT.
+        Vengono scaricate da internet (jsDelivr) quando le scegli e poi restano salvate nella tua mappa.
+      </p>
+      <pre>MIT License
+
+Copyright (c) Microsoft Corporation.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre>
+
+      <h2>Caratteri di scrittura</h2>
+      <ul>
+        <li><strong>Lexend</strong>: The Lexend Project Authors.</li>
+        <li><strong>Atkinson Hyperlegible</strong>: Braille Institute of America, Inc.</li>
+        <li><strong>OpenDyslexic</strong>: Abbie Gonzalez.</li>
+      </ul>
+      <p>Tutti e tre sono distribuiti con la licenza SIL Open Font License 1.1 (<a href="https://openfontlicense.org" rel="noopener">openfontlicense.org</a>).</p>
+
+      <h2>Lettura del testo dalle foto</h2>
+      <p>
+        Sul web la lettura usa <strong>Tesseract</strong> (<a href="https://github.com/naptha/tesseract.js" rel="noopener">Tesseract.js</a>), con licenza Apache 2.0.
+        Su Android usa ML Kit di Google; su iPhone e iPad usa Vision di Apple.
+      </p>
+
+      <h2>Altro software</h2>
+      <p>
+        MappAmi è costruita con software libero, tra cui React, React Flow, ELK, Dexie, jsPDF, Zustand e Capacitor, ciascuno con la propria licenza
+        (in prevalenza MIT).
+      </p>
+    </main>
+  </body>
+</html>
