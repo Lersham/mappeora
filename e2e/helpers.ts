@@ -38,17 +38,23 @@ export async function mascot(where: Page | Locator, pose: 'mappa' | 'indica' | '
 
 /** Like a person would: if the concept is off screen, look at the whole map. */
 export async function onScreen(page: Page, target: Locator): Promise<Locator> {
-  const [box, canvas] = [await target.boundingBox(), await page.locator('.react-flow').boundingBox()];
-  const inside = (b: typeof box) =>
-    !!b && !!canvas && b.x >= canvas.x && b.y >= canvas.y && b.x + b.width <= canvas.x + canvas.width && b.y + b.height <= canvas.y + canvas.height;
-  // Inside the canvas is not enough: the top bar floats over its upper edge.
-  const uncovered = async () =>
-    target.first().evaluate((el) => {
+  const canvas = page.locator('.react-flow');
+  const visible = async () => {
+    const [b, c] = [await target.first().boundingBox(), await canvas.boundingBox()];
+    if (!b || !c || b.x < c.x || b.y < c.y || b.x + b.width > c.x + c.width || b.y + b.height > c.y + c.height) return false;
+    // Inside the canvas is not enough: the top bar floats over its upper edge.
+    return target.first().evaluate((el) => {
       const r = el.getBoundingClientRect();
       const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
       return !!hit && el.contains(hit);
     });
-  if (!inside(box) || !(await uncovered())) await showAll(page);
+  };
+  // A view still gliding (a step of the guide, a concept moved) ends somewhere else: judge where it stops.
+  await settled(page);
+  if (!(await visible())) {
+    await showAll(page);
+    await expect.poll(visible, { message: 'concept still off screen after «Mostra tutto»' }).toBe(true);
+  }
   return target;
 }
 
