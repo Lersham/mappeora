@@ -2056,6 +2056,18 @@ textarea {
   box-shadow: inset 0 -3px 0 var(--primary);
   font-weight: 600;
 }
+.ocr-word.is-selected.is-other {
+  background: color-mix(in srgb, var(--branch-1) 22%, transparent);
+  box-shadow: inset 0 -3px 0 var(--branch-1);
+}
+/* Two concepts side by side: a gap shows where one ends. */
+.ocr-word.is-start {
+  margin-left: 4px;
+}
+.ocr-word.is-used:not(.is-selected) {
+  text-decoration: underline dotted 2px;
+  text-underline-offset: 4px;
+}
 .ocr-word.is-spoken {
   background: var(--highlight);
   color: #1f2430;
@@ -2072,6 +2084,33 @@ textarea {
   cursor: default;
   background: var(--surface);
   border-color: var(--primary);
+}
+.chip.static.is-other {
+  border-color: var(--branch-1);
+}
+.concept-preview .chip.static {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chip-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -6px -10px -6px 0;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.chip-tool:hover {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+}
+.concept-preview > .chip-tool {
+  margin: 0 -4px;
 }
 
 /* ---------- Benvenuto ---------- */

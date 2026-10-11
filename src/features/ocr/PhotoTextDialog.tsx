@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { BigButton } from '../../components/BigButton';
 import { pickPhoto, type PhotoSource } from '../../services/photo';
 import { ocr, OcrDownloadError, PhotoDecodeError } from '../../services/ocr';
-import { cleanOcrText, selectionToConcepts, tokenize } from '../../lib/ocrText';
+import { cleanOcrText, conceptGroups, tokenize } from '../../lib/ocrText';
+import { loadBookPage, saveBookPage } from '../../lib/bookPage';
 import { useReadLongText } from '../../hooks/useReadLongText';
 import { useModal } from '../../components/Dialog';
 import { Listenable } from '../../components/OptionCard';
@@ -11,7 +12,9 @@ import { Icon } from '../../components/Icon';
 const INTRO = 'Fotografa una pagina: leggerò il testo per te e potrai scegliere le parole importanti.';
 /** How late the click of a tap can arrive and still be recognised as that tap's. */
 const TAP_CLICK_MS = 1500;
-const PICK_HINT = 'Tocca le parole importanti, oppure passaci sopra il dito come un evidenziatore: diventeranno concetti della mappa.';
+const PICK_HINT =
+  'Tocca le parole importanti, oppure passaci sopra il dito come un evidenziatore: diventeranno concetti della mappa. Sotto vedi i concetti: con la catena ne unisci due, con le forbici ne dividi uno in parole.';
+const USED_HINT = 'È la pagina dell’ultima volta: le parole sottolineate a puntini sono già nella mappa.';
 
 type Step =
   | { kind: 'pick' }
@@ -20,6 +23,8 @@ type Step =
   | { kind: 'error'; message: string; detail?: string };
 
 interface Props {
+  /** The map: its last page is remembered for next time. */
+  mapId: string;
   /** Adds the chosen concepts to the map. */
   onAdd(concepts: string[]): void;
   onClose(): void;
@@ -30,9 +35,15 @@ interface Props {
  * → tap the important words, or drag across them like a highlighter → they
  * become concepts of the map.
  */
-export function PhotoTextDialog({ onAdd, onClose }: Props) {
-  const [step, setStep] = useState<Step>({ kind: 'pick' });
-  const [text, setText] = useState('');
+export function PhotoTextDialog({ mapId, onAdd, onClose }: Props) {
+  // The last page read for this map comes back as it was left.
+  const [remembered] = useState(() => loadBookPage(mapId));
+  const [step, setStep] = useState<Step>(remembered ? { kind: 'text' } : { kind: 'pick' });
+  const [text, setText] = useState(remembered?.text ?? '');
+  /** Words already added to the map from this page. */
+  const [used, setUsed] = useState<ReadonlySet<number>>(() => new Set(remembered?.used));
+  /** The child's choice for the gap after a word: true joins, false splits. */
+  const [joined, setJoined] = useState<ReadonlyMap<number, boolean>>(new Map());
   const [editing, setEditing] = useState(false);
   /** The text when «Correggi» was pressed: chosen words survive if it did not change. */
   const textBeforeEdit = useRef('');
@@ -42,7 +53,21 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
   const { ref, onKeyDown, tabIndex } = useModal(onClose);
 
   const tokens = useMemo(() => tokenize(text), [text]);
-  const concepts = useMemo(() => selectionToConcepts(text, tokens, selected), [text, tokens, selected]);
+  const groups = useMemo(() => conceptGroups(text, tokens, selected, joined), [text, tokens, selected, joined]);
+  const concepts = groups.map((g) => g.label);
+  /** Which concept each chosen word belongs to, to show where one ends. */
+  const groupOf = useMemo(() => {
+    const of = new Map<number, number>();
+    groups.forEach((g, i) => {
+      for (let w = g.first; w <= g.last; w++) of.set(w, i);
+    });
+    return of;
+  }, [groups]);
+  const setGap = (word: number, join: boolean) => setJoined((prev) => new Map(prev).set(word, join));
+
+  useEffect(() => {
+    if (text && !editing) saveBookPage(mapId, { text, used: [...used] });
+  }, [mapId, text, used, editing]);
 
   // The page being read: «Annulla», closing, or another photo cancel it.
   const job = useRef<AbortController | null>(null);
@@ -85,6 +110,8 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
       }
       setText(clean);
       setSelected(new Set());
+      setUsed(new Set());
+      setJoined(new Map());
       setEditing(false);
       setStep({ kind: 'text' });
     } catch (e) {
@@ -211,7 +238,11 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
                 onClick={() => {
                   void reader.stop();
                   // Word positions changed: the chosen words no longer match.
-                  if (editing && text !== textBeforeEdit.current) setSelected(new Set());
+                  if (editing && text !== textBeforeEdit.current) {
+                    setSelected(new Set());
+                    setUsed(new Set());
+                    setJoined(new Map());
+                  }
                   textBeforeEdit.current = text;
                   setEditing(!editing);
                 }}
@@ -233,6 +264,7 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
                 <Listenable text={PICK_HINT} label="Ascolta come fare">
                   <p className="muted small">{PICK_HINT}</p>
                 </Listenable>
+                {used.size > 0 && <p className="muted small">{USED_HINT}</p>}
                 <div
                   className="ocr-text ocr-pick"
                   onPointerMove={(e) => {
@@ -244,11 +276,13 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
                   {tokens.map((t, i) => {
                     const spoken = reader.word && t.start < reader.word.end && t.end > reader.word.start;
                     if (t.word < 0) return <span key={i}>{t.text}</span>;
+                    const group = groupOf.get(t.word);
+                    const starts = group !== undefined && groups[group].first === t.word;
                     return (
                       <button
                         key={i}
                         type="button"
-                        className={`ocr-word${selected.has(t.word) ? ' is-selected' : ''}${spoken ? ' is-spoken' : ''}`}
+                        className={`ocr-word${selected.has(t.word) ? ' is-selected' : ''}${group !== undefined && group % 2 ? ' is-other' : ''}${starts && groupOf.get(t.word - 1) !== undefined ? ' is-start' : ''}${used.has(t.word) ? ' is-used' : ''}${spoken ? ' is-spoken' : ''}`}
                         aria-pressed={selected.has(t.word)}
                         data-word={t.word}
                         onPointerDown={(e) => {
@@ -279,10 +313,40 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
                 {concepts.length === 0 ? (
                   <span className="muted small">Nessun concetto scelto.</span>
                 ) : (
-                  concepts.map((c) => (
-                    <span key={c} className="chip static">
-                      {c}
-                    </span>
+                  groups.map((g, i) => (
+                    <Fragment key={g.label}>
+                      {i > 0 && groups[i - 1].last + 1 === g.first && (
+                        <button
+                          type="button"
+                          className="chip-tool"
+                          aria-label={`Unisci «${groups[i - 1].label}» e «${g.label}»`}
+                          title="Unisci"
+                          onClick={() => setGap(groups[i - 1].last, true)}
+                        >
+                          <Icon name="join" />
+                        </button>
+                      )}
+                      <span className={`chip static${i % 2 ? ' is-other' : ''}`}>
+                        {g.label}
+                        {g.first < g.last && (
+                          <button
+                            type="button"
+                            className="chip-tool"
+                            aria-label={`Dividi «${g.label}» in parole`}
+                            title="Dividi"
+                            onClick={() =>
+                              setJoined((prev) => {
+                                const next = new Map(prev);
+                                for (let w = g.first; w < g.last; w++) next.set(w, false);
+                                return next;
+                              })
+                            }
+                          >
+                            <Icon name="scissors" />
+                          </button>
+                        )}
+                      </span>
+                    </Fragment>
                   ))
                 )}
               </div>
@@ -298,7 +362,12 @@ export function PhotoTextDialog({ onAdd, onClose }: Props) {
               label={concepts.length === 1 ? 'Aggiungi 1 concetto' : `Aggiungi ${concepts.length} concetti`}
               variant="primary"
               disabled={editing || concepts.length === 0}
-              onClick={() => onAdd(concepts)}
+              onClick={() => {
+                const now = new Set(used);
+                for (const g of groups) for (let w = g.first; w <= g.last; w++) now.add(w);
+                saveBookPage(mapId, { text, used: [...now] });
+                onAdd(concepts);
+              }}
             />
           )}
         </div>

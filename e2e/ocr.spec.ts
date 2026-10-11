@@ -61,6 +61,42 @@ test('dal testo della foto si scelgono le parole: col dito come un evidenziatore
   for (const label of ['Fotosintesi', 'Ossigeno', 'Clorofilla']) await expect(node(page, label)).toBeVisible();
 });
 
+test('i concetti scelti si uniscono o si dividono a piacere, e la pagina resta per la volta dopo', async ({ page }) => {
+  await fakeOcr(page, 'Le radici, il fusto e le foglie.');
+  await newMap(page, 'Le piante');
+  await toolbar(page, 'Dal libro');
+  let dialog = await photographPage(page);
+  const word = (w: string) => dialog.getByRole('button', { name: w, exact: true });
+  const chosen = dialog.locator('.concept-preview .chip');
+
+  // across a comma the stroke makes two concepts: the chain joins them
+  await highlight(page, word('radici'), word('fusto'));
+  await expect(chosen).toHaveText(['Radici', 'Il fusto']);
+  await dialog.getByRole('button', { name: 'Unisci «Radici» e «Il fusto»' }).click();
+  await expect(chosen).toHaveText(['Radici, il fusto']);
+  // the scissors split one into its words
+  await dialog.getByRole('button', { name: 'Dividi «Radici, il fusto» in parole' }).click();
+  await expect(chosen).toHaveText(['Radici', 'Il', 'Fusto']);
+  await dialog.getByRole('button', { name: 'Unisci «Il» e «Fusto»' }).click();
+  await expect(chosen).toHaveText(['Radici', 'Il fusto']);
+  await dialog.getByRole('button', { name: 'Aggiungi 2 concetti' }).click();
+  await expect(nodes(page)).toHaveCount(3);
+
+  // back later: the same page, no new photo, with the words already taken marked
+  await toolbar(page, 'Dal libro');
+  dialog = page.getByRole('dialog', { name: 'Dal libro' });
+  await expect(dialog.locator('.ocr-pick')).toBeVisible();
+  await expect(dialog.getByText('È la pagina dell’ultima volta')).toBeVisible();
+  await expect(word('radici')).toHaveClass(/is-used/);
+  await expect(word('foglie')).not.toHaveClass(/is-used/);
+  await word('foglie').click();
+  await dialog.getByRole('button', { name: 'Aggiungi 1 concetto' }).click();
+  await expect(node(page, 'Foglie')).toBeVisible();
+  // «Altra foto» is still there for a new page
+  await toolbar(page, 'Dal libro');
+  await expect(page.getByRole('dialog', { name: 'Dal libro' }).getByRole('button', { name: 'Altra foto' })).toBeVisible();
+});
+
 test('se il modello italiano non si scarica, lo dice invece di restare fermo; «Annulla» interrompe', async ({ page, consoleErrors }) => {
   // the engine starts, but the Italian model fails: before the fix it waited forever
   await fakeOcrWorker(page, `self.onmessage = ({ data }) => postMessage({

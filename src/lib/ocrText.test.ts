@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanOcrText, confidentText, selectionToConcepts, sentences, sureLetters, tokenize } from './ocrText';
+import { cleanOcrText, conceptGroups, confidentText, selectionToConcepts, sentences, sureLetters, tokenize } from './ocrText';
 
 describe('cleanOcrText', () => {
   it('joins hyphenated words and lines of the same paragraph, keeps paragraphs', () => {
@@ -166,5 +166,25 @@ describe('sureLetters', () => {
     };
     expect(sureLetters(page)).toBe(6);
     expect(sureLetters({ text: 'testo' })).toBe(0);
+  });
+});
+
+describe('conceptGroups', () => {
+  const text = 'Le radici, il fusto e le foglie.';
+  const tokens = tokenize(text);
+  const idx = (w: string) => tokens.find((t) => t.text === w)!.word;
+  const sel = new Set([idx('radici'), idx('il'), idx('fusto')]);
+  const labels = (joined?: Map<number, boolean>) => conceptGroups(text, tokens, sel, joined).map((g) => g.label);
+
+  it('remembers where each concept starts and ends', () => {
+    expect(conceptGroups(text, tokens, sel)).toEqual([
+      { label: 'Radici', first: idx('radici'), last: idx('radici') },
+      { label: 'Il fusto', first: idx('il'), last: idx('fusto') },
+    ]);
+  });
+
+  it('joins across a comma, or splits two adjacent words, when asked', () => {
+    expect(labels(new Map([[idx('radici'), true]]))).toEqual(['Radici, il fusto']);
+    expect(labels(new Map([[idx('il'), false]]))).toEqual(['Radici', 'Il', 'Fusto']);
   });
 });

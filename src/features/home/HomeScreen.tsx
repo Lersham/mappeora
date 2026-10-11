@@ -12,6 +12,7 @@ import { WelcomeDialog, welcomeNeeded } from './WelcomeDialog';
 import { Icon, type IconName } from '../../components/Icon';
 import { friendlyDate } from '../../lib/friendlyDate';
 import { titleMatches } from '../../lib/searchText';
+import { forgetBookPage } from '../../lib/bookPage';
 import { MicButton } from '../../components/MicButton';
 import { Mascot } from '../../components/Mascot';
 
@@ -124,6 +125,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     try {
       map = await storage().get(m.id);
       await storage().remove(m.id);
+      forgetBookPage(m.id);
     } catch {
       setListError(`Non ce l’ho fatta a cancellare "${m.title}". Riprova.`);
       return;

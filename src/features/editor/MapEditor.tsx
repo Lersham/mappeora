@@ -1257,7 +1257,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onClose={() => setDialog(null)}
         />
       )}
-      {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'photo' && <PhotoTextDialog mapId={map.id} onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'more' && (
         <Dialog title="Altro" onClose={() => setDialog(null)} className="more-tools" sheet>
