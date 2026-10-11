@@ -23,7 +23,7 @@ test.describe('Stampa e PDF', () => {
     ['2 fogli', 2],
     ['4 fogli', 4],
   ] as const) {
-    test(`PDF A4 verticale su ${sheets}, leggero`, async ({ page }) => {
+    test(`PDF A4 su ${sheets}, leggero`, async ({ page }) => {
       await toolbar(page, 'Salva');
       await page.getByRole('button', { name: /^PDF da stampare/ }).click();
       await page.getByRole('button', { name: sheets }).click();
@@ -31,8 +31,9 @@ test.describe('Stampa e PDF', () => {
       await page.locator('.dialog-actions').getByRole('button', { name: 'Salva' }).click();
       const info = pdfInfo(await readFile((await (await download).path())!));
       expect(info.pages).toBe(pages);
-      expect(info.height).toBeGreaterThan(info.width); // portrait
-      expect(Math.round(info.width)).toBe(595); // A4
+      // A4, turned if the map prints larger that way
+      expect(Math.round(Math.min(info.width, info.height))).toBe(595);
+      expect(Math.round(Math.max(info.width, info.height))).toBe(842);
       expect(info.kb).toBeLessThan(3000);
     });
   }
@@ -45,7 +46,7 @@ test.describe('Stampa e PDF', () => {
     await page.locator('.dialog-actions').getByRole('button', { name: 'Salva' }).click();
     expect((await download).suggestedFilename()).toBe('la-rivoluzione-francese-verifica.pdf');
     const info = pdfInfo(await readFile((await (await download).path())!));
-    expect(Math.round(info.width)).toBe(842); // A3
+    expect(Math.round(Math.min(info.width, info.height))).toBe(842); // A3
   });
 
   test('«Stampa» prepara il PDF per la finestra di stampa', async ({ page, isMobile }) => {

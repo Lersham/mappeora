@@ -62,7 +62,7 @@ const READABLE_PX = 12;
 const COMFORT_PX = 16;
 const MAX_READ_ZOOM = 1.2;
 /** The farthest the map can be seen from. */
-const MIN_ZOOM = 0.2;
+const MIN_ZOOM = 0.05;
 
 /** Where a new concept goes when none is selected: under the main one. */
 function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined {
@@ -84,6 +84,7 @@ type DialogState =
   | { kind: 'outline' }
   | { kind: 'more' }
   | { kind: 'delete'; id: string }
+  | { kind: 'tidy' }
   | null;
 
 interface Props {
@@ -397,8 +398,17 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     // Too big to be seen whole even from afar (large text on a phone): from
     // the top, where the main concept is, not centred and cut at both ends.
     if (whole < MIN_ZOOM) return top(Math.max(MIN_ZOOM, wide));
-    if (mustFit || px * whole >= READABLE_PX || wide < whole * 1.5) return null;
-    return top(wide);
+    if (mustFit || px * whole >= READABLE_PX) return null;
+    if (wide >= whole * 1.5) return top(wide);
+    // A map wider than the screen (a sheet spread in rows): on a screen wider
+    // than it is tall, names that can be read, from the top and around the
+    // main concept; the rest is a scroll away. A phone sees all of it, and
+    // a tap brings a branch close.
+    if (box.width <= box.height) return null;
+    const zoom = Math.min(MAX_READ_ZOOM, COMFORT_PX / px);
+    const head = visible.reduce((a, n) => (n.position.y < a.position.y ? n : a));
+    const centre = head.position.x + (head.measured?.width ?? 0) / 2;
+    return { x: box.width / 2 - centre * zoom, y: pad - b.y * zoom, zoom };
   };
 
   const fromTopIfTooBig = () => {
@@ -853,26 +863,29 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       onClick: () => setDialog({ kind: 'outline' }),
     },
     { key: 'photo', icon: 'camera', label: 'Dal libro', onClick: () => setDialog({ kind: 'photo' }) },
-    sheetMode
-      ? {
-          key: 'layout',
-          icon: 'hand',
-          label: 'Sposta',
-          title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
-          className: 'group-start',
-          onClick: () => {
-            actions.setFreeLayout(true);
+    ...(sheetMode
+      ? [
+          {
+            key: 'layout',
+            icon: 'hand' as const,
+            label: 'Sposta',
+            title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
+            className: 'group-start',
+            onClick: () => {
+              actions.setFreeLayout(true);
+            },
           },
-        }
-      : {
-          key: 'layout',
-          icon: 'tidy',
-          label: 'Riordina',
-          title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4.' : undefined,
-          className: 'group-start',
-          onClick: () => void tidy(),
-          disabled: arranging,
-        },
+        ]
+      : []),
+    {
+      key: 'tidy',
+      icon: 'tidy',
+      label: 'Riordina',
+      title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4, e se vuoi colora i rami.' : 'Rimetti la mappa in ordine, e se vuoi colora i rami.',
+      className: sheetMode ? undefined : 'group-start',
+      onClick: () => setDialog({ kind: 'tidy' }),
+      disabled: arranging,
+    },
   ];
   // The map as a whole: in the top bar (on a phone, in «Altro»).
   const mapTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
@@ -1135,6 +1148,16 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onClose={() => setDialog(null)}
         />
       )}
+      {dialog?.kind === 'tidy' && (
+        <TidyDialog
+          onTidy={(color) => {
+            setDialog(null);
+            if (color) actions.colorBranches();
+            void tidy();
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
       {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'outline' && (
@@ -1205,6 +1228,24 @@ function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
       ) : (
         <p>È l’idea principale della mappa: finché ha concetti sotto non si può eliminare. Puoi cambiarle nome con «Nome».</p>
       )}
+      <div className="dialog-actions">
+        <BigButton icon="close" label="Annulla" onClick={onClose} />
+      </div>
+    </Dialog>
+  );
+}
+
+/** «Riordina»: just the order, or each branch in its own colour too. */
+function TidyDialog({ onTidy, onClose }: { onTidy(color: boolean): void; onClose(): void }) {
+  return (
+    <Dialog title="Riordina" onClose={onClose} className="tidy-dialog" sheet>
+      <OptionCard icon="✨" name="Riordina" description="Rimette in ordine la mappa. I colori restano come sono." onClick={() => onTidy(false)} />
+      <OptionCard
+        icon="🎨"
+        name="Riordina e colora"
+        description="Rimette in ordine la mappa e dà a ogni ramo un colore pastello, uguale per tutti i concetti del ramo."
+        onClick={() => onTidy(true)}
+      />
       <div className="dialog-actions">
         <BigButton icon="close" label="Annulla" onClick={onClose} />
       </div>

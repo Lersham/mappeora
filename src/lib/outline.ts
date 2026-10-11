@@ -1,6 +1,6 @@
 import type { ConceptMap, MapEdge, MapNode } from '../types/map';
 import { ladderLayout } from './ladder';
-import { colorForDepth } from './palette';
+import { DEFAULT_COLOR } from './palette';
 import { newId } from './id';
 
 /** One line of the "scaletta": a concept and how far it is indented. */
@@ -73,7 +73,7 @@ export function fromOutline(map: Pick<ConceptMap, 'nodes' | 'edges'>, rows: Outl
     const old = byId.get(r.id);
     // A concept written on more lines keeps them if the row was not changed.
     const label = old && oneLine(old.label) === r.label ? old.label : r.label;
-    return old ? { ...old, label, position } : { id: r.id, label, position, color: colorForDepth(r.depth), shape: 'rettangolo' };
+    return old ? { ...old, label, position } : { id: r.id, label, position, color: DEFAULT_COLOR, shape: 'rettangolo' };
   });
 
   const key = (source: string, target: string) => `${source}→${target}`;

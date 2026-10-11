@@ -2,10 +2,9 @@ import { create } from 'zustand';
 import { temporal } from 'zundo';
 import type { ConceptMap, MapEdge, MapNode } from '../types/map';
 import { newId } from '../lib/id';
-import { colorForDepth } from '../lib/palette';
+import { DEFAULT_COLOR, branchColors } from '../lib/palette';
 import { collapseInfo } from '../lib/collapse';
 import { fromOutline, type OutlineRow } from '../lib/outline';
-import { spanningTree } from '../lib/tree';
 import { moveUnder, removeBranch, removeLiftingChildren } from '../lib/branch';
 import { DEFAULT_SIZE } from '../lib/ladder';
 import { NEW_CONCEPT_LABEL } from '../lib/mapFactory';
@@ -35,6 +34,8 @@ interface MapState {
   moveNode(id: string, position: MapNode['position']): void;
   /** `auto`: placed by the automatic layout, not an edit by the child. */
   applyPositions(positions: Record<string, MapNode['position']>, opts?: { auto?: boolean }): void;
+  /** «Riordina e colora»: each branch in its own colour, as one undo step. */
+  colorBranches(): void;
   removeNodes(ids: string[]): void;
   /** Removes `id`; the concepts under it go up one level. False when it has no parent to give them to. */
   removeLiftingChildren(id: string): boolean;
@@ -54,9 +55,6 @@ const CHILD_OFFSET_Y = 140;
 /** Step from one sibling to the next, side by side. */
 const SIBLING_STEP_X = 200;
 const HISTORY_LIMIT = 200;
-
-/** Level of a concept, counted from the main one (a link back to it doesn't count). */
-const depthOf = (map: ConceptMap, id: string) => spanningTree(map).depth.get(id) ?? 0;
 
 /**
  * The first place from `start` rightwards where a new concept covers no
@@ -131,8 +129,7 @@ export const useMapStore = create<MapState>()(
                   y: Math.max(parent.position.y + CHILD_OFFSET_Y, ...siblings.map((p) => p.y + 1)),
                 })
               : { x: 0, y: Math.max(0, ...map.nodes.map((n) => n.position.y)) + CHILD_OFFSET_Y };
-            const depth = parent ? depthOf(map, parent.id) + 1 : 0;
-            const node: MapNode = { id, label, position, color: colorForDepth(depth), shape: 'rettangolo' };
+            const node: MapNode = { id, label, position, color: DEFAULT_COLOR, shape: 'rettangolo' };
             const edges = parent ? [...map.edges, { id: newId(), source: parent.id, target: id }] : map.edges;
             // A new child must be visible: open whatever collapsed concept hides it.
             const above = new Set(ancestors({ ...map, edges }, id));
@@ -158,6 +155,15 @@ export const useMapStore = create<MapState>()(
       },
 
       moveNode: (id, position) => get().updateNode(id, { position }),
+
+      colorBranches: () =>
+        set((s) =>
+          edit(s, (map) => {
+            const colors = branchColors(map.nodes, map.edges);
+            if (!map.nodes.some((n) => colors[n.id] && colors[n.id] !== n.color)) return {};
+            return { nodes: map.nodes.map((n) => (colors[n.id] ? { ...n, color: colors[n.id] } : n)) };
+          }),
+        ),
 
       applyPositions: (positions, opts = {}) =>
         set((s) =>

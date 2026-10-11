@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { test, expect, spoken } from './fixtures';
-import { addConcept, boxes, holdOn, newMap, node, nodes, onScreen, overlapping, rename, sampleMap, settled, showAll, tapLink, toolbar } from './helpers';
+import { addConcept, boxes, holdOn, newMap, node, nodes, onScreen, overlapping, rename, sampleMap, settled, showAll, tapLink, tidyUp, toolbar } from './helpers';
 
 test.describe('Editor', () => {
   test('aggiunge, rinomina, annulla, ripete ed elimina concetti', async ({ page }) => {
@@ -91,7 +91,7 @@ test.describe('Editor', () => {
     const moved = (await node(page, 'Neve').boundingBox())!;
     expect(moved.x - neve.x).toBeGreaterThan(80);
 
-    await toolbar(page, 'Riordina');
+    await tidyUp(page);
     await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toBeVisible();
     await showAll(page);
     await settled(page);
@@ -114,7 +114,7 @@ test.describe('Editor', () => {
 
   test('«Riordina» mette in colonna la linea del tempo', async ({ page }) => {
     await newMap(page, 'Il Novecento', 'Linea del tempo');
-    await toolbar(page, 'Riordina');
+    await tidyUp(page);
     await settled(page);
     const b = await boxes(page);
     const ys = b.map((x) => x.y);
@@ -124,7 +124,7 @@ test.describe('Editor', () => {
 
   test('sulla linea del tempo un concetto nuovo non copre quelli che ci sono già', async ({ page }) => {
     await newMap(page, 'Il Novecento', 'Linea del tempo');
-    await toolbar(page, 'Riordina');
+    await tidyUp(page);
     await settled(page);
     const before = (await boxes(page)).length;
     for (let i = 0; i < 3; i++) {
@@ -188,9 +188,10 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await expect.poll(() => spoken(page)).toEqual(['Gli animali', 'Vertebrati', 'Mammiferi', 'Uccelli']);
     const b = await boxes(page);
     const at = (label: string) => b.find((x) => x.label === label)!;
-    // «Mammiferi» and «Uccelli» are both under «Vertebrati»
-    expect(at('Uccelli').x).toBeCloseTo(at('Mammiferi').x, 0);
-    expect(at('Mammiferi').x).toBeGreaterThan(at('Vertebrati').x);
+    // «Mammiferi» and «Uccelli» are both under «Vertebrati», side by side
+    expect(at('Uccelli').y).toBeCloseTo(at('Mammiferi').y, 0);
+    expect(at('Uccelli').x).toBeGreaterThan(at('Mammiferi').x);
+    expect(at('Mammiferi').y).toBeGreaterThan(at('Vertebrati').y);
   });
 
   test('ogni ramo ha le linee del suo colore; i pallini per collegare solo sul concetto scelto', async ({ page, isMobile }) => {
@@ -210,6 +211,28 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     // On a touch screen lines are drawn with «Collega»: no dots at all.
     await expect.poll(() => handleOpacity('Vapore')).toBe(isMobile ? '0' : '1');
     await expect.poll(() => handleOpacity('Neve')).toBe('0');
+  });
+
+  test('i concetti nascono bianchi; «Riordina e colora» dà un colore pastello a ogni ramo', async ({ page }) => {
+    await sampleMap(page);
+    const background = (label: string) => node(page, label).evaluate((e) => getComputedStyle(e).backgroundColor);
+    for (const label of ['Il ciclo dell’acqua', 'Evaporazione', 'Vapore', 'Neve']) expect(await background(label)).toBe('rgb(255, 255, 255)');
+
+    await tidyUp(page, true);
+    await settled(page);
+    expect(await background('Il ciclo dell’acqua')).toBe('rgb(255, 255, 255)');
+    // a branch and all its concepts share one colour, each branch its own
+    const branches = ['Evaporazione', 'Condensazione', 'Precipitazione'];
+    const colours = await Promise.all(branches.map(background));
+    expect(new Set(colours).size).toBe(3);
+    expect(colours).not.toContain('rgb(255, 255, 255)');
+    expect(await background('Vapore')).toBe(colours[0]);
+    expect(await background('Nuvole')).toBe(colours[1]);
+    expect(await background('Neve')).toBe(colours[2]);
+
+    // one «Annulla» takes the colours back off
+    await toolbar(page, 'Annulla');
+    await expect.poll(() => background('Vapore')).toBe('rgb(255, 255, 255)');
   });
 
   test('sul telefono, toccando un concetto di una mappa vista da lontano, il suo ramo si avvicina', async ({ page, isMobile }) => {
@@ -346,17 +369,17 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
       expect(at(after, b.label).y - at(after, 'Calore del sole').y, b.label).toBeCloseTo(b.y - start.y, 0);
     }
 
-    // The concept in hand, and only it, goes where the finger takes it: above «Calore del sole».
+    // The concept in hand, and only it, goes where the finger takes it: before «Calore del sole», in its row.
     await (await onScreen(page, node(page, 'Vapore'))).click();
     await settled(page);
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(1);
     const [vapore, calore] = [(await node(page, 'Vapore').boundingBox())!, (await node(page, 'Calore del sole').boundingBox())!];
     const [vx, vy] = [vapore.x + vapore.width / 2, vapore.y + vapore.height / 2];
     await touch('touchStart', [{ x: vx, y: vy }]);
-    for (let i = 1; i <= 10; i++) await touch('touchMove', [{ x: vx, y: vy + ((calore.y - 20 - vy) * i) / 10 }]);
+    for (let i = 1; i <= 10; i++) await touch('touchMove', [{ x: vx + ((calore.x - 20 - vx) * i) / 10, y: vy }]);
     await touch('touchEnd', []);
     await settled(page);
-    expect((await node(page, 'Vapore').boundingBox())!.y).toBeLessThan((await node(page, 'Calore del sole').boundingBox())!.y);
+    expect((await node(page, 'Vapore').boundingBox())!.x).toBeLessThan((await node(page, 'Calore del sole').boundingBox())!.x);
     // A drag is not a tap on the concept in hand: «Immagine e colore» stays closed.
     await expect(page.getByRole('dialog')).toHaveCount(0);
 

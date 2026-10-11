@@ -1,6 +1,6 @@
 import type { ConceptMap, MapEdge, MapNode, MapTemplate, NodeImage } from '../types/map';
 import { newId } from './id';
-import { colorForDepth } from './palette';
+import { DEFAULT_COLOR } from './palette';
 
 export interface TemplateInfo {
   id: MapTemplate;
@@ -108,7 +108,7 @@ export function buildTemplate(template: MapTemplate, title: string): { nodes: Ma
         id: ids.get(n.key)!,
         label: n.label,
         position: { x: n.x, y: n.y },
-        color: colorForDepth(n.depth),
+        color: DEFAULT_COLOR,
         shape: n.shape ?? 'rettangolo',
         ...(image && { image }),
       };
