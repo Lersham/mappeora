@@ -18,8 +18,8 @@ export interface PlacedTile extends Tile {
 }
 
 export interface PagePlan {
-  /** Sheets are always portrait: maps grow downwards. */
-  orientation: 'portrait';
+  /** Portrait, unless the map is wide enough to print larger on its side. */
+  orientation: 'portrait' | 'landscape';
   /** Millimetres on paper per CSS pixel of the map. */
   scale: number;
   pageCount: number;
@@ -67,11 +67,11 @@ function cut(size: number, count: number, breaks: number[] = []): Range[] {
 }
 
 /**
- * Plans portrait sheets for a map of `width` × `height` CSS pixels. Tall
- * maps (a "scaletta") are cut into strips laid out in columns, like a
- * newspaper: 1 to 3 columns per sheet, whichever prints the map largest.
- * A wide map may instead be cut down the middle too: 2 sheets side by
- * side, or a 2×2 grid on 4.
+ * Plans sheets for a map of `width` × `height` CSS pixels. Tall maps (a
+ * "scaletta") are cut into strips laid out in columns, like a newspaper:
+ * 1 to 3 columns per sheet, whichever prints the map largest. A wide map
+ * may instead be cut down the middle too: 2 sheets side by side, or a 2×2
+ * grid on 4. Sheets are portrait unless landscape prints the map larger.
  * `breaks` are heights where a cut doesn't split a concept.
  */
 export function planPages(
@@ -82,58 +82,61 @@ export function planPages(
   layout: { margin: number; header: number; footer: number },
   breaks: number[] = [],
 ): PagePlan {
-  const { w: pageW, h: pageH } = PAPER_MM[paper];
-  const boxW = pageW - layout.margin * 2;
-  const boxH = pageH - layout.margin * 2 - layout.header - layout.footer;
   let best: PagePlan | null = null;
   const consider = (plan: PagePlan) => {
     if (!best || plan.scale > best.scale + 1e-9) best = plan;
   };
+  for (const orientation of ['portrait', 'landscape'] as const) {
+    const { w, h } = PAPER_MM[paper];
+    const [pageW, pageH] = orientation === 'portrait' ? [w, h] : [h, w];
+    const boxW = pageW - layout.margin * 2;
+    const boxH = pageH - layout.margin * 2 - layout.header - layout.footer;
 
-  // Columns: strips of the whole width, `perPage` side by side on each sheet.
-  for (const perPage of [1, 2, 3]) {
-    const strips = cut(height, pages * perPage, breaks);
-    const tallest = Math.max(...strips.map((s) => s.length));
-    const scale = Math.min((boxW - (perPage - 1) * COLUMN_GAP) / (perPage * width), boxH / tallest, MAX_SCALE);
-    const groupW = perPage * width * scale + (perPage - 1) * COLUMN_GAP;
-    consider({
-      orientation: 'portrait',
-      scale,
-      pageCount: pages,
-      tiles: strips.map((s, i) => ({
-        x: 0,
-        y: s.start,
-        w: width,
-        h: s.length,
-        page: Math.floor(i / perPage),
-        dx: (boxW - groupW) / 2 + (i % perPage) * (width * scale + COLUMN_GAP),
-        dy: 0, // top-aligned: pieces line up when the sheets are joined
-      })),
-    });
-  }
-
-  // A wide map: cut in two side by side too (2 sheets next to each
-  // other, or a 2×2 poster on 4).
-  if (pages % 2 === 0) {
-    const xs = cut(width, 2);
-    const ys = cut(height, pages / 2, breaks);
-    const scale = Math.min(boxW / Math.max(...xs.map((r) => r.length)), boxH / Math.max(...ys.map((r) => r.length)), MAX_SCALE);
-    consider({
-      orientation: 'portrait',
-      scale,
-      pageCount: pages,
-      tiles: ys.flatMap((y, row) =>
-        xs.map((x, col) => ({
-          x: x.start,
-          y: y.start,
-          w: x.length,
-          h: y.length,
-          page: row * 2 + col,
-          dx: (boxW - x.length * scale) / 2,
-          dy: 0,
+    // Columns: strips of the whole width, `perPage` side by side on each sheet.
+    for (const perPage of [1, 2, 3]) {
+      const strips = cut(height, pages * perPage, breaks);
+      const tallest = Math.max(...strips.map((s) => s.length));
+      const scale = Math.min((boxW - (perPage - 1) * COLUMN_GAP) / (perPage * width), boxH / tallest, MAX_SCALE);
+      const groupW = perPage * width * scale + (perPage - 1) * COLUMN_GAP;
+      consider({
+        orientation,
+        scale,
+        pageCount: pages,
+        tiles: strips.map((s, i) => ({
+          x: 0,
+          y: s.start,
+          w: width,
+          h: s.length,
+          page: Math.floor(i / perPage),
+          dx: (boxW - groupW) / 2 + (i % perPage) * (width * scale + COLUMN_GAP),
+          dy: 0, // top-aligned: pieces line up when the sheets are joined
         })),
-      ),
-    });
+      });
+    }
+
+    // A wide map: cut in two side by side too (2 sheets next to each
+    // other, or a 2×2 poster on 4).
+    if (pages % 2 === 0) {
+      const xs = cut(width, 2);
+      const ys = cut(height, pages / 2, breaks);
+      const scale = Math.min(boxW / Math.max(...xs.map((r) => r.length)), boxH / Math.max(...ys.map((r) => r.length)), MAX_SCALE);
+      consider({
+        orientation,
+        scale,
+        pageCount: pages,
+        tiles: ys.flatMap((y, row) =>
+          xs.map((x, col) => ({
+            x: x.start,
+            y: y.start,
+            w: x.length,
+            h: y.length,
+            page: row * 2 + col,
+            dx: (boxW - x.length * scale) / 2,
+            dy: 0,
+          })),
+        ),
+      });
+    }
   }
   return best!;
 }

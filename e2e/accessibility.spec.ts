@@ -68,13 +68,21 @@ test.describe('Tastiera', () => {
     await expect(page.locator('.topbar').getByRole('button', { name: 'Aspetto', exact: true })).toBeFocused();
   });
 
-  test('Invio su un collegamento apre la parola di collegamento', async ({ page }) => {
+  test('Invio su un collegamento apre la parola di collegamento', async ({ page, isMobile }) => {
     await newMap(page, 'Il sistema solare', 'Le 5 W');
     const link = page.getByRole('group', { name: /^Collegamento da «Il sistema solare»/ }).first();
     await link.focus();
     await page.keyboard.press('Enter');
     const dialog = page.getByRole('dialog', { name: 'Parola di collegamento' });
     await expect(dialog).toBeVisible();
+    const field = dialog.getByRole('textbox');
+    if (isMobile) {
+      // The on-screen keyboard would cover the words and «Togli freccia»: it
+      // opens only when the child taps the field.
+      await expect(field).not.toBeFocused();
+      await field.click();
+    }
+    await expect(field).toBeFocused();
     await page.keyboard.type('ha');
     await dialog.getByRole('button', { name: 'Fatto' }).click();
     await expect(page.getByRole('group', { name: /^Collegamento da «Il sistema solare» a .*: ha$/ })).toHaveCount(1);

@@ -6,14 +6,15 @@ import { roundedPath } from '../../lib/sheetLayout';
 import { LinkAdd } from './LinkAdd';
 import { branchClass } from './branchColor';
 
-export type BusEdgeData = { points: { x: number; y: number }[]; own?: number; branch?: number; onEdit?: () => void; near?: boolean };
+export type BusEdgeData = { points: { x: number; y: number }[]; own?: number; branch?: number; column?: boolean; onEdit?: () => void; near?: boolean };
 export type BusFlowEdge = Edge<BusEdgeData, 'bus'>;
 
 /**
- * "Foglio A4": the line from the main concept to a branch. It runs along
- * the space above each row of branches (and between columns, for lower
- * rows) and drops into the branch from above; linking words sit just above
- * the branch.
+ * "Foglio": the line from a concept to one under it. Towards a row it runs
+ * along the space above the row and drops into the concept from above;
+ * down a column it starts just under the concept above it (the line from
+ * the top of the column runs behind the ones in between). Linking words
+ * sit just above the concept.
  */
 export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, interactionWidth }: EdgeProps<BusFlowEdge>) {
   const scale = labelScale(useSettings((s) => s.textScale));
@@ -24,7 +25,7 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
     points[0].x = sourceX;
     points[points.length - 1].x = targetX;
   }
-  const path = roundedPath([{ x: sourceX, y: sourceY }, ...points, { x: targetX, y: targetY }]);
+  const path = roundedPath([...(data?.column ? [] : [{ x: sourceX, y: sourceY }]), ...points, { x: targetX, y: targetY }]);
   // Several branches share the line along the top: only the last stretch,
   // down into this branch, is a wide target for a tap (linking words).
   const last = points[points.length - 1] ?? { x: sourceX, y: sourceY };

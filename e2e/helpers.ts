@@ -121,6 +121,15 @@ export async function toolbar(page: Page, name: string) {
   await page.getByRole('dialog', { name: 'Altro' }).getByRole('button', { name, exact: true }).click();
 }
 
+/** «Riordina», then one of its two choices: just tidy, or tidy and colour the branches. */
+export async function tidyUp(page: Page, color = false) {
+  await toolbar(page, 'Riordina');
+  await page
+    .getByRole('dialog', { name: 'Riordina' })
+    .getByRole('button', { name: color ? /^Riordina e colora/ : /^Riordina(?! e colora)/ })
+    .click();
+}
+
 /** On-screen boxes of the visible concepts. */
 export function boxes(page: Page) {
   return nodes(page).evaluateAll((els) =>

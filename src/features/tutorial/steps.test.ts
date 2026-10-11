@@ -88,6 +88,38 @@ describe('TUTORIAL_STEPS', () => {
     expect(guideFor(TUTORIAL_STEPS[0], two).text).toBe(TUTORIAL_STEPS[0].text);
   });
 
+  it('notices a line taken away, not a concept deleted or moved', () => {
+    const done = step('Togli una freccia');
+    const two = withChild('Luce');
+    const three: ConceptMap = { ...two, nodes: [...two.nodes, { id: 'c', label: 'Estate', position: { x: 0, y: 200 } }], edges: [...two.edges, { id: 'f', source: root.id, target: 'c' }] };
+    const linked: ConceptMap = { ...three, edges: [...three.edges, { id: 'g', source: 'c', target: 'b' }] };
+    expect(done(at(three), at(linked))).toBe(true);
+    expect(done(at({ ...three, edges: [three.edges[0]] }), at(three))).toBe(true); // «Estate» stays, on its own
+    expect(done(at(linked), at(linked))).toBe(false);
+    // «Elimina» on «Estate»: its two lines go with it.
+    expect(done(at(two), at(linked))).toBe(false);
+    // «Cambia ramo»: «Estate» under «Luce», one line for another.
+    expect(done(at({ ...three, edges: [two.edges[0], { id: 'h', source: 'b', target: 'c' }] }), at(three))).toBe(false);
+  });
+
+  it('asks for a concept first when there is no line to take away', () => {
+    const taking = TUTORIAL_STEPS.find((s) => s.title === 'Togli una freccia')!;
+    expect(guideFor(taking, first).target).toBe('concetto');
+    expect(guideFor(taking, withChild('Luce')).text).toBe(taking.text);
+    expect(guideFor(taking, withChild('Luce')).target).toBeUndefined();
+  });
+
+  it('notices the line put back, by «Annulla» or by «Collega»', () => {
+    const done = step('Rimetti la freccia');
+    const two = withChild('Luce');
+    const apart: ConceptMap = { ...two, edges: [] };
+    expect(TUTORIAL_STEPS.find((s) => s.title === 'Rimetti la freccia')?.target).toBe('annulla');
+    expect(done(at(two), at(apart))).toBe(true);
+    expect(done(at(apart), at(apart))).toBe(false);
+    // A new concept comes with its own line: that is not the one taken away.
+    expect(done(at({ ...apart, nodes: [...apart.nodes, { id: 'c', label: 'Estate', position: { x: 0, y: 200 } }], edges: [{ id: 'f', source: root.id, target: 'c' }] }), at(apart))).toBe(false);
+  });
+
   it('ends with a step that has nothing to check', () => {
     expect(TUTORIAL_STEPS.at(-1)?.done).toBeUndefined();
   });

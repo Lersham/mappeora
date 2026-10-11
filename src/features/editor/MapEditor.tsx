@@ -17,7 +17,6 @@ import { beginStep, endStep, mapHistory, untracked, useMapStore } from '../../st
 import { reviewVisibility, useReview, type ReviewMode } from '../../store/reviewStore';
 import { ConceptNode, type ConceptActions, type ConceptFlowNode } from './ConceptNode';
 import { FreeEdge } from './FreeEdge';
-import { LadderEdge } from './LadderEdge';
 import { BusEdge } from './BusEdge';
 import { TreeEdge } from './TreeEdge';
 import { sheetLayout, type SheetResult } from '../../lib/sheetLayout';
@@ -47,6 +46,7 @@ import type { ConceptMap, MapNode } from '../../types/map';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 import { useBackHandler } from '../../lib/backButton';
 import { motion } from '../../lib/motion';
+import { TOUCH } from '../../lib/touch';
 import { MAP_ARIA_LABELS, edgeAriaLabel, spokenLabel } from './a11yLabels';
 import { SaveProblemNotice } from './SaveProblemNotice';
 import { OptionCard } from '../../components/OptionCard';
@@ -62,13 +62,7 @@ const READABLE_PX = 12;
 const COMFORT_PX = 16;
 const MAX_READ_ZOOM = 1.2;
 /** The farthest the map can be seen from. */
-const MIN_ZOOM = 0.2;
-
-/**
- * A touch screen: a finger that lands on a concept while moving or zooming
- * the map must not drag it away, and lines are drawn with «Collega».
- */
-const TOUCH = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+const MIN_ZOOM = 0.05;
 
 /** Where a new concept goes when none is selected: under the main one. */
 function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined {
@@ -79,7 +73,7 @@ function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined 
 
 /** A failed share sheet the child closed is not an error. */
 const isCancel = (e: unknown) => e instanceof Error && /cancel/i.test(e.message);
-const edgeTypes: EdgeTypes = { ladder: LadderEdge, bus: BusEdge, free: FreeEdge, tree: TreeEdge };
+const edgeTypes: EdgeTypes = { bus: BusEdge, free: FreeEdge, tree: TreeEdge };
 
 type DialogState =
   | { kind: 'style' }
@@ -90,6 +84,7 @@ type DialogState =
   | { kind: 'outline' }
   | { kind: 'more' }
   | { kind: 'delete'; id: string }
+  | { kind: 'tidy' }
   | null;
 
 interface Props {
@@ -162,7 +157,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const sheetMode = layout === 'foglio';
   /**
    * On a touch screen the concepts on the A4 sheet stay where the sheet puts
-   * them: a finger moves and zooms the map, a tap selects. «Sposta» frees them.
+   * them: a finger moves and zooms the map, a tap selects. Only the concept
+   * in hand can be dragged, to change its place in the branch. «Sposta» frees them.
    */
   const locked = TOUCH && sheetMode;
   const collapse = useMemo(() => collapseInfo(map), [map]);
@@ -245,6 +241,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         sizes[n.id],
         layout,
         shown?.roles[n.id],
+        shown?.heads[n.id],
         parents.has(n.id),
         collapse.hiddenBelow[n.id] ?? 0,
       ];
@@ -259,6 +256,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         ariaLabel: n.id === secret ? 'Concetto nascosto' : spokenLabel(n.label),
         position: n.position,
         selected: !review.active && n.id === selectedId,
+        ...(locked && { draggable: !review.active && n.id === selectedId }),
         hidden: collapse.hidden.has(n.id) || reviewVisibility(review, n.id) === 'hidden',
         measured: sizes[n.id],
         data: {
@@ -268,6 +266,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           image: n.image,
           layout,
           role: shown?.roles[n.id],
+          branch: shown?.heads[n.id],
           hasChildren: parents.has(n.id),
           collapsed: n.collapsed,
           hiddenBelow: collapse.hiddenBelow[n.id] ?? 0,
@@ -294,25 +293,24 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       const base = { id: e.id, source: e.source, target: e.target, label: e.label, ariaLabel, interactionWidth: locked ? 16 : 40, className: 'concept-edge' };
       // The «+» for linking words stands out on the lines of the concept in hand.
       const near = !review.active && (e.source === selectedId || e.target === selectedId);
-      const kind = shown?.edges[e.id];
-      if (kind?.kind === 'bus') {
+      const bus = shown?.edges[e.id];
+      if (bus) {
         return {
           ...base,
           type: 'bus',
           sourceHandle: 's-bottom',
           targetHandle: 't-top',
-          data: { points: kind.points, own: kind.own, branch: kind.branch, onEdit: onEdit(e.id), near },
+          data: { points: bus.points, own: bus.own, branch: bus.branch, column: bus.column, onEdit: onEdit(e.id), near },
         };
-      }
-      if (kind?.kind === 'ladder') {
-        return { ...base, type: 'ladder', sourceHandle: 's-spine', targetHandle: 't-left', data: { branch: kind.branch, onEdit: onEdit(e.id), near } };
       }
       if (sheetTemplate && !shown) return { ...base, type: 'free', data: { onEdit: onEdit(e.id), near } }; // placed by hand
       return {
         ...base,
         type: 'tree',
         data: { onEdit: onEdit(e.id), near },
-        ...(shown && { sourceHandle: 's-spine', targetHandle: 't-left' }), // a cross-link on a sheet
+        // A cross-link on a sheet. Towards a concept higher up it leaves from
+        // the left too: from the bottom it would loop behind its own box.
+        ...(shown && { sourceHandle: shown.positions[e.target]?.y < shown.positions[e.source]?.y ? 's-left' : 's-spine', targetHandle: 't-left' }),
         labelBgPadding: [8, 4] as [number, number],
         labelBgBorderRadius: 6,
       };
@@ -400,8 +398,17 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     // Too big to be seen whole even from afar (large text on a phone): from
     // the top, where the main concept is, not centred and cut at both ends.
     if (whole < MIN_ZOOM) return top(Math.max(MIN_ZOOM, wide));
-    if (mustFit || px * whole >= READABLE_PX || wide < whole * 1.5) return null;
-    return top(wide);
+    if (mustFit || px * whole >= READABLE_PX) return null;
+    if (wide >= whole * 1.5) return top(wide);
+    // A map wider than the screen (a sheet spread in rows): on a screen wider
+    // than it is tall, names that can be read, from the top and around the
+    // main concept; the rest is a scroll away. A phone sees all of it, and
+    // a tap brings a branch close.
+    if (box.width <= box.height) return null;
+    const zoom = Math.min(MAX_READ_ZOOM, COMFORT_PX / px);
+    const head = visible.reduce((a, n) => (n.position.y < a.position.y ? n : a));
+    const centre = head.position.x + (head.measured?.width ?? 0) / 2;
+    return { x: box.width / 2 - centre * zoom, y: pad - b.y * zoom, zoom };
   };
 
   const fromTopIfTooBig = () => {
@@ -477,7 +484,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     }
     let head = id;
     if (shown) {
-      while (shown.roles[head] === 'item' && above.has(head)) head = above.get(head)!;
+      while (shown.roles[head] === 'item' && !(head in shown.heads) && above.has(head)) head = above.get(head)!;
       if (shown.roles[head] === 'root') return [head];
     }
     const out: string[] = [];
@@ -856,26 +863,29 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       onClick: () => setDialog({ kind: 'outline' }),
     },
     { key: 'photo', icon: 'camera', label: 'Dal libro', onClick: () => setDialog({ kind: 'photo' }) },
-    sheetMode
-      ? {
-          key: 'layout',
-          icon: 'hand',
-          label: 'Sposta',
-          title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
-          className: 'group-start',
-          onClick: () => {
-            actions.setFreeLayout(true);
+    ...(sheetMode
+      ? [
+          {
+            key: 'layout',
+            icon: 'hand' as const,
+            label: 'Sposta',
+            title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
+            className: 'group-start',
+            onClick: () => {
+              actions.setFreeLayout(true);
+            },
           },
-        }
-      : {
-          key: 'layout',
-          icon: 'tidy',
-          label: 'Riordina',
-          title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4.' : undefined,
-          className: 'group-start',
-          onClick: () => void tidy(),
-          disabled: arranging,
-        },
+        ]
+      : []),
+    {
+      key: 'tidy',
+      icon: 'tidy',
+      label: 'Riordina',
+      title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4, e se vuoi colora i rami.' : 'Rimetti la mappa in ordine, e se vuoi colora i rami.',
+      className: sheetMode ? undefined : 'group-start',
+      onClick: () => setDialog({ kind: 'tidy' }),
+      disabled: arranging,
+    },
   ];
   // The map as a whole: in the top bar (on a phone, in «Altro»).
   const mapTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
@@ -931,7 +941,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         </label>
         {editing ? (
           <>
-            <BigButton icon="undo" label="Annulla" aria-label="Annulla" title="Annulla" disabled={!canUndo} onClick={() => mapHistory().undo()} />
+            <BigButton
+              icon="undo"
+              label="Annulla"
+              aria-label="Annulla"
+              title="Annulla"
+              className={target('annulla')}
+              disabled={!canUndo}
+              onClick={() => mapHistory().undo()}
+            />
             <BigButton icon="redo" label="Ripeti" aria-label="Ripeti" title="Ripeti" disabled={!canRedo} onClick={() => mapHistory().redo()} />
             {mapTools.map(({ key, ...t }) => (
               <BigButton key={key} {...t} className={`topbar-map${key === 'save' ? ' group-start' : ''}`} />
@@ -987,6 +1005,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onConnectEnd={() => setConnecting(false)}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
           nodesDraggable={editing && !locked}
+          // A finger draws lines with «Collega».
           nodesConnectable={editing && !TOUCH}
           elementsSelectable={editing}
           // Our own handler (above): one undo step, and never behind a dialog.
@@ -1129,6 +1148,16 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onClose={() => setDialog(null)}
         />
       )}
+      {dialog?.kind === 'tidy' && (
+        <TidyDialog
+          onTidy={(color) => {
+            setDialog(null);
+            if (color) actions.colorBranches();
+            void tidy();
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
       {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'outline' && (
@@ -1199,6 +1228,24 @@ function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
       ) : (
         <p>È l’idea principale della mappa: finché ha concetti sotto non si può eliminare. Puoi cambiarle nome con «Nome».</p>
       )}
+      <div className="dialog-actions">
+        <BigButton icon="close" label="Annulla" onClick={onClose} />
+      </div>
+    </Dialog>
+  );
+}
+
+/** «Riordina»: just the order, or each branch in its own colour too. */
+function TidyDialog({ onTidy, onClose }: { onTidy(color: boolean): void; onClose(): void }) {
+  return (
+    <Dialog title="Riordina" onClose={onClose} className="tidy-dialog" sheet>
+      <OptionCard icon="✨" name="Riordina" description="Rimette in ordine la mappa. I colori restano come sono." onClick={() => onTidy(false)} />
+      <OptionCard
+        icon="🎨"
+        name="Riordina e colora"
+        description="Rimette in ordine la mappa e dà a ogni ramo un colore pastello, uguale per tutti i concetti del ramo."
+        onClick={() => onTidy(true)}
+      />
       <div className="dialog-actions">
         <BigButton icon="close" label="Annulla" onClick={onClose} />
       </div>

@@ -5,9 +5,16 @@ const layout = { margin: 12, header: 12, footer: 4 };
 
 describe('planPages', () => {
   it('prints a small map whole, on one portrait sheet', () => {
-    const plan = planPages(600, 400, 'a4', 1, layout);
+    const plan = planPages(400, 600, 'a4', 1, layout);
     expect(plan.orientation).toBe('portrait');
-    expect(plan.tiles).toEqual([expect.objectContaining({ x: 0, y: 0, w: 600, h: 400, page: 0 })]);
+    expect(plan.tiles).toEqual([expect.objectContaining({ x: 0, y: 0, w: 400, h: 600, page: 0 })]);
+  });
+
+  it('turns the sheet for a wide map, when that prints it larger', () => {
+    const plan = planPages(1400, 650, 'a4', 1, layout);
+    expect(plan.orientation).toBe('landscape');
+    expect(plan.scale).toBeCloseTo(273 / 1400);
+    expect(plan.tiles).toEqual([expect.objectContaining({ x: 0, y: 0, w: 1400, h: 650, page: 0 })]);
   });
 
   it('lays a tall, narrow "scaletta" out in columns, much larger than one long strip', () => {
@@ -50,7 +57,8 @@ describe('planPages', () => {
       [0, 0],
       [1, 0],
     ]);
-    expect(two.scale).toBeGreaterThan(one.scale * 1.5);
+    expect(one.orientation).toBe('landscape');
+    expect(two.scale).toBeGreaterThan(one.scale * 1.3);
   });
 
   it('does not blow up a tiny map', () => {

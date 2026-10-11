@@ -1171,7 +1171,8 @@ textarea {
   /* Grows with the text size, so long words still fit on one line. */
   max-width: min(calc(260px * var(--text-scale) / 1.15), 80vw);
   padding: 14px 18px;
-  border: 3px solid rgba(0, 0, 0, 0.25);
+  --node-border: rgba(0, 0, 0, 0.25);
+  border: 3px solid var(--node-border);
   border-radius: 14px;
   color: #1f2430; /* node colours are always light pastels */
   text-align: center;
@@ -1197,6 +1198,31 @@ textarea {
 .concept-node.shape-nuvola {
   border-radius: 40px 32px 44px 28px;
 }
+/* "Foglio": the main concept and the first concept of each branch stand
+   out, like a title and its headings; the branch's in the colour of its lines. */
+.concept-node.sheet-root {
+  --node-border: #1f2430;
+  max-width: min(calc(340px * var(--text-scale) / 1.15), 80vw);
+  padding: 16px 26px;
+  border-width: 4px;
+}
+.concept-node.sheet-root .concept-label {
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+.concept-node.sheet-branch {
+  border-width: 4px;
+}
+.concept-node.sheet-branch .concept-label {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+.sheet-branch.branch-0 { --node-border: var(--branch-0); }
+.sheet-branch.branch-1 { --node-border: var(--branch-1); }
+.sheet-branch.branch-2 { --node-border: var(--branch-2); }
+.sheet-branch.branch-3 { --node-border: var(--branch-3); }
+.sheet-branch.branch-4 { --node-border: var(--branch-4); }
+.sheet-branch.branch-5 { --node-border: var(--branch-5); }
 .concept-node.is-selected {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 30%, transparent);
@@ -1818,7 +1844,7 @@ textarea {
 
 /* The selected concept must not look different on paper. */
 .exporting .concept-node.is-selected {
-  border-color: rgba(0, 0, 0, 0.25);
+  border-color: var(--node-border);
   box-shadow: none;
 }
 
@@ -2240,6 +2266,7 @@ textarea {
   }
 }
 /* The button the tutorial asks for. */
+.topbar .tutorial-target,
 .toolbar .tutorial-target,
 .selection-bar .tutorial-target {
   outline: 4px solid var(--primary);
@@ -2252,6 +2279,7 @@ textarea {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .topbar .tutorial-target,
   .toolbar .tutorial-target,
   .selection-bar .tutorial-target {
     animation: none;
