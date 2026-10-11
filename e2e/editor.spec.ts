@@ -319,9 +319,10 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
 });
 
 test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
-  test('sul foglio il dito su un concetto muove la mappa; «Sposta» libera i concetti', async ({ page, isMobile }) => {
+  test('sul foglio il dito su un concetto muove la mappa, quello scelto si trascina; «Sposta» libera i concetti', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'vale per i touch screen');
     await sampleMap(page);
+    await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
     // No lock to find: on the A4 sheet the concepts stay where the sheet puts them.
     await expect(page.locator('.lock-button')).toHaveCount(0);
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(0);
@@ -344,6 +345,20 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
       expect(at(after, b.label).x - at(after, 'Calore del sole').x, b.label).toBeCloseTo(b.x - start.x, 0);
       expect(at(after, b.label).y - at(after, 'Calore del sole').y, b.label).toBeCloseTo(b.y - start.y, 0);
     }
+
+    // The concept in hand, and only it, goes where the finger takes it: above «Calore del sole».
+    await (await onScreen(page, node(page, 'Vapore'))).click();
+    await settled(page);
+    await expect(page.locator('.react-flow__node.draggable')).toHaveCount(1);
+    const [vapore, calore] = [(await node(page, 'Vapore').boundingBox())!, (await node(page, 'Calore del sole').boundingBox())!];
+    const [vx, vy] = [vapore.x + vapore.width / 2, vapore.y + vapore.height / 2];
+    await touch('touchStart', [{ x: vx, y: vy }]);
+    for (let i = 1; i <= 10; i++) await touch('touchMove', [{ x: vx, y: vy + ((calore.y - 20 - vy) * i) / 10 }]);
+    await touch('touchEnd', []);
+    await settled(page);
+    expect((await node(page, 'Vapore').boundingBox())!.y).toBeLessThan((await node(page, 'Calore del sole').boundingBox())!.y);
+    // A drag is not a tap on the concept in hand: «Immagine e colore» stays closed.
+    await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await toolbar(page, 'Sposta');
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(9);

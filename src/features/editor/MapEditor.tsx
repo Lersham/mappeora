@@ -157,7 +157,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const sheetMode = layout === 'foglio';
   /**
    * On a touch screen the concepts on the A4 sheet stay where the sheet puts
-   * them: a finger moves and zooms the map, a tap selects. «Sposta» frees them.
+   * them: a finger moves and zooms the map, a tap selects. Only the concept
+   * in hand can be dragged, to change its place in the branch. «Sposta» frees them.
    */
   const locked = TOUCH && sheetMode;
   const collapse = useMemo(() => collapseInfo(map), [map]);
@@ -254,6 +255,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         ariaLabel: n.id === secret ? 'Concetto nascosto' : spokenLabel(n.label),
         position: n.position,
         selected: !review.active && n.id === selectedId,
+        ...(locked && { draggable: !review.active && n.id === selectedId }),
         hidden: collapse.hidden.has(n.id) || reviewVisibility(review, n.id) === 'hidden',
         measured: sizes[n.id],
         data: {
