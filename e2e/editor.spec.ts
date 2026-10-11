@@ -83,9 +83,10 @@ test.describe('Editor', () => {
 
     // far to the right of its branch: on the sheet it would snap back
     const neve = (await node(page, 'Neve').boundingBox())!;
-    await page.mouse.move(neve.x + 20, neve.y + 8);
+    // from the middle: the corners of the concept in hand have its buttons
+    await page.mouse.move(neve.x + neve.width / 2, neve.y + neve.height / 2);
     await page.mouse.down();
-    await page.mouse.move(neve.x + 140, neve.y + 30, { steps: 10 });
+    await page.mouse.move(neve.x + neve.width / 2 + 120, neve.y + neve.height / 2 + 22, { steps: 10 });
     await page.mouse.up();
     await settled(page);
     const moved = (await node(page, 'Neve').boundingBox())!;
@@ -409,6 +410,37 @@ test.describe('Editor: la barra del concetto scelto', () => {
     await input.fill('Vapore acqueo');
     await input.press('Enter');
     await expect(node(page, 'Vapore acqueo')).toBeVisible();
+  });
+
+  test('la maniglia ↔ allarga o stringe un concetto; «Annulla» e «Automatica» lo rimettono com’era', async ({ page }) => {
+    await sampleMap(page);
+    await choose(page, 'Evaporazione');
+    const concept = node(page, 'Evaporazione');
+    const width = () => concept.evaluate((el) => (el as HTMLElement).offsetWidth); // not on screen: the map may be zoomed
+    const before = await width();
+    const grip = concept.getByRole('button', { name: /Larghezza di Evaporazione/ });
+    const g = (await (await onScreen(page, grip)).boundingBox())!;
+    await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(g.x + g.width / 2 + 50, g.y + g.height / 2, { steps: 5 });
+    await page.mouse.up();
+    await expect.poll(width).toBeGreaterThan(before + 30);
+    // The words go on more lines when it is narrower: the height follows.
+    await grip.focus();
+    const wide = await width();
+    for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowLeft');
+    await expect.poll(width).toBe(wide - 120);
+
+    for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Annulla' }).click(); // the keys, one step each
+    await expect.poll(width).toBe(wide);
+    await page.getByRole('button', { name: 'Annulla' }).click(); // the whole drag at once
+    await expect.poll(width).toBeCloseTo(before, 0);
+
+    await page.getByRole('button', { name: 'Ripeti' }).click();
+    await expect.poll(width).toBeGreaterThan(before + 30);
+    await (await onScreen(page, concept)).click();
+    await page.getByRole('button', { name: 'Automatica' }).click();
+    await expect.poll(width).toBeCloseTo(before, 0);
   });
 
   test('«Collega» e poi un altro concetto: nasce la freccia', async ({ page }) => {

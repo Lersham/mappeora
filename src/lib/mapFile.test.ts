@@ -7,6 +7,7 @@ describe('mapFile', () => {
     const map = createMap('L’acqua', 'causa-effetto');
     map.nodes[0].image = { kind: 'foto', ref: 'data:image/jpeg;base64,AAAA' };
     map.nodes[0].collapsed = true;
+    map.nodes[0].width = 240;
     const copy = parseMapFile(serializeMap(map));
     expect(copy.id).not.toBe(map.id);
     expect(copy.title).toBe('L’acqua');
@@ -19,6 +20,12 @@ describe('mapFile', () => {
   it('keeps a map placed by hand as it is', () => {
     const map = { ...createMap('Le stagioni'), freeLayout: true };
     expect(parseMapFile(serializeMap(map)).freeLayout).toBe(true);
+  });
+
+  it('drops widths out of range', () => {
+    const map = createMap('Le stagioni');
+    map.nodes[0].width = 5000;
+    expect(parseMapFile(serializeMap(map)).nodes[0].width).toBeUndefined();
   });
 
   it('rejects files that are not maps', () => {

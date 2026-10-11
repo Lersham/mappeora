@@ -309,6 +309,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           color: n.color,
           shape: n.shape,
           image: n.image,
+          width: n.width,
           layout,
           role: shown?.roles[n.id],
           branch: shown?.heads[n.id],

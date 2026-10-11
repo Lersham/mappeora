@@ -45,6 +45,7 @@ import {
   Volume2,
   X,
   type LucideIcon,
+  MoveHorizontal,
 } from 'lucide-react';
 
 /**
@@ -87,6 +88,7 @@ const ICONS = {
   plus: Plus,
   print: Printer,
   redo: Redo2,
+  resize: MoveHorizontal,
   reset: RotateCcw,
   save: Save,
   scissors: Scissors,

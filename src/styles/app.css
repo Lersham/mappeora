@@ -1263,7 +1263,7 @@ textarea {
 .concept-speak {
   position: absolute;
   top: -20px;
-  right: -20px;
+  left: -20px; /* the right side has ↔ and «−» */
   width: 40px;
   height: 40px;
   display: grid;
@@ -1769,6 +1769,33 @@ textarea {
 }
 /* Collapse / expand: a round tab on the bottom-right corner, clear of the
    handle used to drag new links. */
+.concept-resize {
+  position: absolute;
+  top: 50%;
+  right: -20px;
+  width: 36px;
+  height: 36px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary);
+  cursor: ew-resize;
+  touch-action: none;
+}
+/* A finger needs more room than the circle shows. */
+.concept-resize::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+.concept-resize svg {
+  width: 20px;
+  height: 20px;
+}
 .concept-toggle {
   position: absolute;
   right: 6px;

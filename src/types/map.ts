@@ -23,6 +23,8 @@ export interface MapNode {
   color?: string;
   shape?: NodeShape;
   image?: NodeImage;
+  /** Width chosen by hand (px); the height follows the text. None: as wide as its words. */
+  width?: number;
   /** Hides the concepts below this one (see lib/collapse.ts). */
   collapsed?: boolean;
 }
