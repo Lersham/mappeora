@@ -853,6 +853,9 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         .map((x) => x.id);
       if (!node && links.length === 0) return;
       e.preventDefault();
+      // With others under it, the same question as «Elimina»: never a branch
+      // left floating without its concept.
+      if (node && s.map && childrenOf(s.map, node.id).length > 0) return setDialog({ kind: 'delete', id: node.id });
       beginStep();
       if (links.length) s.removeEdges(links);
       if (node) s.removeNodes([node.id]);
