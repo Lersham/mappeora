@@ -57,8 +57,7 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
           </button>
         </EdgeLabel>
       )}
-      {/* Only on the selected concept's lines: elsewhere the «+» would need room between the rows. */}
-      {!label && data?.near && <LinkAdd x={targetX} y={(last.y + targetY) / 2} onEdit={data?.onEdit} near={data?.near} />}
+      {!label && <LinkAdd x={targetX} y={(last.y + targetY) / 2} onEdit={data?.onEdit} near={data?.near} />}
     </>
   );
 }
