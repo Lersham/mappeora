@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createMap, NEW_CONCEPT_LABEL } from '../../lib/mapFactory';
 import type { ConceptMap } from '../../types/map';
-import { TUTORIAL_STEPS, TUTORIAL_TITLE, type TutorialProgress } from './steps';
+import { TUTORIAL_STEPS, TUTORIAL_TITLE, guideFor, type TutorialProgress } from './steps';
 
 const step = (title: string) => {
   const found = TUTORIAL_STEPS.find((s) => s.title === title);
@@ -72,6 +72,20 @@ describe('TUTORIAL_STEPS', () => {
     expect(done(at(linked), at(three))).toBe(true);
     expect(done(at(three), at(two))).toBe(false); // a new concept, with its own line
     expect(done(at(three), at(three))).toBe(false);
+    // Only two concepts, already linked: a new one first, then the line.
+    expect(done(at(linked), at(two))).toBe(true);
+  });
+
+  it('asks for a new concept first when every concept is already linked', () => {
+    const linking = TUTORIAL_STEPS.find((s) => s.title === 'Collega due idee')!;
+    const two = withChild('Luna');
+    expect(guideFor(linking, two).target).toBe('concetto');
+    expect(guideFor(linking, two).text).toContain('«Concetto»');
+    expect(guideFor(linking, first).target).toBe('concetto');
+    const three: ConceptMap = { ...two, nodes: [...two.nodes, { id: 'c', label: 'Stelle', position: { x: 0, y: 200 } }], edges: [...two.edges, { id: 'f', source: 'b', target: 'c' }] };
+    expect(guideFor(linking, three)).toMatchObject({ text: linking.text, target: 'collega' });
+    // The other steps say the same thing on any map.
+    expect(guideFor(TUTORIAL_STEPS[0], two).text).toBe(TUTORIAL_STEPS[0].text);
   });
 
   it('ends with a step that has nothing to check', () => {

@@ -18,8 +18,22 @@ export interface TutorialStep {
   title: string;
   text: string;
   target?: TutorialTarget;
+  /** The map doesn't allow the step yet: what to say and point at instead. */
+  first?(map: ConceptMap): Pick<TutorialStep, 'text' | 'target'> | undefined;
   /** Done: `now` shows the child did what the step asks, compared with `start`. */
   done?(now: TutorialProgress, start: TutorialProgress): boolean;
+}
+
+/** What a step says and points at, on the map as it is now. */
+export function guideFor(step: TutorialStep, map: ConceptMap | null): Pick<TutorialStep, 'text' | 'target'> {
+  return (map && step.first?.(map)) || step;
+}
+
+/** Every concept is already linked to every other one: no new line can be drawn. */
+function allLinked(map: ConceptMap): boolean {
+  const pairs = new Set(map.edges.map((e) => [e.source, e.target].sort().join(' ')));
+  const n = map.nodes.length;
+  return pairs.size >= (n * (n - 1)) / 2;
 }
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
@@ -70,9 +84,18 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Collega due idee',
-    text: 'Quando tocchi un riquadro, in basso compare la sua barra: Nome, Immagine, Collega, Cambia ramo, Elimina. Tutto quello che serve per quel riquadro è lì. Premi «Collega» e poi tocca un altro riquadro: nasce una freccia tra i due.',
+    text: 'Quando tocchi un riquadro, in basso compare la sua barra: Nome, Immagine, Collega, Cambia ramo, Elimina. Tutto quello che serve per quel riquadro è lì. Premi «Collega» e poi tocca un riquadro che non è ancora unito a questo: nasce una freccia tra i due.',
     target: 'collega',
-    done: (now, start) => now.map.nodes.length === start.map.nodes.length && now.map.edges.length > start.map.edges.length,
+    first: (map) =>
+      allLinked(map)
+        ? {
+            text: 'I tuoi riquadri sono già tutti collegati: per fare una freccia nuova ne serve un altro. Premi «Concetto» e scrivi un’idea, per esempio «Le stelle». Poi ti dico come collegarla.',
+            target: 'concetto',
+          }
+        : undefined,
+    // A new concept comes with its own line: only a line more than that counts.
+    done: (now, start) =>
+      now.map.edges.length - start.map.edges.length > now.map.nodes.length - start.map.nodes.length,
   },
   {
     title: 'Ce l’hai fatta!',

@@ -24,6 +24,10 @@ const GOOGLE_STEPS = [
   'Torna qui: l’immagine arriva da sola. Se non arriva, premi «Incolla immagine».',
 ];
 
+/** Back from Google, the clipboard is tried for about two seconds. */
+const CLIPBOARD_RETRIES = 5;
+const CLIPBOARD_RETRY_MS = 400;
+
 /** Shown when the search finds nothing: common subjects at school. */
 const SUGGESTED = [
   '💧', '🔥', '🌍', '☀️', '🌙', '⭐', '🌱', '🌳', '🌸', '🍎',
@@ -153,18 +157,32 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
   // Only a picture: text there may be anything copied before.
   useEffect(() => {
     if (tab !== 'foto') return;
-    const back = async () => {
-      if (!awayAtGoogle.current || document.visibilityState !== 'visible') return;
-      awayAtGoogle.current = false;
+    let retry: number | undefined;
+    let reading = false;
+    const back = async (tries = 0) => {
+      if (!awayAtGoogle.current || reading || document.visibilityState !== 'visible') return;
+      window.clearTimeout(retry);
+      reading = true;
       const pasted = await readClipboardImage();
+      reading = false;
+      if (!awayAtGoogle.current) return;
+      // Not allowed yet: phones show the page before they give it the focus,
+      // and only a page with the focus can read the clipboard.
+      if (pasted === null && tries < CLIPBOARD_RETRIES) {
+        retry = window.setTimeout(() => void back(tries + 1), CLIPBOARD_RETRY_MS);
+        return;
+      }
+      awayAtGoogle.current = false;
       if (pasted instanceof Blob || (typeof pasted === 'string' && /^data:image\//i.test(pasted.trim()))) void usePasted(pasted);
       else setPasteHint(true);
     };
-    window.addEventListener('focus', back);
-    document.addEventListener('visibilitychange', back);
+    const onBack = () => void back();
+    window.addEventListener('focus', onBack);
+    document.addEventListener('visibilitychange', onBack);
     return () => {
-      window.removeEventListener('focus', back);
-      document.removeEventListener('visibilitychange', back);
+      window.clearTimeout(retry);
+      window.removeEventListener('focus', onBack);
+      document.removeEventListener('visibilitychange', onBack);
     };
   }, [tab]);
 
