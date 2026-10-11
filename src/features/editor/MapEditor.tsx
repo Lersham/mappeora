@@ -47,6 +47,7 @@ import type { ConceptMap, MapNode } from '../../types/map';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 import { useBackHandler } from '../../lib/backButton';
 import { motion } from '../../lib/motion';
+import { TOUCH } from '../../lib/touch';
 import { MAP_ARIA_LABELS, edgeAriaLabel, spokenLabel } from './a11yLabels';
 import { SaveProblemNotice } from './SaveProblemNotice';
 import { OptionCard } from '../../components/OptionCard';
@@ -63,12 +64,6 @@ const COMFORT_PX = 16;
 const MAX_READ_ZOOM = 1.2;
 /** The farthest the map can be seen from. */
 const MIN_ZOOM = 0.2;
-
-/**
- * A touch screen: a finger that lands on a concept while moving or zooming
- * the map must not drag it away, and lines are drawn with «Collega».
- */
-const TOUCH = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
 
 /** Where a new concept goes when none is selected: under the main one. */
 function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined {
@@ -312,7 +307,9 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         ...base,
         type: 'tree',
         data: { onEdit: onEdit(e.id), near },
-        ...(shown && { sourceHandle: 's-spine', targetHandle: 't-left' }), // a cross-link on a sheet
+        // A cross-link on a sheet. Towards a concept higher up it leaves from
+        // the left too: from the bottom it would loop behind its own box.
+        ...(shown && { sourceHandle: shown.positions[e.target]?.y < shown.positions[e.source]?.y ? 's-left' : 's-spine', targetHandle: 't-left' }),
         labelBgPadding: [8, 4] as [number, number],
         labelBgBorderRadius: 6,
       };
@@ -995,6 +992,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onConnectEnd={() => setConnecting(false)}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
           nodesDraggable={editing && !locked}
+          // A finger draws lines with «Collega».
           nodesConnectable={editing && !TOUCH}
           elementsSelectable={editing}
           // Our own handler (above): one undo step, and never behind a dialog.

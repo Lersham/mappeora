@@ -79,7 +79,9 @@ function NodeImageView({ image }: { image: NonNullable<ConceptNodeData['image']>
  * "Foglio" maps: lines reach a branch from above and the concepts inside it
  * from the left; they leave the main concept from the bottom centre and
  * the others from the bottom-left (the branch's vertical line). Every node
- * has all four, the ones its role doesn't use are invisible.
+ * has all four, the ones its role doesn't use are invisible. A fifth, never
+ * seen, on the left: an extra line towards a concept higher up leaves from
+ * there, so it doesn't loop behind its own box.
  */
 function SheetHandles({ role, kind }: { role: NodeRole; kind: 'source' | 'target' }) {
   const hidden = (shown: boolean) => (shown ? undefined : 'handle-hidden');
@@ -92,6 +94,7 @@ function SheetHandles({ role, kind }: { role: NodeRole; kind: 'source' | 'target
     <>
       <Handle id="s-bottom" type="source" position={Position.Bottom} className={hidden(role === 'root')} />
       <Handle id="s-spine" type="source" position={Position.Bottom} style={{ left: LADDER.spine }} className={hidden(role !== 'root')} />
+      <Handle id="s-left" type="source" position={Position.Left} className="handle-hidden" />
     </>
   );
 }

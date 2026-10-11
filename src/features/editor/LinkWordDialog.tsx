@@ -3,6 +3,7 @@ import { Dialog } from '../../components/Dialog';
 import { MicButton } from '../../components/MicButton';
 import { BigButton } from '../../components/BigButton';
 import { useMapStore } from '../../store/mapStore';
+import { TOUCH } from '../../lib/touch';
 import type { MapEdge } from '../../types/map';
 
 /** The most common linking words in Italian school maps. */
@@ -29,7 +30,9 @@ export function LinkWordDialog({ edge, onClose }: { edge: MapEdge; onClose(): vo
         <input
           className="text-field link-word-input"
           value={text}
-          autoFocus
+          // On a phone the keyboard would cover the words and «Togli freccia»:
+          // it opens when the child taps the field.
+          autoFocus={!TOUCH}
           placeholder="es. è formato da"
           aria-label="Parola di collegamento"
           onChange={(e) => setText(e.target.value)}
