@@ -247,6 +247,17 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
         </div>
       </fieldset>
 
+      {node.width && (
+        <fieldset>
+          <legend>Larghezza</legend>
+          <div className="choice-row">
+            <button type="button" className="choice" onClick={() => updateNode(node.id, { width: undefined })}>
+              Automatica
+            </button>
+          </div>
+        </fieldset>
+      )}
+
       <h3 className="photo-web-title">Immagine</h3>
       <div className="choice-row" role="group" aria-label="Scegli da dove">
         {TABS.map((t) => (

@@ -33,31 +33,9 @@ test.describe('Voce', () => {
     expect((await spoken(page)).at(-1)).toBe(sample);
   });
 
-  test('Scaletta: fermare la dettatura con il microfono scrive la riga una volta sola', async ({ page }) => {
+  test('«Detta» si ferma con «Fatto»', async ({ page }) => {
     await newMap(page, 'Le stagioni');
-    await toolbar(page, 'Scaletta');
-    const outline = page.getByRole('dialog', { name: 'Scaletta' });
     await holdMic(page);
-    await say(page, 'Primavera');
-    await outline.getByRole('button', { name: 'Detta una nuova riga' }).click();
-    await expect(outline.locator('.outline-input').nth(1)).toHaveValue('Primavera');
-    // The listening button pulses: it never stands still for Playwright.
-    await outline.getByRole('button', { name: 'Smetti di ascoltare' }).click({ force: true });
-    await expect(outline.getByRole('button', { name: 'Detta una nuova riga' })).toBeVisible();
-    await page.waitForTimeout(300);
-    await expect(outline.locator('.outline-input')).toHaveCount(2);
-  });
-
-  test('chiudere un dialogo mentre ascolta spegne il microfono, e «Detta» poi si ferma con «Fatto»', async ({ page }) => {
-    await newMap(page, 'Le stagioni');
-    await toolbar(page, 'Scaletta');
-    const outline = page.getByRole('dialog', { name: 'Scaletta' });
-    await holdMic(page);
-    await outline.getByRole('button', { name: 'Detta una nuova riga' }).click();
-    await expect(outline.getByRole('button', { name: 'Smetti di ascoltare' })).toBeVisible();
-    await outline.getByRole('button', { name: 'Annulla' }).click();
-    await expect.poll(() => micsOpen(page)).toBe(0);
-
     await toolbar(page, 'Detta');
     const overlay = page.getByRole('dialog').filter({ hasText: 'Ti ascolto' });
     await expect(overlay).toBeVisible();

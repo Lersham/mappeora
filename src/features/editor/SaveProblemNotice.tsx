@@ -29,7 +29,7 @@ export function SaveProblemNotice() {
       ) : (
         <>
           <span>
-            Non riesco a salvare le ultime modifiche. Per sicurezza puoi anche salvarle in un file con «Salva».
+            Non riesco a salvare le ultime modifiche. Per sicurezza puoi anche salvarle in un file con «Stampa e manda».
           </span>
           <div className="save-problem-actions">
             <button type="button" className="big-button primary" onClick={run(flushAutosave)}>

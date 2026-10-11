@@ -102,6 +102,35 @@ test.describe('Lettura, ripasso e voce', () => {
     await expect(page.locator('.review-dim')).toHaveCount(0);
   });
 
+  test('Ripetimi: i concetti nominati si accendono, alla fine dice cosa manca', async ({ page }) => {
+    await sampleMap(page);
+    await say(page, 'il ciclo dell acqua parte con l evaporazione grazie al calore del sole, poi la condensazione forma le nuvole e infine piove');
+    await toolbar(page, 'Ripassa');
+    await page.getByRole('button', { name: /^Ripetimi/ }).click();
+    await expect(nodes(page)).toHaveCount(9);
+    // the map stays readable; ciclo dell'acqua, evaporazione, calore del sole,
+    // condensazione, nuvole get the tick
+    await expect(page.locator('.concept-node.review-dim')).toHaveCount(0);
+    await expect(page.locator('.concept-node.review-heard')).toHaveCount(5);
+    const bar = page.getByRole('navigation', { name: 'Ripetimi' });
+    await expect(bar.getByLabel('Concetti spiegati')).toHaveText('5 / 9');
+    await expect(page.locator('.present-caption')).toContainText('infine piove');
+    // the microphone did not catch it: a tap lights the concept up
+    await settled(page);
+    await node(page, 'Pioggia').click();
+    await expect(page.locator('.concept-node.review-heard')).toHaveCount(6);
+    await bar.getByRole('button', { name: 'Ho finito' }).click();
+    const summary = 'Hai spiegato 6 concetti su 9. Ti mancano: ';
+    await expect(page.locator('.present-caption')).toContainText(summary);
+    for (const missing of ['Vapore', 'Precipitazione', 'Neve']) await expect(page.locator('.present-caption')).toContainText(missing);
+    // the forgotten ones are ringed, and the summary is read aloud
+    await expect(page.locator('.concept-node.review-current')).toHaveCount(3);
+    await expect.poll(async () => (await spoken(page)).join()).toContain(summary);
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __micsOpen: number }).__micsOpen)).toBe(0);
+    await bar.getByRole('button', { name: 'Fine' }).click();
+    await expect(page.locator('.review-dim, .review-current, .review-heard')).toHaveCount(0);
+  });
+
   test('dettatura: «nuovo concetto …» aggiunge un concetto, «annulla» lo toglie', async ({ page }) => {
     await newMap(page, 'Le piante');
     await say(page, 'nuovo concetto fotosintesi');

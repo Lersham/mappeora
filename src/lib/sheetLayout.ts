@@ -20,13 +20,13 @@ import { DEFAULT_SIZE, LADDER, labelWidth, layoutTree } from './ladder';
 /** Space between two concepts side by side. */
 const SIDE_GAP = 40;
 /** From a concept to the line that feeds the row under it. */
-const ROW_LINE_GAP = 20;
+const ROW_LINE_GAP = 12;
 /** Space above a row: the feeding line, then linking words. */
-const BAND = 44;
+const BAND = 36;
 /** Where the feeding line runs, below the top of the band. */
-const LINE_DROP = 14;
+const LINE_DROP = 12;
 /** Space between a concept and the next one down a column (the line and its «+»). */
-const COLUMN_GAP = 36;
+const COLUMN_GAP = 28;
 /** A list of concepts with none of their own stays in a row up to about three short ones. */
 const ROW_MAX = 3 * 160 + 2 * SIDE_GAP;
 

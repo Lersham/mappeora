@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { reviewVisibility, useReview } from './reviewStore';
+import { reviewVisibility, ripetimiSummary, useReview } from './reviewStore';
 
 const steps = [
   { nodeId: 'a', text: 'A' },
@@ -44,6 +44,28 @@ describe('review mode', () => {
     expect([vis('a'), vis('b'), vis('c')]).toEqual(['dim', 'dim', 'current']);
     useReview.getState().goTo(7);
     expect(useReview.getState().index).toBe(2);
+  });
+
+  it('in ripetimi lights up the concepts named, then rings the ones left out', () => {
+    useReview.getState().start(steps, 'ripetimi');
+    expect([vis('a'), vis('b'), vis('c')]).toEqual(['normal', 'normal', 'normal']);
+    useReview.getState().hear(['a', 'zzz']);
+    expect([vis('a'), vis('b'), vis('c')]).toEqual(['heard', 'normal', 'normal']);
+    useReview.getState().toggleHeard('c');
+    useReview.getState().finish();
+    expect([vis('a'), vis('b'), vis('c')]).toEqual(['heard', 'current', 'heard']);
+    useReview.getState().retry();
+    useReview.getState().toggleHeard('c');
+    expect([vis('a'), vis('b'), vis('c')]).toEqual(['heard', 'normal', 'normal']);
+    expect(Object.keys(useReview.getState().heard)).toEqual(['a']);
+  });
+
+  it('sums up what ripetimi heard', () => {
+    useReview.getState().start(steps, 'ripetimi');
+    useReview.getState().hear(['b']);
+    expect(ripetimiSummary(useReview.getState())).toMatch(/^Hai spiegato 1 concetto su 3\. Ti mancano: .+, .+\.$/);
+    useReview.getState().hear(['a', 'c']);
+    expect(ripetimiSummary(useReview.getState())).toBe('Perfetto! Hai spiegato tutti i concetti: 3 su 3.');
   });
 
   it('shows every node normally when not reviewing', () => {

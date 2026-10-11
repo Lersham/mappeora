@@ -38,17 +38,23 @@ export async function mascot(where: Page | Locator, pose: 'mappa' | 'indica' | '
 
 /** Like a person would: if the concept is off screen, look at the whole map. */
 export async function onScreen(page: Page, target: Locator): Promise<Locator> {
-  const [box, canvas] = [await target.boundingBox(), await page.locator('.react-flow').boundingBox()];
-  const inside = (b: typeof box) =>
-    !!b && !!canvas && b.x >= canvas.x && b.y >= canvas.y && b.x + b.width <= canvas.x + canvas.width && b.y + b.height <= canvas.y + canvas.height;
-  // Inside the canvas is not enough: the top bar floats over its upper edge.
-  const uncovered = async () =>
-    target.first().evaluate((el) => {
+  const canvas = page.locator('.react-flow');
+  const visible = async () => {
+    const [b, c] = [await target.first().boundingBox(), await canvas.boundingBox()];
+    if (!b || !c || b.x < c.x || b.y < c.y || b.x + b.width > c.x + c.width || b.y + b.height > c.y + c.height) return false;
+    // Inside the canvas is not enough: the top bar floats over its upper edge.
+    return target.first().evaluate((el) => {
       const r = el.getBoundingClientRect();
       const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
       return !!hit && el.contains(hit);
     });
-  if (!inside(box) || !(await uncovered())) await showAll(page);
+  };
+  // A view still gliding (a step of the guide, a concept moved) ends somewhere else: judge where it stops.
+  await settled(page);
+  if (!(await visible())) {
+    await showAll(page);
+    await expect.poll(visible, { message: 'concept still off screen after «Mostra tutto»' }).toBe(true);
+  }
   return target;
 }
 
@@ -115,7 +121,7 @@ export async function tapLink(page: Page, index = 0) {
 
 /**
  * Uses a tool of the editor: in the toolbar, above it for the chosen concept
- * (Immagine, Elimina), in the top bar (Salva, Aspetto) or, where they do not
+ * (Immagine, Elimina), in the top bar (Stampa e manda, Aspetto) or, where they do not
  * fit (a phone), under «Altro».
  */
 export async function toolbar(page: Page, name: string) {
@@ -128,13 +134,10 @@ export async function toolbar(page: Page, name: string) {
   await page.getByRole('dialog', { name: 'Altro' }).getByRole('button', { name, exact: true }).click();
 }
 
-/** «Riordina», then one of its two choices: just tidy, or tidy and colour the branches. */
+/** «Riordina»; with `color`, then «Colora i rami», which it offers after. */
 export async function tidyUp(page: Page, color = false) {
   await toolbar(page, 'Riordina');
-  await page
-    .getByRole('dialog', { name: 'Riordina' })
-    .getByRole('button', { name: color ? /^Riordina e colora/ : /^Riordina(?! e colora)/ })
-    .click();
+  if (color) await page.getByRole('button', { name: 'Colora i rami' }).click();
 }
 
 /** On-screen boxes of the visible concepts. */
@@ -252,7 +255,10 @@ export async function highlight(page: Page, from: Locator, to: Locator) {
   const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x: number, y: number) =>
     cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
   await touch('touchStart', start.x, start.y);
-  for (let i = 1; i <= 8; i++) await touch('touchMove', start.x + ((end.x - start.x) * i) / 8, start.y + ((end.y - start.y) * i) / 8);
+  // A real finger wobbles down a little before it goes where it is going:
+  // that must not turn the stroke into a scroll.
+  await touch('touchMove', start.x + 2, start.y + 5);
+  for (let i = 1; i <= 8; i++) await touch('touchMove', start.x + 2 + ((end.x - start.x - 2) * i) / 8, start.y + 5 + ((end.y - start.y - 5) * i) / 8);
   await touch('touchEnd', end.x, end.y);
   await cdp.detach();
 }

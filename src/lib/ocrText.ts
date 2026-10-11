@@ -145,14 +145,27 @@ export function tokenize(text: string): Token[] {
   return tokens;
 }
 
+/** A concept made of the chosen words `first`…`last` (word positions). */
+export interface ConceptGroup {
+  label: string;
+  first: number;
+  last: number;
+}
+
 /**
  * Selected words that are next to each other become one concept
  * ("luce" + "del" + "sole" → "Luce del sole"), unless a sentence or
- * clause break sits between them.
+ * clause break sits between them. `joined` overrides that choice for the
+ * gap after word w: true joins the two words, false keeps them apart.
  */
-export function selectionToConcepts(text: string, tokens: Token[], selected: ReadonlySet<number>): string[] {
+export function conceptGroups(
+  text: string,
+  tokens: Token[],
+  selected: ReadonlySet<number>,
+  joined: ReadonlyMap<number, boolean> = new Map(),
+): ConceptGroup[] {
   const words = tokens.filter((t) => t.word >= 0);
-  const concepts: string[] = [];
+  const groups: ConceptGroup[] = [];
   const seen = new Set<string>();
   let group: Token[] = [];
 
@@ -166,7 +179,7 @@ export function selectionToConcepts(text: string, tokens: Token[], selected: Rea
     const key = label.toLocaleLowerCase('it-IT');
     if (!seen.has(key)) {
       seen.add(key);
-      concepts.push(label);
+      groups.push({ label, first: group[0].word, last: last.word });
     }
     group = [];
   };
@@ -177,11 +190,15 @@ export function selectionToConcepts(text: string, tokens: Token[], selected: Rea
       continue;
     }
     const prev = group[group.length - 1];
-    if (prev && breaksBetween(text, prev.end, w.start)) flush();
+    if (prev && !(joined.get(prev.word) ?? !breaksBetween(text, prev.end, w.start))) flush();
     group.push(w);
   }
   flush();
-  return concepts;
+  return groups;
+}
+
+export function selectionToConcepts(text: string, tokens: Token[], selected: ReadonlySet<number>): string[] {
+  return conceptGroups(text, tokens, selected).map((g) => g.label);
 }
 
 export interface Chunk {

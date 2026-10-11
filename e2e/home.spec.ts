@@ -40,8 +40,8 @@ test.describe('Schermata iniziale', () => {
   test('«Indietro» del browser chiude la finestra aperta, poi torna alle mappe, senza uscire dal sito', async ({ page, isMobile }) => {
     test.skip(isMobile, 'basta provarlo una volta');
     await newMap(page, 'I fiumi');
-    await toolbar(page, 'Salva');
-    const dialog = page.getByRole('dialog', { name: 'Salva, esporta o stampa' });
+    await toolbar(page, 'Stampa e manda');
+    const dialog = page.getByRole('dialog', { name: 'Stampa e manda' });
     await expect(dialog).toBeVisible();
     await page.goBack();
     await expect(dialog).toBeHidden();

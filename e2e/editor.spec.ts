@@ -83,9 +83,10 @@ test.describe('Editor', () => {
 
     // far to the right of its branch: on the sheet it would snap back
     const neve = (await node(page, 'Neve').boundingBox())!;
-    await page.mouse.move(neve.x + 20, neve.y + 8);
+    // from the middle: the corners of the concept in hand have its buttons
+    await page.mouse.move(neve.x + neve.width / 2, neve.y + neve.height / 2);
     await page.mouse.down();
-    await page.mouse.move(neve.x + 140, neve.y + 30, { steps: 10 });
+    await page.mouse.move(neve.x + neve.width / 2 + 120, neve.y + neve.height / 2 + 22, { steps: 10 });
     await page.mouse.up();
     await settled(page);
     const moved = (await node(page, 'Neve').boundingBox())!;
@@ -196,24 +197,23 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
 
   test('ogni ramo ha le linee del suo colore; i pallini per collegare solo sul concetto scelto', async ({ page, isMobile }) => {
     await sampleMap(page);
+    // a white map is white all over: no coloured lines until the branches have a colour
+    await expect(page.locator('.react-flow__edge-path.branch-line')).toHaveCount(0);
+    await tidyUp(page, true);
+    await settled(page);
     const colours = await page.locator('.react-flow__edge-path.branch-line').evaluateAll((paths) => [
       ...new Set(paths.map((p) => [...p.classList].find((c) => /^branch-\d$/.test(c)))),
     ]);
     expect(colours.sort()).toEqual(['branch-0', 'branch-1', 'branch-2']);
 
+    // No dots to drag new lines, not even on the concept in hand.
     await (await onScreen(page, node(page, 'Vapore'))).click();
-    const handleOpacity = (label: string) =>
-      page
-        .locator('.react-flow__node', { has: page.locator('.concept-label', { hasText: label }) })
-        .locator('.react-flow__handle:not(.handle-hidden)')
-        .first()
-        .evaluate((h) => getComputedStyle(h).opacity);
-    // On a touch screen lines are drawn with «Collega»: no dots at all.
-    await expect.poll(() => handleOpacity('Vapore')).toBe(isMobile ? '0' : '1');
-    await expect.poll(() => handleOpacity('Neve')).toBe('0');
+    await node(page, 'Vapore').hover();
+    const visible = await page.locator('.react-flow__handle').evaluateAll((hs) => hs.filter((h) => getComputedStyle(h).opacity !== '0').length);
+    expect(visible).toBe(0);
   });
 
-  test('i concetti nascono bianchi; «Riordina e colora» dà un colore pastello a ogni ramo', async ({ page }) => {
+  test('i concetti nascono bianchi; «Colora i rami», dopo «Riordina», dà un colore pastello a ogni ramo', async ({ page }) => {
     await sampleMap(page);
     const background = (label: string) => node(page, label).evaluate((e) => getComputedStyle(e).backgroundColor);
     for (const label of ['Il ciclo dell’acqua', 'Evaporazione', 'Vapore', 'Neve']) expect(await background(label)).toBe('rgb(255, 255, 255)');
@@ -233,6 +233,14 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     // one «Annulla» takes the colours back off
     await toolbar(page, 'Annulla');
     await expect.poll(() => background('Vapore')).toBe('rgb(255, 255, 255)');
+
+    // «Riordina» alone leaves the colours as they are and offers them; «Chiudi» lets it be
+    await toolbar(page, 'Riordina');
+    const offer = page.getByRole('status').filter({ hasText: 'Colora i rami' });
+    await expect(offer).toBeVisible();
+    expect(await background('Vapore')).toBe('rgb(255, 255, 255)');
+    await offer.getByRole('button', { name: 'Chiudi' }).click();
+    await expect(offer).toBeHidden();
   });
 
   test('sul telefono, toccando un concetto di una mappa vista da lontano, il suo ramo si avvicina', async ({ page, isMobile }) => {
@@ -407,25 +415,45 @@ test.describe('Editor: la barra del concetto scelto', () => {
     await expect(node(page, 'Vapore acqueo')).toBeVisible();
   });
 
-  test('«Collega» e poi un altro concetto: nasce la freccia', async ({ page }) => {
+  test('la maniglia ↔ allarga o stringe un concetto; «Annulla» e «Automatica» lo rimettono com’era', async ({ page }) => {
     await sampleMap(page);
-    const edges = await page.locator('.react-flow__edge').count();
-    await (await choose(page, 'Vapore')).getByRole('button', { name: 'Collega', exact: true }).click();
-    await expect(page.getByRole('status').filter({ hasText: 'Tocca il concetto da collegare a «Vapore»' })).toBeVisible();
-    await (await onScreen(page, node(page, 'Nuvole'))).click();
-    await expect(page.locator('.react-flow__edge')).toHaveCount(edges + 1);
-    await expect(link(page, 'Vapore', 'Nuvole')).toHaveCount(1);
-    await expect(page.locator('.pick-banner')).toHaveCount(0);
+    await choose(page, 'Evaporazione');
+    const concept = node(page, 'Evaporazione');
+    const width = () => concept.evaluate((el) => (el as HTMLElement).offsetWidth); // not on screen: the map may be zoomed
+    const before = await width();
+    const grip = concept.getByRole('button', { name: /Larghezza di Evaporazione/ });
+    const g = (await (await onScreen(page, grip)).boundingBox())!;
+    await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(g.x + g.width / 2 + 50, g.y + g.height / 2, { steps: 5 });
+    await page.mouse.up();
+    await expect.poll(width).toBeGreaterThan(before + 30);
+    // The words go on more lines when it is narrower: the height follows.
+    await grip.focus();
+    const wide = await width();
+    for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowLeft');
+    await expect.poll(width).toBe(wide - 120);
+
+    for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Annulla' }).click(); // the keys, one step each
+    await expect.poll(width).toBe(wide);
+    await page.getByRole('button', { name: 'Annulla' }).click(); // the whole drag at once
+    await expect.poll(width).toBeCloseTo(before, 0);
+
+    await page.getByRole('button', { name: 'Ripeti' }).click();
+    await expect.poll(width).toBeGreaterThan(before + 30);
+    await (await onScreen(page, concept)).click();
+    await page.getByRole('button', { name: 'Automatica' }).click();
+    await expect.poll(width).toBeCloseTo(before, 0);
   });
 
   test('la ✕, Esc o un tocco sulla mappa vuota lasciano perdere', async ({ page }) => {
     await sampleMap(page);
     const edges = await page.locator('.react-flow__edge').count();
     const bar = await choose(page, 'Vapore');
-    await bar.getByRole('button', { name: 'Collega', exact: true }).click();
+    await bar.getByRole('button', { name: 'Cambia ramo', exact: true }).click();
     await page.locator('.pick-banner').getByRole('button', { name: 'Esci' }).click();
     await expect(page.locator('.pick-banner')).toHaveCount(0);
-    await bar.getByRole('button', { name: 'Collega', exact: true }).click();
+    await bar.getByRole('button', { name: 'Cambia ramo', exact: true }).click();
     await page.keyboard.press('Escape');
     await expect(page.locator('.pick-banner')).toHaveCount(0);
     await expect(page.locator('.react-flow__edge')).toHaveCount(edges);

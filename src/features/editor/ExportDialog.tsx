@@ -3,6 +3,7 @@ import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
 import { OptionCard } from '../../components/OptionCard';
 import { isNative } from '../../services/platform';
+import { TOUCH } from '../../lib/touch';
 import type { PageCount, Paper } from '../../lib/pagePlan';
 
 export type ExportKind = 'pdf' | 'png' | 'file';
@@ -43,7 +44,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
   const run = (print: boolean) => onExport({ kind, paper, pages, simple, print });
 
   return (
-    <Dialog title="Salva, esporta o stampa" onClose={onClose} className="export-dialog">
+    <Dialog title="Stampa e manda" onClose={onClose} className="export-dialog">
       <div className="export-kinds">
         {KINDS.map((k) => (
           <OptionCard key={k.value} icon={k.icon} name={k.label} description={k.desc} pressed={kind === k.value} onClick={() => setKind(k.value)} />
@@ -96,10 +97,10 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
 
       <div className="dialog-actions">
         <BigButton icon="close" label="Annulla" onClick={onClose} />
-        {kind === 'pdf' && !isNative() && <BigButton icon="print" label="Stampa" disabled={busy} onClick={() => run(true)} />}
+        {kind === 'pdf' && !isNative() && !TOUCH && <BigButton icon="print" label="Stampa" disabled={busy} onClick={() => run(true)} />}
         <BigButton
           icon={isNative() ? 'share' : 'save'}
-          label={busy ? 'Preparo…' : isNative() ? 'Condividi' : 'Salva'}
+          label={busy ? 'Preparo…' : isNative() ? 'Condividi' : 'Scarica'}
           variant="primary"
           disabled={busy}
           onClick={() => run(false)}

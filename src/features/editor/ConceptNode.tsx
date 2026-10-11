@@ -1,10 +1,11 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { Handle, Position, useStoreApi, type Node, type NodeProps } from '@xyflow/react';
 import type { MapNode } from '../../types/map';
 import type { MapLayout } from '../../lib/templates';
 import type { NodeRole } from '../../lib/sheetLayout';
 import { LADDER } from '../../lib/ladder';
-import { useMapStore } from '../../store/mapStore';
+import { beginStep, endStep, useMapStore } from '../../store/mapStore';
+import { NODE_WIDTH } from '../../lib/mapFile';
 import { useReading } from '../../store/readingStore';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { reviewVisibility, useReview } from '../../store/reviewStore';
@@ -25,12 +26,14 @@ export interface ConceptActions {
   addNear(id: string, where: 'child' | 'sibling'): void;
 }
 
-export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'collapsed'> & {
+export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'collapsed' | 'width'> & {
   layout: MapLayout;
   /** "Foglio" maps: which lines the concept has (see NodeRole). */
   role?: NodeRole;
   /** "Foglio" maps: the number of the main concept's branch this concept starts. */
   branch?: number;
+  /** The branch has a colour: its first concept's border takes it. */
+  tinted?: boolean;
   hasChildren?: boolean;
   /** How many concepts this one hides while collapsed. */
   hiddenBelow?: number;
@@ -100,9 +103,60 @@ function SheetHandles({ role, kind }: { role: NodeRole; kind: 'source' | 'target
   );
 }
 
+const clampWidth = (w: number) => Math.round(Math.min(NODE_WIDTH.max, Math.max(NODE_WIDTH.min, w)));
+
+/**
+ * Drag it sideways and the concept gets wider or narrower: its words go on
+ * other lines and the height follows. With the keyboard: ← and →.
+ */
+function WidthGrip({ id, label }: { id: string; label: string }) {
+  const flow = useStoreApi();
+  const drag = useRef<{ x: number; width: number; zoom: number } | null>(null);
+  const setWidth = (w: number) => useMapStore.getState().updateNode(id, { width: clampWidth(w) });
+  const box = (el: Element) => el.closest('.concept-node')!.getBoundingClientRect().width;
+  const end = () => {
+    if (!drag.current) return;
+    drag.current = null;
+    endStep();
+  };
+  return (
+    <button
+      type="button"
+      className="concept-resize nodrag nopan"
+      aria-label={`Larghezza di ${label}: frecce sinistra e destra`}
+      title="Trascina per allargare o stringere"
+      onPointerDown={(e) => {
+        if (!e.isPrimary) return;
+        e.stopPropagation();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        const zoom = flow.getState().transform[2];
+        drag.current = { x: e.clientX, width: box(e.currentTarget) / zoom, zoom };
+        beginStep();
+      }}
+      onPointerMove={(e) => {
+        const d = drag.current;
+        if (d) setWidth(d.width + (e.clientX - d.x) / d.zoom);
+      }}
+      onPointerUp={end}
+      onPointerCancel={end}
+      onLostPointerCapture={end}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        e.stopPropagation();
+        const zoom = flow.getState().transform[2];
+        setWidth(box(e.currentTarget) / zoom + (e.key === 'ArrowRight' ? 20 : -20));
+      }}
+    >
+      <Icon name="resize" />
+    </button>
+  );
+}
+
 /** "Foglio" maps: the main concept and the first concept of each branch stand out, like headings. */
 const sheetClass = (data: ConceptNodeData) =>
-  data.layout !== 'foglio' ? '' : data.role === 'root' ? ' sheet-root' : data.branch !== undefined ? ` sheet-branch branch-${data.branch % BRANCH_COLORS}` : '';
+  data.layout !== 'foglio' ? '' : data.role === 'root' ? ' sheet-root' : data.branch === undefined ? '' : data.tinted ? ` sheet-branch branch-${data.branch % BRANCH_COLORS}` : ' sheet-branch';
 
 function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const updateNode = useMapStore((s) => s.updateNode);
@@ -166,7 +220,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   return (
     <div
       className={`concept-node shape-${data.shape ?? 'rettangolo'}${sheetClass(data)}${selected ? ' is-selected' : ''}${isReading ? ' is-reading' : ''}${armed ? ' is-armed' : ''} review-${visibility}`}
-      style={{ background: data.color }}
+      style={{ background: data.color, ...(data.width && { width: data.width, minWidth: 0, maxWidth: 'none' }) }}
       onPointerDown={(e) => {
         swallow.current = false;
         cancelHold();
@@ -229,7 +283,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
                   commit();
                 }
                 if (e.key === 'Escape') setEditing(false);
-                // As in the «Scaletta»: Tab goes on with a concept under this
+                // As in an outline: Tab goes on with a concept under this
                 // one, Maiusc+Tab with one next to it.
                 if (e.key === 'Tab' && data.actions) {
                   e.preventDefault();
@@ -259,6 +313,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
           )}
         </>
       )}
+      {selected && !reviewing && !editing && <WidthGrip id={id} label={data.label} />}
       {data.hasChildren && !reviewing && (
         <button
           type="button"

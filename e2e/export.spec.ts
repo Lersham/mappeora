@@ -24,11 +24,11 @@ test.describe('Stampa e PDF', () => {
     ['4 fogli', 4],
   ] as const) {
     test(`PDF A4 su ${sheets}, leggero`, async ({ page }) => {
-      await toolbar(page, 'Salva');
+      await toolbar(page, 'Stampa e manda');
       await page.getByRole('button', { name: /^PDF da stampare/ }).click();
       await page.getByRole('button', { name: sheets }).click();
       const download = page.waitForEvent('download');
-      await page.locator('.dialog-actions').getByRole('button', { name: 'Salva' }).click();
+      await page.locator('.dialog-actions').getByRole('button', { name: 'Scarica' }).click();
       const info = pdfInfo(await readFile((await (await download).path())!));
       expect(info.pages).toBe(pages);
       // A4, turned if the map prints larger that way
@@ -39,11 +39,11 @@ test.describe('Stampa e PDF', () => {
   }
 
   test('versione per la verifica, foglio A3', async ({ page }) => {
-    await toolbar(page, 'Salva');
+    await toolbar(page, 'Stampa e manda');
     await page.getByRole('button', { name: 'A3 (grande)' }).click();
     await page.getByLabel(/Versione per la verifica/).check();
     const download = page.waitForEvent('download');
-    await page.locator('.dialog-actions').getByRole('button', { name: 'Salva' }).click();
+    await page.locator('.dialog-actions').getByRole('button', { name: 'Scarica' }).click();
     expect((await download).suggestedFilename()).toBe('la-rivoluzione-francese-verifica.pdf');
     const info = pdfInfo(await readFile((await (await download).path())!));
     expect(Math.round(Math.min(info.width, info.height))).toBe(842); // A3
@@ -51,7 +51,7 @@ test.describe('Stampa e PDF', () => {
 
   test('«Stampa» prepara il PDF per la finestra di stampa', async ({ page, isMobile }) => {
     test.skip(isMobile, 'sul telefono si condivide il PDF');
-    await toolbar(page, 'Salva');
+    await toolbar(page, 'Stampa e manda');
     await page.getByRole('button', { name: 'Stampa', exact: true }).click();
     await expect(page.locator('iframe.print-frame')).toHaveCount(1);
   });

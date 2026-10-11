@@ -3,7 +3,7 @@
  * useful search terms ("ciclo", "acqua").
  */
 
-const STOPWORDS = new Set(
+export const STOPWORDS = new Set(
   (
     'il lo la i gli le l un uno una di a da in con su per tra fra ' +
     'del dello della dei degli delle dell al allo alla ai agli alle all ' +

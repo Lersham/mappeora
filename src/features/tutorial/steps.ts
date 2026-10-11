@@ -11,7 +11,6 @@ export type TutorialTarget =
   | 'detta'
   | 'leggi'
   | 'ripassa'
-  | 'scaletta'
   | 'libro'
   | 'sposta'
   | 'riordina'
@@ -19,13 +18,12 @@ export type TutorialTarget =
   | 'salva'
   | 'aspetto'
   | 'immagine'
-  | 'collega'
   | 'cambia-ramo'
   | 'elimina'
   | 'solo-mappa';
 
-/** A window the editor opens: «Ripassa», «Salva»… ('settings' is «Aspetto», 'focus' «Solo la mappa»). */
-export type TutorialTool = 'outline' | 'photo' | 'review' | 'export' | 'settings' | 'focus';
+/** A window the editor opens: «Ripassa», «Stampa e manda»… ('settings' is «Aspetto», 'focus' «Solo la mappa», 'style' «Immagine e colore»). */
+export type TutorialTool = 'photo' | 'review' | 'export' | 'settings' | 'focus' | 'style';
 
 /** What the child has done so far, as the tutorial sees it. */
 export interface TutorialProgress {
@@ -49,13 +47,6 @@ export interface TutorialStep {
 /** What a step says and points at, on the map as it is now. */
 export function guideFor(step: TutorialStep, map: ConceptMap | null): Pick<TutorialStep, 'text' | 'target'> {
   return (map && step.first?.(map)) || step;
-}
-
-/** Every concept is already linked to every other one: no new line can be drawn. */
-function allLinked(map: ConceptMap): boolean {
-  const pairs = new Set(map.edges.map((e) => [e.source, e.target].sort().join(' ')));
-  const n = map.nodes.length;
-  return pairs.size >= (n * (n - 1)) / 2;
 }
 
 /** Lines drawn (> 0) or taken away (< 0) since `start`, leaving out the ones that come and go with a concept. */
@@ -122,6 +113,11 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     done: (now) => now.map.nodes.length > 1 && !now.map.nodes.some((n) => n.label === NEW_CONCEPT_LABEL),
   },
   {
+    title: 'Tocca, ritocca, tieni premuto',
+    text: 'Su un riquadro funzionano tre gesti. Un tocco lo sceglie: in basso compare la sua barra, con Nome, Immagine, Cambia ramo ed Elimina. Un altro tocco sullo stesso riquadro, anche dopo un po’, apre «Immagine e colore». Tenerlo premuto e poi alzare il dito serve a cambiarne il nome. Prova: tocca «Luce e calore» e poi toccalo ancora.',
+    done: opened('style'),
+  },
+  {
     title: 'Le parole che collegano',
     text: 'Tocca il «+» sulla linea tra i due riquadri (o la linea stessa) e scegli come sono legati, per esempio «serve per» o «causa». Così la mappa si legge come una frase.',
     done: (now, start) =>
@@ -145,20 +141,6 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     target: 'immagine',
     done: (now, start) =>
       now.map.nodes.some((n) => n.image && n.image.ref !== start.map.nodes.find((s) => s.id === n.id)?.image?.ref),
-  },
-  {
-    title: 'Collega due idee',
-    text: 'Quando tocchi un riquadro, in basso compare la sua barra: Nome, Immagine, Collega, Cambia ramo, Elimina. Tutto quello che serve per quel riquadro è lì. Premi «Collega» e poi tocca un riquadro che non è ancora unito a questo: nasce una freccia tra i due.',
-    target: 'collega',
-    first: (map) =>
-      allLinked(map)
-        ? {
-            text: 'I tuoi riquadri sono già tutti collegati: per fare una freccia nuova ne serve un altro. Premi «Concetto» e scrivi un’idea, per esempio «Le stelle». Poi ti dico come collegarla.',
-            target: 'concetto',
-          }
-        : undefined,
-    // A new concept comes with its own line: only a line more than that counts.
-    done: (now, start) => linesChanged(now, start) > 0,
   },
   {
     title: 'Togli una freccia',
@@ -208,7 +190,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Bianca o colorata',
-    text: `La tua mappa è bianca, come un foglio nuovo. Per colorarla premi «Riordina», in basso, e scegli «Riordina e colora»: ogni ramo prende un colore pastello, uguale per tutti i suoi concetti. «Riordina» da solo rimette la mappa in ordine e lascia i colori come sono. Non ti piace? Premi «Annulla». ${IN_ALTRO}`,
+    text: `La tua mappa è bianca, come un foglio nuovo. Per colorarla premi «Riordina», in basso: la mappa torna in ordine e in alto compare «🎨 Colora i rami». Premilo: ogni ramo prende un colore pastello, uguale per tutti i suoi concetti. Non ti piace? Premi «Annulla». ${IN_ALTRO}`,
     target: 'riordina',
     first: needsTwoBranches,
     done: (now, start) =>
@@ -238,14 +220,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     done: (now, start) => now.map.nodes.length < start.map.nodes.length,
   },
   {
-    title: 'La scaletta',
-    text: `Premi «Scaletta», in basso: la mappa diventa un elenco, un concetto per riga, e puoi scriverla lì come un riassunto. Le frecce a destra e a sinistra mettono una riga sotto quella di sopra o la riportano indietro. «Fatto» la rimette nella mappa. ${IN_ALTRO}`,
-    target: 'scaletta',
-    done: opened('outline'),
-  },
-  {
     title: 'Dal libro',
-    text: `Premi «Dal libro», in basso: fotografi una pagina, MappAmi legge il testo e tu tocchi le parole importanti, che diventano concetti della mappa. Se ora non hai un libro, guarda e premi «Chiudi». ${IN_ALTRO}`,
+    text: `Premi «Dal libro», in basso: fotografi una pagina e MappAmi legge il testo. Tocca le parole importanti, o passaci sopra il dito come un evidenziatore, anche andando a capo: diventano concetti della mappa. Sotto li vedi: con la catena ne unisci due, con le forbici ne dividi uno. La pagina resta lì per la volta dopo. Se ora non hai un libro, guarda e premi «Chiudi». ${IN_ALTRO}`,
     target: 'libro',
     done: opened('photo'),
   },
@@ -256,8 +232,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     done: opened('review'),
   },
   {
-    title: 'Salva, stampa, manda',
-    text: `La mappa si salva da sola, mentre lavori. «Salva» serve a portarla fuori: «PDF da stampare» per il quaderno, «Immagine» da mandare in chat, «File modificabile» per continuarla su un altro dispositivo. ${TOP_OR_ALTRO}`,
+    title: 'Stampa e manda',
+    text: `La mappa si salva da sola, mentre lavori. «Stampa e manda» serve a portarla fuori: «PDF da stampare» per il quaderno, «Immagine» da mandare in chat, «File modificabile» per continuarla su un altro dispositivo. ${TOP_OR_ALTRO}`,
     target: 'salva',
     done: opened('export'),
   },
@@ -275,6 +251,6 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Ce l’hai fatta!',
-    text: 'Ora conosci tutti i pulsanti. Il titolo, in alto, si cambia toccandolo. Con «Mappe», in alto a sinistra, torni all’elenco: la tua mappa è lì, salvata. Quando premi «Fine» i colori se ne vanno e la mappa torna bianca: per ricolorarla, «Riordina e colora». Puoi rifare questo giro quando vuoi: nella pagina iniziale premi «Impara facendo».',
+    text: 'Ora conosci tutti i pulsanti. Il titolo, in alto, si cambia toccandolo. Con «Mappe», in alto a sinistra, torni all’elenco: la tua mappa è lì, salvata. Quando premi «Fine» i colori se ne vanno e la mappa torna bianca: per ricolorarla, «Riordina» e poi «Colora i rami». Puoi rifare questo giro quando vuoi: nella pagina iniziale premi «Impara facendo».',
   },
 ];

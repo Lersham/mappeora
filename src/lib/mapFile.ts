@@ -9,6 +9,8 @@ import { newId } from './id';
 export const MAP_FILE_EXTENSION = '.mappami';
 /** Files saved when the app was still called Mappeora: they open as before. */
 export const OLD_MAP_FILE_EXTENSION = '.mappeora';
+/** The widths a concept can be given by hand (px). */
+export const NODE_WIDTH = { min: 100, max: 600 };
 const FORMAT = 'mappeora';
 /** «Salva tutte le mappe»: every map of the device in one file, same extension. */
 const ARCHIVE_FORMAT = 'mappeora-archivio';
@@ -96,6 +98,7 @@ function readNode(v: unknown): MapNode | undefined {
   const image = readImage(v.image);
   if (image) node.image = image;
   if (v.collapsed === true) node.collapsed = true;
+  if (typeof v.width === 'number' && v.width >= NODE_WIDTH.min && v.width <= NODE_WIDTH.max) node.width = Math.round(v.width);
   return node;
 }
 

@@ -1,5 +1,20 @@
+import type { Page } from '@playwright/test';
 import { test, expect, say, spoken } from './fixtures';
 import { addConcept, mascot, newMap, node, nodes, onScreen, rename, settled, tapLink, toolbar } from './helpers';
+
+/** The concepts not wholly in sight: out of the map's area, or under a bar floating over it. */
+const hidden = (page: Page) =>
+  page.evaluate(() => {
+    const flow = document.querySelector('.react-flow')!.getBoundingClientRect();
+    const bars = [...document.querySelectorAll('.selection-bar')].map((b) => b.getBoundingClientRect().top);
+    const bottom = Math.min(flow.bottom, ...bars);
+    return [...document.querySelectorAll('.concept-node')]
+      .filter((n) => {
+        const r = n.getBoundingClientRect();
+        return r.top < flow.top || r.left < flow.left || r.right > flow.right || r.bottom > bottom;
+      })
+      .map((n) => n.querySelector('.concept-label')?.textContent);
+  });
 
 test.describe('Impara facendo', () => {
   test('dalla home costruisce una mappa vera, un passo alla volta', async ({ page }) => {
@@ -14,7 +29,7 @@ test.describe('Impara facendo', () => {
     };
 
     await expect(coach.getByRole('heading', { name: 'L’idea principale' })).toBeVisible();
-    await expect(coach).toContainText('Passo 1 di 22');
+    await expect(coach).toContainText('Passo 1 di 21');
     await mascot(coach, 'indica');
     await expect(page.locator('.title-input')).toHaveValue('La mia prima mappa');
     // Until the step is done there is only «Salta».
@@ -35,6 +50,16 @@ test.describe('Impara facendo', () => {
     await expect(concept).not.toHaveClass(/tutorial-target/);
 
     await rename(page, 'Nuovo concetto', 'Luce e calore');
+    await next('Tocca, ritocca, tieni premuto');
+
+    // A tap chooses it, another one opens «Immagine e colore».
+    await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
+    await (await onScreen(page, node(page, 'Luce e calore'))).click();
+    await (await onScreen(page, node(page, 'Luce e calore'))).click();
+    const style = page.getByRole('dialog', { name: 'Immagine e colore' });
+    await expect(style).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(style).toHaveCount(0);
     await next('Le parole che collegano');
 
     await tapLink(page, 0);
@@ -58,28 +83,21 @@ test.describe('Impara facendo', () => {
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('sole');
     await page.locator('.illustration-tile').first().click();
     await expect(node(page, 'Estate').locator('.concept-illustration, .concept-emoji')).toBeVisible();
-    await next('Collega due idee');
-
-    // «Estate» is still the concept in hand: «Collega», then another concept.
-    const collega = page.getByRole('toolbar', { name: 'Concetto scelto' }).getByRole('button', { name: 'Collega', exact: true });
-    await expect(collega).toHaveClass(/tutorial-target/);
-    await collega.click();
-    await (await onScreen(page, node(page, 'Luce e calore'))).click();
     await next('Togli una freccia');
 
-    // The line just drawn goes; both concepts stay.
+    // «Estate»'s line goes; both concepts stay.
     const lines = page.locator('.react-flow__edge');
-    await expect(lines).toHaveCount(3);
-    await tapLink(page, 2);
-    await page.getByRole('dialog', { name: 'Parola di collegamento' }).getByRole('button', { name: 'Togli freccia' }).click();
     await expect(lines).toHaveCount(2);
+    await tapLink(page, 1);
+    await page.getByRole('dialog', { name: 'Parola di collegamento' }).getByRole('button', { name: 'Togli freccia' }).click();
+    await expect(lines).toHaveCount(1);
     await expect(nodes(page)).toHaveCount(3);
     await next('Rimetti la freccia');
 
     const undo = page.locator('.topbar').getByRole('button', { name: 'Annulla', exact: true });
     await expect(undo).toHaveClass(/tutorial-target/);
     await undo.click();
-    await expect(lines).toHaveCount(3);
+    await expect(lines).toHaveCount(2);
     await next('Cambia ramo');
     await expect(undo).not.toHaveClass(/tutorial-target/);
     // The other tools have a test of their own (below).
@@ -103,42 +121,10 @@ test.describe('Impara facendo', () => {
     const coach = page.getByRole('region', { name: 'Tutorial' });
     await coach.getByRole('button', { name: 'Salta' }).click();
     await expect(coach.getByRole('heading', { name: 'Un nuovo concetto' })).toBeVisible();
-    await expect(coach).toContainText('Passo 2 di 22');
+    await expect(coach).toContainText('Passo 2 di 21');
     await coach.getByRole('button', { name: 'Chiudi' }).click();
     await expect(coach).toHaveCount(0);
     await expect(page.locator('.tutorial-target')).toHaveCount(0);
-  });
-
-  test('«Collega due idee» con i riquadri già tutti collegati chiede prima un concetto nuovo', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Impara facendo' }).click();
-    const coach = page.getByRole('region', { name: 'Tutorial' });
-    const bar = page.getByRole('navigation', { name: 'Strumenti' });
-    const tools = page.getByRole('toolbar', { name: 'Concetto scelto' });
-    await coach.getByRole('button', { name: 'Salta' }).click();
-    // Only one concept, then «Salta» up to linking (no «Detta»): the two are already linked.
-    await addConcept(page, 'La mia prima mappa', 'Luna');
-    while (!(await coach.getByRole('heading', { name: 'Collega due idee' }).isVisible())) {
-      await coach.getByRole('button', { name: /^(Avanti|Salta)$/ }).click();
-    }
-    await expect(coach).toContainText('già tutti collegati');
-    await expect(bar.getByRole('button', { name: 'Concetto', exact: true })).toHaveClass(/tutorial-target/);
-    await coach.getByRole('button', { name: 'Ascolta' }).click();
-    await expect.poll(() => spoken(page)).toContainEqual(expect.stringContaining('già tutti collegati'));
-
-    // A new concept: now there is something to link.
-    await addConcept(page, 'Luna', 'Le stelle');
-    await expect(coach).toContainText('non è ancora unito');
-    await expect(bar.getByRole('button', { name: 'Concetto', exact: true })).not.toHaveClass(/tutorial-target/);
-    // «Le stelle» hangs from «Luna»: the main idea is still free to link to it.
-    await (await onScreen(page, node(page, 'La mia prima mappa'))).click();
-    await expect(tools.getByRole('button', { name: 'Collega', exact: true })).toHaveClass(/tutorial-target/);
-    await tools.getByRole('button', { name: 'Collega', exact: true }).click();
-    await (await onScreen(page, node(page, 'Le stelle'))).click();
-    await expect(coach.getByRole('status')).toContainText('Ben fatto');
-    // All three are linked now, but the step is done: it doesn't ask for another concept.
-    await expect(coach).not.toContainText('già tutti collegati');
-    await expect(bar.getByRole('button', { name: 'Concetto', exact: true })).not.toHaveClass(/tutorial-target/);
   });
 
   test('poi ogni altro pulsante, detto e indicato: anche quando è dentro «Altro»', async ({ page }) => {
@@ -197,12 +183,24 @@ test.describe('Impara facendo', () => {
     await addConcept(page, 'La mia prima mappa', 'Il giorno');
     await expect(coach).toContainText('La tua mappa è bianca');
 
-    // White, as it starts; «Riordina e colora» gives it colours.
+    // A picture, as in the guide's own map: taller concepts, a map that on a
+    // phone is no longer wide enough to fill the strip the guide leaves it.
+    await choose('Estate');
+    await tools.getByRole('button', { name: 'Immagine', exact: true }).click();
+    await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('sole');
+    await page.locator('.illustration-tile').first().click();
+    await expect(node(page, 'Estate').locator('.concept-illustration, .concept-emoji')).toBeVisible();
+
+    // White, as it starts; «Riordina», then «Colora i rami», gives it colours.
     for (const label of ['Luce', 'Estate', 'Il giorno']) expect(await background(label)).toBe('rgb(255, 255, 255)');
     await useTool('Riordina');
-    await page.getByRole('dialog', { name: 'Riordina' }).getByRole('button', { name: /^Riordina e colora/ }).click();
+    await page.getByRole('button', { name: 'Colora i rami' }).click();
     await settled(page);
     expect(await background('Luce')).not.toBe('rgb(255, 255, 255)');
+    // The colours are to be seen: on a phone the map's area is a strip wider
+    // than it is tall, and no concept may end up under the tools of the one
+    // in hand.
+    expect(await hidden(page)).toEqual([]);
     await next('Un colore tutto suo');
 
     await choose('Estate');
@@ -217,10 +215,6 @@ test.describe('Impara facendo', () => {
     await expect(tools.getByRole('button', { name: 'Elimina', exact: true })).toHaveClass(/tutorial-target/);
     await tools.getByRole('button', { name: 'Elimina', exact: true }).click();
     await expect(node(page, 'Estate')).toHaveCount(0);
-    await next('La scaletta');
-
-    await useTool('Scaletta');
-    await page.getByRole('dialog', { name: 'Scaletta' }).getByRole('button', { name: 'Annulla' }).click();
     await next('Dal libro');
 
     await useTool('Dal libro');
@@ -232,10 +226,10 @@ test.describe('Impara facendo', () => {
     await page.getByRole('dialog', { name: 'Ripassa' }).getByRole('button', { name: /^Un passo alla volta/ }).click();
     await expect(coach).toHaveCount(0);
     await page.locator('.topbar').getByRole('button', { name: 'Esci' }).click();
-    await next('Salva, stampa, manda');
+    await next('Stampa e manda');
 
-    await useTool('Salva');
-    await page.getByRole('dialog', { name: 'Salva, esporta o stampa' }).getByRole('button', { name: 'Annulla' }).click();
+    await useTool('Stampa e manda');
+    await page.getByRole('dialog', { name: 'Stampa e manda' }).getByRole('button', { name: 'Annulla' }).click();
     await next('Come la vedi');
 
     await useTool('Aspetto');
@@ -249,13 +243,17 @@ test.describe('Impara facendo', () => {
     await page.getByRole('button', { name: 'Mostra i pulsanti' }).click();
     await next('Ce l’hai fatta!');
 
-    // The colours were only to show how: the tutorial leaves the map white.
+    // The colours were only to show how: the tutorial leaves the map white,
+    // lines and borders too.
     expect(await background('Luce')).not.toBe('rgb(255, 255, 255)');
+    const tinted = page.locator('.react-flow__edge-path.branch-line, .concept-node.sheet-branch[class*="branch-"]');
+    await expect(tinted.first()).toBeAttached();
     await coach.getByRole('button', { name: 'Fine' }).click();
     await expect(coach).toHaveCount(0);
     for (const label of ['La mia prima mappa', 'Luce', 'Il giorno']) {
       await expect.poll(() => background(label)).toBe('rgb(255, 255, 255)');
     }
+    await expect(tinted).toHaveCount(0);
   });
 
   test('una mappa nuova qualsiasi non ha la guida', async ({ page }) => {

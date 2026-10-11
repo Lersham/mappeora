@@ -832,7 +832,7 @@ textarea {
     display: none;
   }
 }
-/* Phones: «Salva» and «Aspetto» are in «Altro». */
+/* Phones: «Stampa e manda» and «Aspetto» are in «Altro». */
 @media (max-width: 560px) {
   .topbar {
     padding-block: max(4px, env(safe-area-inset-top)) 4px;
@@ -935,6 +935,18 @@ textarea {
 .pick-banner p {
   margin: 0;
   font-weight: 600;
+}
+.color-offer-button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--primary-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
 }
 .is-picking .react-flow__node {
   cursor: crosshair;
@@ -1083,53 +1095,14 @@ textarea {
 .react-flow__edge-path.branch-line.branch-3 { stroke: var(--branch-3); }
 .react-flow__edge-path.branch-line.branch-4 { stroke: var(--branch-4); }
 .react-flow__edge-path.branch-line.branch-5 { stroke: var(--branch-5); }
-/* "Foglio" maps: connection points a concept's role doesn't use. */
-.react-flow__handle.handle-hidden {
+/* The points lines start and end at: never seen, new lines come from the
+   tree («Cambia ramo»), not from dragging a dot. Stronger than React Flow's
+   own .connectionindicator, or the hidden dots would still catch a finger. */
+.react-flow .react-flow__node .react-flow__handle {
   opacity: 0;
   pointer-events: none;
-}
-/* The dots to draw a line show on the concept in hand (and under the
-   mouse); while a line is being drawn, everywhere it can arrive. */
-.react-flow__node:not(.selected) .react-flow__handle:not(.handle-hidden) {
-  opacity: 0;
-  pointer-events: none;
-}
-@media (hover: hover) {
-  .react-flow__node:hover .react-flow__handle:not(.handle-hidden) {
-    opacity: 1;
-    pointer-events: all;
-  }
-}
-.is-connecting .react-flow__node .react-flow__handle:not(.handle-hidden) {
-  opacity: 1;
-  pointer-events: all;
-}
-/* Locked concepts draw no lines either: no dots at all. */
-.is-locked .react-flow__node .react-flow__handle:not(.handle-hidden) {
-  opacity: 0;
-  pointer-events: none;
-}
-/* On a touch screen lines are drawn with «Collega»: no dots to drag. */
-@media (pointer: coarse) {
-  .react-flow__node .react-flow__handle:not(.handle-hidden) {
-    opacity: 0;
-    pointer-events: none;
-  }
-}
-.react-flow__handle {
   width: 16px;
   height: 16px;
-  background: var(--primary);
-  border: 2px solid var(--surface);
-}
-/* On a touch screen a finger hits a wider area than the dot it sees. */
-@media (pointer: coarse) {
-  .react-flow__handle::before {
-    content: '';
-    position: absolute;
-    inset: -12px;
-    border-radius: 50%;
-  }
 }
 /* A concept or a link reached with Tab shows where the keyboard is. */
 .react-flow__node:focus-visible > .concept-node {
@@ -1263,7 +1236,7 @@ textarea {
 .concept-speak {
   position: absolute;
   top: -20px;
-  right: -20px;
+  left: -20px; /* the right side has ↔ and «−» */
   width: 40px;
   height: 40px;
   display: grid;
@@ -1767,8 +1740,34 @@ textarea {
   border-radius: 10px;
   pointer-events: none;
 }
-/* Collapse / expand: a round tab on the bottom-right corner, clear of the
-   handle used to drag new links. */
+/* Collapse / expand: a round tab on the bottom-right corner. */
+.concept-resize {
+  position: absolute;
+  top: 50%;
+  right: -20px;
+  width: 36px;
+  height: 36px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary);
+  cursor: ew-resize;
+  touch-action: none;
+}
+/* A finger needs more room than the circle shows. */
+.concept-resize::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+.concept-resize svg {
+  width: 20px;
+  height: 20px;
+}
 .concept-toggle {
   position: absolute;
   right: 6px;
@@ -1813,11 +1812,28 @@ textarea {
 .concept-node.review-current {
   box-shadow: 0 0 0 6px var(--highlight);
 }
-.is-reviewing .react-flow__handle {
-  visibility: hidden;
-}
 .concept-node.review-dim {
   opacity: 0.4;
+}
+/* Ripetimi: the map stays readable (it is a compensatory tool), the
+   concepts already explained get a green ring and a tick. */
+.concept-node.review-heard {
+  box-shadow: 0 0 0 6px var(--success);
+}
+.concept-node.review-heard::after {
+  content: '✓';
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #fff;
+  font-weight: 700;
+  line-height: 28px;
+  text-align: center;
+  pointer-events: none;
 }
 .present-caption {
   margin: 0;
@@ -1979,7 +1995,12 @@ textarea {
   resize: vertical;
 }
 .ocr-word {
-  display: inline;
+  /* A finger that starts on a word highlights, in any direction: the phone
+     decides at the first touch whether a gesture scrolls, so the word itself
+     must say no (touch-action works on inline-block, not on inline). From the
+     spaces and the margins the text still scrolls. */
+  display: inline-block;
+  touch-action: none;
   padding: 2px 1px;
   margin: 0;
   border: none;
@@ -1989,13 +2010,23 @@ textarea {
   letter-spacing: inherit;
   word-spacing: inherit;
   cursor: pointer;
-  /* Sideways drags highlight; up and down still scroll the page. */
-  touch-action: pan-y;
 }
 .ocr-word.is-selected {
   background: color-mix(in srgb, var(--primary) 25%, transparent);
   box-shadow: inset 0 -3px 0 var(--primary);
   font-weight: 600;
+}
+.ocr-word.is-selected.is-other {
+  background: color-mix(in srgb, var(--branch-1) 22%, transparent);
+  box-shadow: inset 0 -3px 0 var(--branch-1);
+}
+/* Two concepts side by side: a gap shows where one ends. */
+.ocr-word.is-start {
+  margin-left: 4px;
+}
+.ocr-word.is-used:not(.is-selected) {
+  text-decoration: underline dotted 2px;
+  text-underline-offset: 4px;
 }
 .ocr-word.is-spoken {
   background: var(--highlight);
@@ -2014,106 +2045,32 @@ textarea {
   background: var(--surface);
   border-color: var(--primary);
 }
-
-/* ---------- Scaletta (outline) ---------- */
-
-.outline-dialog {
-  width: min(calc(800px * var(--text-scale) / 1.15), 100%);
+.chip.static.is-other {
+  border-color: var(--branch-1);
 }
-.outline-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
-  container-type: inline-size;
-}
-.outline-row {
-  display: flex;
-  flex-wrap: wrap;
+.concept-preview .chip.static {
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-width: 0;
-  padding-left: calc(var(--depth, 0) * 20px);
 }
-.outline-bullet {
-  flex: none;
-  width: 1em;
-  color: var(--muted);
-  text-align: center;
-}
-.outline-input {
-  /* Grows with flex; when a deep line leaves too little room the buttons
-     go to a second line instead of squeezing the text. */
-  flex: 1 1 7rem;
-  width: 0;
-  min-width: 7rem;
-  min-height: 48px;
-  padding: 8px 10px;
-  /* A long concept goes on more lines: all of it can be read. */
-  resize: none;
-  overflow: hidden;
-  line-height: 1.35;
-  overflow-wrap: break-word;
-  field-sizing: content;
-}
-.outline-tools {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-}
-.outline-tool {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 48px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--tint);
-  color: var(--primary);
-  font-size: 1.25rem;
+.chip-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -6px -10px -6px 0;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
   cursor: pointer;
-  touch-action: manipulation;
 }
-.outline-tool:disabled {
-  opacity: 0.3;
-  cursor: default;
+.chip-tool:hover {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
 }
-.outline-add {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-}
-@media (max-width: 520px) {
-  .outline-row {
-    padding-left: calc(var(--depth, 0) * 12px);
-  }
-}
-/* Where the list is narrow for its words (a phone, large text) every line
-   has the whole width and its buttons underneath: the same for all lines,
-   not beside on one and under on the next. */
-@container (max-width: 30em) {
-  .outline-tools {
-    flex-basis: 100%;
-    justify-content: flex-end;
-  }
-  /* A smaller mark, the room to the words. */
-  .outline-bullet {
-    width: 0.6em;
-    font-size: 0.75em;
-  }
-  .outline-input {
-    padding-inline: 8px;
-  }
-}
-/* Keyboard shortcuts only where there is probably a keyboard. */
-@media not (hover: hover) {
-  .outline-keys {
-    display: none;
-  }
+.concept-preview > .chip-tool {
+  margin: 0 -4px;
 }
 
 /* ---------- Benvenuto ---------- */

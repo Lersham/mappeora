@@ -14,7 +14,7 @@ import {
 } from '@xyflow/react';
 import { useStore } from 'zustand';
 import { beginStep, endStep, mapHistory, untracked, useMapStore } from '../../store/mapStore';
-import { reviewVisibility, useReview, type ReviewMode } from '../../store/reviewStore';
+import { reviewVisibility, ripetimiSummary, useReview, type ReviewMode } from '../../store/reviewStore';
 import { ConceptNode, type ConceptActions, type ConceptFlowNode } from './ConceptNode';
 import { FreeEdge } from './FreeEdge';
 import { BusEdge } from './BusEdge';
@@ -26,13 +26,14 @@ import { NodeStyleDialog } from './NodeStyleDialog';
 import { LinkWordDialog } from './LinkWordDialog';
 import { ExportDialog, type ExportChoice } from './ExportDialog';
 import { ReviewBar } from './ReviewBar';
-import { OutlineDialog } from './OutlineDialog';
 import { PhotoTextDialog } from '../ocr/PhotoTextDialog';
 import { BigButton } from '../../components/BigButton';
 import { Dialog } from '../../components/Dialog';
 import { DictationOverlay } from '../../components/DictationOverlay';
 import { useReadAloud } from '../../hooks/useReadAloud';
-import { useDictation } from '../../hooks/useDictation';
+import { DICTATION_ERRORS, useDictation } from '../../hooks/useDictation';
+import { useRipetimi } from '../../hooks/useRipetimi';
+import { speech } from '../../services/speech';
 import { useCrowded } from '../../hooks/useCrowded';
 import { autoLayout } from '../../services/layout';
 import { exportMap, saveMapFile } from '../../services/export';
@@ -42,6 +43,7 @@ import { spanningTree } from '../../lib/tree';
 import { branchOf as branchIds, cannotMoveUnder, childrenOf } from '../../lib/branch';
 import { layoutOf, templateInfo } from '../../lib/templates';
 import { NEW_MAP_TITLE } from '../../lib/mapFactory';
+import { DEFAULT_COLOR, branchColors } from '../../lib/palette';
 import type { ConceptMap, MapNode } from '../../types/map';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 import { useBackHandler } from '../../lib/backButton';
@@ -79,14 +81,13 @@ const edgeTypes: EdgeTypes = { bus: BusEdge, free: FreeEdge, tree: TreeEdge };
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
 /** The tools that may end up in «Altro», by key, and the tutorial's name for each. */
 const TOOL_TARGETS: Record<string, TutorialTarget> = {
-  outline: 'scaletta',
   photo: 'libro',
   layout: 'sposta',
   tidy: 'riordina',
   save: 'salva',
   settings: 'aspetto',
 };
-/** Where Salva and Aspetto leave the top bar for «Altro» (see .topbar-map). */
+/** Where «Stampa e manda» and Aspetto leave the top bar for «Altro» (see .topbar-map). */
 const PHONE = '(max-width: 560px)';
 function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(
@@ -105,10 +106,8 @@ type DialogState =
   | { kind: 'export' }
   | { kind: 'review' }
   | { kind: 'photo' }
-  | { kind: 'outline' }
   | { kind: 'more' }
   | { kind: 'delete'; id: string }
-  | { kind: 'tidy' }
   | null;
 
 interface Props {
@@ -132,6 +131,13 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const reader = useReadAloud();
   const dictation = useDictation();
   const [arranging, setArranging] = useState(false);
+  // After «Riordina»: the offer to colour the branches too, for a while.
+  const [colorOffer, setColorOffer] = useState(false);
+  useEffect(() => {
+    if (!colorOffer) return;
+    const t = setTimeout(() => setColorOffer(false), 10000);
+    return () => clearTimeout(t);
+  }, [colorOffer]);
   const [exporting, setExporting] = useState(false);
   /** Bumped by «Annulla»: an export still running then stops before saving. */
   const exportRun = useRef(0);
@@ -157,7 +163,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     return () => canvas.removeEventListener('scroll', back, true);
   }, []);
   /** A line is being drawn from a concept: every connection point shows. */
-  const [connecting, setConnecting] = useState(false);
   const noticeTimer = useRef<number | undefined>(undefined);
   /** A short message that goes away by itself. */
   const showNotice = (text: string) => {
@@ -165,8 +170,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     window.clearTimeout(noticeTimer.current);
     noticeTimer.current = window.setTimeout(() => setNotice((now) => (now === text ? null : now)), 5000);
   };
-  /** «Collega» or «Cambia ramo»: the next concept tapped is the other end. */
-  const [picking, setPicking] = useState<{ kind: 'link' | 'branch'; from: string } | null>(null);
+  /** «Cambia ramo»: the next concept tapped is the one to put it under. */
+  const [picking, setPicking] = useState<{ from: string } | null>(null);
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
   const [tutorialStep, setTutorialStep] = useState<number | null>(tutorial ? 0 : null);
   /** The tutorial coloured the map only to show how: it ends white, as it began («Annulla» brings the colours back). */
@@ -184,7 +189,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const markUsed = useCallback((tool: TutorialTool) => setUsed((u) => ({ ...u, [tool]: (u[tool] ?? 0) + 1 })), []);
   useEffect(() => {
     const kind = dialog?.kind;
-    if (kind === 'outline' || kind === 'photo' || kind === 'review' || kind === 'export') markUsed(kind);
+    if (kind === 'photo' || kind === 'review' || kind === 'export' || kind === 'style') markUsed(kind);
   }, [dialog?.kind]);
   // Libera and 5 W fill an A4 sheet by themselves, unless the child chose
   // to place the concepts by hand.
@@ -230,6 +235,13 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // collapsing, dropping a dragged concept). Not an edit by the child, so
   // it stays out of the undo history.
   const shown = held.current ?? sheet;
+  // A white map is white all over: a branch's line and border take its colour
+  // only once its first concept has one («Colora i rami», or by hand).
+  const painted = useMemo(() => {
+    const colors = new Map(map.nodes.map((n) => [n.id, n.color ?? DEFAULT_COLOR]));
+    return new Set(Object.entries(shown?.heads ?? {}).filter(([id]) => colors.get(id) !== DEFAULT_COLOR).map(([, b]) => b));
+  }, [map.nodes, shown]);
+  const paint = (branch?: number) => (branch !== undefined && painted.has(branch) ? branch : undefined);
   // A drop on a sheet is recorded once the sheet has put the concept in its
   // place: a concept that snaps back leaves no empty undo step.
   const dropPending = useRef(false);
@@ -278,6 +290,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         layout,
         shown?.roles[n.id],
         shown?.heads[n.id],
+        paint(shown?.heads[n.id]),
         parents.has(n.id),
         collapse.hiddenBelow[n.id] ?? 0,
       ];
@@ -300,9 +313,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           color: n.color,
           shape: n.shape,
           image: n.image,
+          width: n.width,
           layout,
           role: shown?.roles[n.id],
           branch: shown?.heads[n.id],
+          tinted: paint(shown?.heads[n.id]) !== undefined,
           hasChildren: parents.has(n.id),
           collapsed: n.collapsed,
           hiddenBelow: collapse.hiddenBelow[n.id] ?? 0,
@@ -314,7 +329,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     });
     flowCache.current = next;
     return result;
-  }, [map.nodes, selectedId, sizes, review, layout, collapse, parents, shown, secret, conceptActions]);
+  }, [map.nodes, selectedId, sizes, review, layout, collapse, parents, shown, painted, secret, conceptActions]);
   // The links' spoken names need the concepts' names, not their positions:
   // a string that stays the same while a concept is dragged.
   const nodeNames = useMemo(() => JSON.stringify(map.nodes.map((n) => [n.id, n.label])), [map.nodes]);
@@ -336,7 +351,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           type: 'bus',
           sourceHandle: 's-bottom',
           targetHandle: 't-top',
-          data: { points: bus.points, own: bus.own, branch: bus.branch, column: bus.column, onEdit: onEdit(e.id), near },
+          data: { points: bus.points, own: bus.own, branch: paint(bus.branch), column: bus.column, onEdit: onEdit(e.id), near },
         };
       }
       if (sheetTemplate && !shown) return { ...base, type: 'free', data: { onEdit: onEdit(e.id), near } }; // placed by hand
@@ -351,7 +366,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         labelBgBorderRadius: 6,
       };
     });
-  }, [map.edges, nodeNames, shown, sheetTemplate, review.active, secret, selectedId, locked]);
+  }, [map.edges, nodeNames, shown, painted, sheetTemplate, review.active, secret, selectedId, locked]);
 
   const onNodesChange = useCallback((changes: NodeChange<ConceptFlowNode>[]) => {
     const s = useMapStore.getState();
@@ -435,12 +450,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     // the top, where the main concept is, not centred and cut at both ends.
     if (whole < MIN_ZOOM) return top(Math.max(MIN_ZOOM, wide));
     if (mustFit || px * whole >= READABLE_PX) return null;
+    // The screen, not the map's area: on a phone the guide takes the lower
+    // half and leaves the map a strip wider than it is tall, and a page view
+    // there hid the branches under the tools of the concept in hand.
+    if (window.innerWidth <= window.innerHeight) return null;
     if (wide >= whole * 1.5) return top(wide);
-    // A map wider than the screen (a sheet spread in rows): on a screen wider
-    // than it is tall, names that can be read, from the top and around the
-    // main concept; the rest is a scroll away. A phone sees all of it, and
-    // a tap brings a branch close.
-    if (box.width <= box.height) return null;
+    // A map wider than the screen (a sheet spread in rows): names that can
+    // be read, from the top and around the main concept; the rest is a
+    // scroll away. A phone sees all of it, and a tap brings a branch close.
     const zoom = Math.min(MAX_READ_ZOOM, COMFORT_PX / px);
     const head = visible.reduce((a, n) => (n.position.y < a.position.y ? n : a));
     const centre = head.position.x + (head.measured?.width ?? 0) / 2;
@@ -452,7 +469,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     if (page) void setViewport(page);
   };
 
-  /** After «Riordina», «Scaletta», a review: the page view if the map needs it, else all of it. */
+  /** After «Riordina», a review: the page view if the map needs it, else all of it. */
   const showMap = (delay: number) =>
     setTimeout(() => {
       const page = pageView();
@@ -606,6 +623,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   latest.current = { toggleInPlace, addNear };
 
+  /** «Riordina»: the order at once, colours untouched; colouring the branches is offered after. */
+  const tidyAndOffer = () => {
+    const { nodes, edges } = map;
+    const colors = branchColors(nodes, edges);
+    setColorOffer(nodes.some((n) => (n.color ?? DEFAULT_COLOR) !== colors[n.id]));
+    void tidy();
+  };
+
   const tidy = async () => {
     // A "foglio" map is always in order: just show all of it. One placed by
     // hand goes back on the sheet.
@@ -618,8 +643,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   /**
    * Top-down layout (elkjs) of the concepts on screen. `followUp`: it
-   * completes the step just made («Dal libro», «Scaletta»), so one «Annulla»
-   * undoes both.
+   * completes the step just made («Dal libro»), so one «Annulla» undoes
+   * both.
    */
   const arrange = async ({ followUp = false } = {}) => {
     setArranging(true);
@@ -647,7 +672,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     }
   };
 
-  /** After «Dal libro» or «Scaletta»: a sheet orders itself, a map placed by hand stays so. */
+  /** After «Dal libro»: a sheet orders itself, a map placed by hand stays so. */
   const afterBulkEdit = () => (sheetTemplate ? showMap(150) : setTimeout(() => void arrange({ followUp: true }), 150));
 
   const dictate = async () => {
@@ -655,7 +680,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     if (!command) return;
     if (command.type === 'add') addConcept(command.label);
     else if (command.type === 'read') reader.readMap();
-    else if (command.type === 'tidy') await tidy();
+    else if (command.type === 'tidy') tidyAndOffer();
     else if (command.type === 'undo') mapHistory().undo();
     else if (command.type === 'redo') mapHistory().redo();
   };
@@ -722,7 +747,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     actions.select(null);
     // Full screen helps on the class whiteboard; not every WebView allows it.
     if (mode === 'interrogazione') document.documentElement.requestFullscreen?.().catch(() => {});
-    review.start(readingOrder(visiblePart(map), { depthFirst: sheetTemplate }), mode);
+    const steps = readingOrder(visiblePart(map), { depthFirst: sheetTemplate });
+    if (mode !== 'ripetimi') return review.start(steps, mode);
+    // The child names the concepts, not the whole propositions.
+    const labels = new Map(map.nodes.map((n) => [n.id, n.label.replace(/\s+/g, ' ').trim()]));
+    review.start(
+      steps.map((s) => ({ nodeId: s.nodeId, text: labels.get(s.nodeId) ?? s.text })),
+      mode,
+    );
+    showMap(50);
   };
 
   const exitReview = () => {
@@ -733,12 +766,18 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   };
 
   useBackHandler(exitReview, review.active);
+  const ripetimi = useRipetimi(review.active && review.mode === 'ripetimi' && !review.done);
+  const finishRipetimi = () => {
+    review.finish();
+    void reader.readText(ripetimiSummary(useReview.getState()));
+  };
   const overview = () => void fitView({ padding: fitPadding(0.15), duration: motion(500) }).then(fromTopIfTooBig);
 
   // Review: follow the current concept and read it once it is visible.
   const current = review.active ? review.steps[review.index] : undefined;
   useEffect(() => {
-    if (!current) return;
+    // At «Ripetimi» the whole map stays in view.
+    if (!current || review.mode === 'ripetimi') return;
     const node = useMapStore.getState().map?.nodes.find((n) => n.id === current.nodeId);
     if (!node) return;
     const size = useMapStore.getState().sizes[node.id] ?? { width: 180, height: 72 };
@@ -826,31 +865,23 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const editing = !review.active;
 
   const labelOf = (id: string) => useMapStore.getState().map?.nodes.find((n) => n.id === id)?.label ?? '';
-  /** The other end of «Collega» or «Cambia ramo», tapped on the map. */
+  /** Where «Cambia ramo» puts the concept: the one tapped on the map. */
   const pickTarget = (id: string) => {
     const pick = picking;
     setPicking(null);
     if (!pick || id === pick.from) return;
     const current = useMapStore.getState().map;
     if (!current) return;
-    if (pick.kind === 'link') {
-      if (current.edges.some((e) => (e.source === pick.from && e.target === id) || (e.source === id && e.target === pick.from))) {
-        return showNotice(`«${labelOf(pick.from)}» e «${labelOf(id)}» sono già collegati.`);
-      }
-      actions.connect(pick.from, id);
-      showNotice('Collegati. Tocca il «+» sulla freccia per scrivere come sono legati.');
-    } else {
-      const why = cannotMoveUnder(current, pick.from, id);
-      if (why === 'below') return showNotice(`«${labelOf(id)}» è nel ramo di «${labelOf(pick.from)}»: scegli un concetto fuori dal ramo.`);
-      if (why === 'already') return showNotice(`«${labelOf(pick.from)}» è già sotto «${labelOf(id)}».`);
-      actions.moveUnder(pick.from, id);
-    }
+    const why = cannotMoveUnder(current, pick.from, id);
+    if (why === 'below') return showNotice(`«${labelOf(id)}» è nel ramo di «${labelOf(pick.from)}»: scegli un concetto fuori dal ramo.`);
+    if (why === 'already') return showNotice(`«${labelOf(pick.from)}» è già sotto «${labelOf(id)}».`);
+    actions.moveUnder(pick.from, id);
     // After React Flow has selected the concept tapped: the one the child
     // started from stays in hand.
     setTimeout(() => actions.select(pick.from));
     reveal(pick.from);
   };
-  // Esc, or the back button, puts «Collega» and «Cambia ramo» away.
+  // Esc, or the back button, puts «Cambia ramo» away.
   useBackHandler(() => setPicking(null), picking !== null);
   useEffect(() => {
     if (!picking) return;
@@ -891,15 +922,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // Where they all fit they are in groups ('group-start'): what goes into the map,
   // then where it stays on the sheet.
   const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
-    {
-      key: 'outline',
-      icon: 'outline',
-      label: 'Scaletta',
-      title: 'Scrivi la mappa come un elenco puntato',
-      className: 'group-start',
-      onClick: () => setDialog({ kind: 'outline' }),
-    },
-    { key: 'photo', icon: 'camera', label: 'Dal libro', onClick: () => setDialog({ kind: 'photo' }) },
+    { key: 'photo', icon: 'camera', label: 'Dal libro', className: 'group-start', onClick: () => setDialog({ kind: 'photo' }) },
     ...(sheetMode
       ? [
           {
@@ -918,15 +941,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       key: 'tidy',
       icon: 'tidy',
       label: 'Riordina',
-      title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4, e se vuoi colora i rami.' : 'Rimetti la mappa in ordine, e se vuoi colora i rami.',
+      title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4. I colori restano come sono.' : 'Rimetti la mappa in ordine. I colori restano come sono.',
       className: sheetMode ? undefined : 'group-start',
-      onClick: () => setDialog({ kind: 'tidy' }),
+      onClick: tidyAndOffer,
       disabled: arranging,
     },
   ];
   // The map as a whole: in the top bar (on a phone, in «Altro»).
   const mapTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
-    { key: 'save', icon: 'save', label: 'Salva', onClick: () => setDialog({ kind: 'export' }) },
+    { key: 'save', icon: 'share', label: 'Stampa e manda', onClick: () => setDialog({ kind: 'export' }) },
     {
       key: 'settings',
       icon: 'palette',
@@ -961,7 +984,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   return (
     <div
-      className={`editor${picking ? ' is-picking' : ''}${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
+      className={`editor${picking ? ' is-picking' : ''}${review.active ? ' is-reviewing' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
       onPointerDownCapture={(e) => {
         touch();
         // A press anywhere but on a concept (a button, the map) is something
@@ -1020,7 +1043,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={({ source, target }) => actions.connect(source, target)}
           onNodeDragStart={() => {
             cancelCloser();
             dragging.current = true;
@@ -1037,7 +1059,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           }}
           onPaneClick={() => {
             cancelCloser();
-            // Tapping the empty map puts «Collega» or «Cambia ramo» away, nothing else.
+            // Tapping the empty map puts «Cambia ramo» away, nothing else.
             if (picking) return setPicking(null);
             actions.select(null);
           }}
@@ -1049,16 +1071,16 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
               cancelCloser();
               return setDialog({ kind: 'style' });
             }
+            // Ripetimi: a tap lights up (or turns off) a concept the microphone missed.
+            if (review.mode === 'ripetimi') return review.toggleHeard(node.id);
             if (review.mode !== 'interrogazione') return;
             const i = review.order[node.id];
             if (i !== undefined) review.goTo(i);
           }}
-          onConnectStart={() => setConnecting(true)}
-          onConnectEnd={() => setConnecting(false)}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
           nodesDraggable={editing && !locked}
-          // A finger draws lines with «Collega».
-          nodesConnectable={editing && !TOUCH}
+          // Lines come from the tree itself («Cambia ramo»): no dots to drag new ones.
+          nodesConnectable={false}
           elementsSelectable={editing}
           // Our own handler (above): one undo step, and never behind a dialog.
           deleteKeyCode={null}
@@ -1103,18 +1125,31 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           <div className="selection-bar" role="toolbar" aria-label="Concetto scelto">
             <BigButton icon="edit" label="Nome" onClick={() => useMapStore.getState().startEditing(selectedNode.id)} />
             <BigButton icon="image" label="Immagine" className={target('immagine')} onClick={() => setDialog({ kind: 'style' })} />
-            <BigButton icon="link" label="Collega" className={target('collega')} onClick={() => setPicking({ kind: 'link', from: selectedNode.id })} />
-            <BigButton icon="branch" label="Cambia ramo" className={target('cambia-ramo')} onClick={() => setPicking({ kind: 'branch', from: selectedNode.id })} />
+            <BigButton icon="branch" label="Cambia ramo" className={target('cambia-ramo')} onClick={() => setPicking({ from: selectedNode.id })} />
             <BigButton icon="trash" label="Elimina" variant="danger" className={target('elimina')} onClick={() => deleteConcept(selectedNode.id)} />
+          </div>
+        )}
+        {colorOffer && !picking && (
+          <div className="pick-banner color-offer" role="status">
+            <p>Mappa in ordine.</p>
+            <button
+              type="button"
+              className="color-offer-button"
+              onClick={() => {
+                setColorOffer(false);
+                actions.colorBranches();
+              }}
+            >
+              🎨 Colora i rami
+            </button>
+            <button type="button" className="pick-banner-close" aria-label="Chiudi" title="Chiudi" onClick={() => setColorOffer(false)}>
+              <Icon name="close" />
+            </button>
           </div>
         )}
         {picking && (
           <div className="pick-banner" role="status">
-            <p>
-              {picking.kind === 'link'
-                ? `Tocca il concetto da collegare a «${labelOf(picking.from)}».`
-                : `Tocca il concetto sotto cui mettere «${labelOf(picking.from)}».`}
-            </p>
+            <p>{`Tocca il concetto sotto cui mettere «${labelOf(picking.from)}».`}</p>
             <button type="button" className="pick-banner-close" aria-label="Esci" title="Esci" onClick={() => setPicking(null)}>
               <Icon name="close" />
             </button>
@@ -1125,6 +1160,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       {review.active && review.mode === 'interrogazione' && current && (
         <p className="present-caption" aria-live="polite">
           {current.text}
+        </p>
+      )}
+      {review.active && review.mode === 'ripetimi' && (
+        <p className="present-caption ripetimi-caption" aria-live="polite">
+          {review.done
+            ? ripetimiSummary(review)
+            : ripetimi.error
+              ? DICTATION_ERRORS[ripetimi.error]
+              : ripetimi.said || 'Spiega la mappa a voce: i concetti che nomini si accendono.'}
         </p>
       )}
       {tutorialStep !== null && (
@@ -1141,7 +1185,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         />
       )}
       {review.active ? (
-        <ReviewBar onRepeat={() => current && void reader.readSteps([current])} onOverview={overview} onExit={exitReview} />
+        <ReviewBar
+          onRepeat={() => current && void reader.readSteps([current])}
+          onOverview={overview}
+          onExit={exitReview}
+          onFinish={finishRipetimi}
+        />
       ) : (
         <div className="dock">
           <nav ref={toolbarRef} className={`toolbar${crowded ? ' is-crowded' : ''}`} aria-label="Strumenti">
@@ -1204,27 +1253,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onClose={() => setDialog(null)}
         />
       )}
-      {dialog?.kind === 'tidy' && (
-        <TidyDialog
-          onTidy={(color) => {
-            setDialog(null);
-            if (color) actions.colorBranches();
-            void tidy();
-          }}
-          onClose={() => setDialog(null)}
-        />
-      )}
-      {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'photo' && <PhotoTextDialog mapId={map.id} onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
-      {dialog?.kind === 'outline' && (
-        <OutlineDialog
-          onClose={() => setDialog(null)}
-          onDone={() => {
-            setDialog(null);
-            afterBulkEdit();
-          }}
-        />
-      )}
       {dialog?.kind === 'more' && (
         <Dialog title="Altro" onClose={() => setDialog(null)} className="more-tools" sheet>
           <div className="more-grid">
@@ -1292,24 +1322,6 @@ function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
   );
 }
 
-/** «Riordina»: just the order, or each branch in its own colour too. */
-function TidyDialog({ onTidy, onClose }: { onTidy(color: boolean): void; onClose(): void }) {
-  return (
-    <Dialog title="Riordina" onClose={onClose} className="tidy-dialog" sheet>
-      <OptionCard icon="✨" name="Riordina" description="Rimette in ordine la mappa. I colori restano come sono." onClick={() => onTidy(false)} />
-      <OptionCard
-        icon="🎨"
-        name="Riordina e colora"
-        description="Rimette in ordine la mappa e dà a ogni ramo un colore pastello, uguale per tutti i concetti del ramo."
-        onClick={() => onTidy(true)}
-      />
-      <div className="dialog-actions">
-        <BigButton icon="close" label="Annulla" onClick={onClose} />
-      </div>
-    </Dialog>
-  );
-}
-
 function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): void; onClose(): void }) {
   return (
     <Dialog title="Ripassa" onClose={onClose} className="review-start" sheet>
@@ -1321,6 +1333,14 @@ function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): vo
         description="Tutta la mappa davanti a te, a schermo intero: spiega un concetto alla volta e vai avanti con le frecce."
         onClick={() => onStart('interrogazione')}
       />
+      {speech().sttSupported && (
+        <OptionCard
+          icon="🗣️"
+          name="Ripetimi"
+          description="Spiega la mappa a voce: i concetti che nomini si accendono. Alla fine ti dico cosa hai saltato."
+          onClick={() => onStart('ripetimi')}
+        />
+      )}
       <div className="dialog-actions">
         <BigButton icon="close" label="Annulla" onClick={onClose} />
       </div>
