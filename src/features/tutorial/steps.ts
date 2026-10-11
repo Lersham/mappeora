@@ -24,8 +24,8 @@ export type TutorialTarget =
   | 'elimina'
   | 'solo-mappa';
 
-/** A window the editor opens: «Ripassa», «Stampa e manda»… ('settings' is «Aspetto», 'focus' «Solo la mappa»). */
-export type TutorialTool = 'outline' | 'photo' | 'review' | 'export' | 'settings' | 'focus';
+/** A window the editor opens: «Ripassa», «Stampa e manda»… ('settings' is «Aspetto», 'focus' «Solo la mappa», 'style' «Immagine e colore»). */
+export type TutorialTool = 'outline' | 'photo' | 'review' | 'export' | 'settings' | 'focus' | 'style';
 
 /** What the child has done so far, as the tutorial sees it. */
 export interface TutorialProgress {
@@ -120,6 +120,11 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'Dagli un nome',
     text: 'Il riquadro nuovo è già pronto: scrivi un’idea che c’entra, per esempio «Luce e calore», e premi Invio. Per cambiarlo dopo: tieni premuto il riquadro, o toccalo e premi «Nome».',
     done: (now) => now.map.nodes.length > 1 && !now.map.nodes.some((n) => n.label === NEW_CONCEPT_LABEL),
+  },
+  {
+    title: 'Tocca, ritocca, tieni premuto',
+    text: 'Su un riquadro funzionano tre gesti. Un tocco lo sceglie: in basso compare la sua barra. Un altro tocco sullo stesso riquadro, anche dopo un po’, apre «Immagine e colore». Tenerlo premuto e poi alzare il dito serve a cambiarne il nome. Prova: tocca «Luce e calore» e poi toccalo ancora.',
+    done: opened('style'),
   },
   {
     title: 'Le parole che collegano',

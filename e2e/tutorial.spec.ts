@@ -29,7 +29,7 @@ test.describe('Impara facendo', () => {
     };
 
     await expect(coach.getByRole('heading', { name: 'L’idea principale' })).toBeVisible();
-    await expect(coach).toContainText('Passo 1 di 22');
+    await expect(coach).toContainText('Passo 1 di 23');
     await mascot(coach, 'indica');
     await expect(page.locator('.title-input')).toHaveValue('La mia prima mappa');
     // Until the step is done there is only «Salta».
@@ -50,6 +50,16 @@ test.describe('Impara facendo', () => {
     await expect(concept).not.toHaveClass(/tutorial-target/);
 
     await rename(page, 'Nuovo concetto', 'Luce e calore');
+    await next('Tocca, ritocca, tieni premuto');
+
+    // A tap chooses it, another one opens «Immagine e colore».
+    await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
+    await (await onScreen(page, node(page, 'Luce e calore'))).click();
+    await (await onScreen(page, node(page, 'Luce e calore'))).click();
+    const style = page.getByRole('dialog', { name: 'Immagine e colore' });
+    await expect(style).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(style).toHaveCount(0);
     await next('Le parole che collegano');
 
     await tapLink(page, 0);
@@ -118,7 +128,7 @@ test.describe('Impara facendo', () => {
     const coach = page.getByRole('region', { name: 'Tutorial' });
     await coach.getByRole('button', { name: 'Salta' }).click();
     await expect(coach.getByRole('heading', { name: 'Un nuovo concetto' })).toBeVisible();
-    await expect(coach).toContainText('Passo 2 di 22');
+    await expect(coach).toContainText('Passo 2 di 23');
     await coach.getByRole('button', { name: 'Chiudi' }).click();
     await expect(coach).toHaveCount(0);
     await expect(page.locator('.tutorial-target')).toHaveCount(0);

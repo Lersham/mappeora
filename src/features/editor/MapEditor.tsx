@@ -193,7 +193,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const markUsed = useCallback((tool: TutorialTool) => setUsed((u) => ({ ...u, [tool]: (u[tool] ?? 0) + 1 })), []);
   useEffect(() => {
     const kind = dialog?.kind;
-    if (kind === 'outline' || kind === 'photo' || kind === 'review' || kind === 'export') markUsed(kind);
+    if (kind === 'outline' || kind === 'photo' || kind === 'review' || kind === 'export' || kind === 'style') markUsed(kind);
   }, [dialog?.kind]);
   // Libera and 5 W fill an A4 sheet by themselves, unless the child chose
   // to place the concepts by hand.
