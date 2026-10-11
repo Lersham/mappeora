@@ -46,3 +46,16 @@ export function stem(word: string): string {
   const hard = w.length > 3 ? w.replace(/([cg])h([ei])$/, '$1$2') : w;
   return hard.replace(/[aeio]$/, '');
 }
+
+/**
+ * True when every word of the query is in the title, with or without
+ * accents, singular or plural: «vulcani» finds «Il vulcano», «perche»
+ * finds «Perché piove?». Little words count only if there is nothing else:
+ * «la rivoluzione» finds «Rivoluzione francese».
+ */
+export function titleMatches(title: string, query: string): boolean {
+  const words = fold(query).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  const meaningful = words.filter((w) => !STOPWORDS.has(w));
+  const text = fold(title);
+  return (meaningful.length ? meaningful : words).every((w) => text.includes(stem(w)));
+}

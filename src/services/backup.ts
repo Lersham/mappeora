@@ -82,6 +82,11 @@ export function backupDue(maps: MapSummary[], now = Date.now(), state = readStat
   return now - state.savedAt > 14 * DAY && maps.some((m) => m.updatedAt > state.savedAt!);
 }
 
+/** When «Salva tutte le mappe» last made a file on this device, if ever. */
+export function lastBackup(): number | undefined {
+  return readState().savedAt;
+}
+
 export function snoozeBackup(now = Date.now()) {
   writeState({ snoozedUntil: now + 7 * DAY });
 }

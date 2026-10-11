@@ -51,7 +51,7 @@ import { MAP_ARIA_LABELS, edgeAriaLabel, spokenLabel } from './a11yLabels';
 import { SaveProblemNotice } from './SaveProblemNotice';
 import { OptionCard } from '../../components/OptionCard';
 import { TutorialCoach } from '../tutorial/TutorialCoach';
-import { TUTORIAL_STEPS } from '../tutorial/steps';
+import { TUTORIAL_STEPS, type TutorialTarget } from '../tutorial/steps';
 import { Icon } from '../../components/Icon';
 
 const nodeTypes = { concept: ConceptNode };
@@ -150,7 +150,9 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const [picking, setPicking] = useState<{ kind: 'link' | 'branch'; from: string } | null>(null);
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
   const [tutorialStep, setTutorialStep] = useState<number | null>(tutorial ? 0 : null);
-  const tutorialTarget = tutorialStep === null ? undefined : TUTORIAL_STEPS[tutorialStep]?.target;
+  /** Set by the coach: it knows when a step must first ask for something else. */
+  const [coachTarget, setCoachTarget] = useState<TutorialTarget>();
+  const tutorialTarget = tutorialStep === null ? undefined : coachTarget;
   /** The button the tutorial is asking for stands out. */
   const target = (name: typeof tutorialTarget) => (name && tutorialTarget === name ? 'tutorial-target' : undefined);
   // Libera and 5 W fill an A4 sheet by themselves, unless the child chose
@@ -1060,6 +1062,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           index={tutorialStep}
           onNext={() => setTutorialStep((i) => (i === null || i + 1 >= TUTORIAL_STEPS.length ? null : i + 1))}
           onClose={() => setTutorialStep(null)}
+          onTarget={setCoachTarget}
         />
       )}
       {review.active ? (

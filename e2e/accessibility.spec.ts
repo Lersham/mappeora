@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures';
-import { newMap, node, nodes, toolbar } from './helpers';
+import { newMap, node, nodes, openCopy, toolbar } from './helpers';
 
 /** WCAG 2.2 A/AA problems that block or seriously hinder someone. */
 async function seriousProblems(page: import('@playwright/test').Page) {
@@ -13,6 +13,15 @@ async function seriousProblems(page: import('@playwright/test').Page) {
 test.describe('Accessibilità (axe-core)', () => {
   test('schermata iniziale', async ({ page }) => {
     await page.goto('/');
+    expect(await seriousProblems(page)).toEqual([]);
+  });
+
+  test('schermata iniziale con tante mappe, la ricerca e «Annulla»', async ({ page }) => {
+    await openCopy(page, ['Uno', 'Due', 'Tre', 'Quattro', 'Cinque', 'Sei', 'Sette', 'Otto']);
+    await page.getByRole('searchbox', { name: 'Cerca una mappa' }).fill('nulla');
+    expect(await seriousProblems(page)).toEqual([]);
+    await page.getByRole('searchbox', { name: 'Cerca una mappa' }).fill('');
+    await page.getByRole('button', { name: 'Cancella Otto' }).click();
     expect(await seriousProblems(page)).toEqual([]);
   });
 

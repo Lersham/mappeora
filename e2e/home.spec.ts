@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures';
-import { addConcept, newMap, node, nodes, toolbar, type TemplateName } from './helpers';
+import { test, expect, say } from './fixtures';
+import { addConcept, mascot, newMap, node, nodes, openCopy, toolbar, type TemplateName } from './helpers';
 
 test.describe('Schermata iniziale', () => {
   const templates: [TemplateName, number][] = [
@@ -97,13 +97,81 @@ test.describe('Schermata iniziale', () => {
     await expect(page.locator('.map-title')).toHaveText(['Le piante (qui) (copia)', 'Le piante (altra finestra)']);
   });
 
-  test('cancella una mappa dopo la conferma', async ({ page }) => {
+  test('cancella una mappa senza chiedere; «Annulla», al suo posto, la rimette', async ({ page }) => {
+    await newMap(page, 'Prima');
     await newMap(page, 'Da cancellare');
     await page.getByRole('button', { name: 'Mappe' }).click();
-    page.once('dialog', (d) => void d.accept());
     await page.getByRole('button', { name: 'Cancella Da cancellare' }).click();
+    // No browser «OK / Annulla»: the map is gone, and where it was...
+    await expect(page.locator('.map-title')).toHaveText(['Prima']);
+    const undo = page.getByRole('button', { name: 'Annulla' });
+    await expect(undo).toHaveAccessibleDescription('Hai cancellato «Da cancellare».');
+    await expect(undo).toBeFocused();
+    await expect(page.locator('.map-list > li').first()).toHaveClass('map-removed');
+    // ...«Annulla» brings it back, in its place, with the focus on it.
+    await undo.click();
+    await expect(page.locator('.map-title')).toHaveText(['Da cancellare', 'Prima']);
+    await expect(page.getByRole('button', { name: /^Da cancellare/ })).toBeFocused();
+    await expect(page.locator('.map-removed')).toHaveCount(0);
+
+    // Leaving the screen makes it final.
+    await page.getByRole('button', { name: 'Cancella Da cancellare' }).click();
+    await page.getByRole('button', { name: 'Cancella Prima' }).click();
     await expect(page.locator('.map-card')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Annulla' })).toHaveAccessibleDescription('Hai cancellato «Prima».');
+    await expect(page.getByText('Non hai ancora mappe')).toHaveCount(0);
+    await page.reload();
     await expect(page.getByText('Non hai ancora mappe')).toBeVisible();
+    await mascot(page.locator('.empty'), 'indica');
+    await expect(page.locator('.map-removed')).toHaveCount(0);
+  });
+
+  test('con tante mappe: le ultime 5, «Tutte le mie mappe» e la ricerca', async ({ page }) => {
+    // Oldest first.
+    await openCopy(page, ['Le stagioni', 'Il vulcano', 'Perché piove?', 'Gli animali della savana', 'La Rivoluzione francese', 'Il ciclo dell’acqua', 'I pianeti', 'Le frazioni']);
+
+    // The latest five; the others behind one button.
+    await expect(page.locator('.map-title')).toHaveText(['Le frazioni', 'I pianeti', 'Il ciclo dell’acqua', 'La Rivoluzione francese', 'Gli animali della savana']);
+    const more = page.getByRole('button', { name: 'Tutte le mie mappe (8)' });
+    await expect(more).toBeVisible();
+
+    // The search looks in all of them, the way a child types: no accents, plural.
+    const search = page.getByRole('searchbox', { name: 'Cerca una mappa' });
+    await search.fill('vulcani');
+    await expect(page.locator('.map-title')).toHaveText(['Il vulcano']);
+    await expect(search).toHaveAccessibleDescription('Ho trovato 1 mappa.');
+    await expect(more).toHaveCount(0);
+    const feedback = page.locator('.map-search-feedback');
+    await expect(feedback.locator('.mascot')).toHaveCount(0);
+    await search.fill('perche');
+    await expect(page.locator('.map-title')).toHaveText(['Perché piove?']);
+    await search.fill('dinosauri');
+    await expect(page.locator('.map-card')).toHaveCount(0);
+    await expect(page.getByText('Non trovo mappe con «dinosauri» nel titolo.')).toBeVisible();
+    await mascot(feedback, 'cerca');
+    // ...or by voice.
+    await say(page, 'Le stagioni');
+    await page.getByRole('button', { name: 'Cerca con la voce' }).click();
+    await expect(search).toHaveValue('Le stagioni');
+    await expect(page.locator('.map-title')).toHaveText(['Le stagioni']);
+    await expect(feedback.locator('.mascot')).toHaveCount(0);
+    await search.fill('');
+    await expect(page.locator('.map-card')).toHaveCount(5);
+
+    // «Tutte le mie mappe»: all of them, the focus on the first one that was hidden.
+    await more.click();
+    await expect(page.locator('.map-card')).toHaveCount(8);
+    await expect(page.getByRole('button', { name: /^Perché piove\?/ })).toBeFocused();
+    await expect(more).toHaveCount(0);
+
+    // Down to six maps, nothing is hidden and there is nothing to search.
+    await page.getByRole('button', { name: 'Cancella Le frazioni' }).click();
+    await page.getByRole('button', { name: 'Cancella I pianeti' }).click();
+    await expect(page.locator('.map-card')).toHaveCount(6);
+    await expect(search).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator('.map-card')).toHaveCount(6);
+    await expect(page.getByRole('button', { name: /^Tutte le mie mappe/ })).toHaveCount(0);
   });
 
   test('apre la mappa di esempio sulla Rivoluzione francese', async ({ page }) => {

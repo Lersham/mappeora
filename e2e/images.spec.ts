@@ -71,6 +71,38 @@ test.describe('Immagini nei concetti', () => {
     await expect(node(page, 'Il Colosseo').locator('.concept-photo')).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
   });
 
+  test('l’immagine arriva da sola anche se il telefono dà il focus alla pagina un attimo dopo', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'gli appunti del browser si provano sul computer');
+    await newMap(page, 'La Luna');
+    await node(page, 'La Luna').click();
+    await toolbar(page, 'Immagine');
+    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    // As on Android: the page shows again before it has the focus, and
+    // until then the clipboard can't be read.
+    await page.evaluate(() => {
+      const clipboard = navigator.clipboard;
+      const read = clipboard.read.bind(clipboard);
+      const w = window as unknown as { unfocused: boolean; tries: number };
+      Object.assign(w, { unfocused: true, tries: 0 });
+      Object.defineProperty(clipboard, 'read', {
+        value: () => (w.tries++, w.unfocused ? Promise.reject(new DOMException('Document is not focused.', 'NotAllowedError')) : read()),
+      });
+    });
+    const popup = page.waitForEvent('popup');
+    await page.getByRole('button', { name: 'Cerca su Google' }).click();
+    await page.evaluate(async (b64) => {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': new Blob([bytes], { type: 'image/png' }) })]);
+    }, PNG_1PX.toString('base64'));
+    await (await popup).close();
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect.poll(() => page.evaluate(() => (window as unknown as { tries: number }).tries)).toBeGreaterThan(0);
+    // The focus comes, with no event of its own: the picture still arrives.
+    await page.evaluate(() => ((window as unknown as { unfocused: boolean }).unfocused = false));
+    await expect(node(page, 'La Luna').locator('.concept-photo')).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
+    await expect(page.getByRole('button', { name: 'Incolla immagine' })).toHaveCount(0);
+  });
+
   test('tornando da Google senza un’immagine copiata indica «Incolla immagine»', async ({ page, isMobile }) => {
     test.skip(isMobile, 'gli appunti del browser si provano sul computer');
     await newMap(page, 'Il Colosseo');
