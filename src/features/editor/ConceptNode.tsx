@@ -283,7 +283,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
                   commit();
                 }
                 if (e.key === 'Escape') setEditing(false);
-                // As in the «Scaletta»: Tab goes on with a concept under this
+                // As in an outline: Tab goes on with a concept under this
                 // one, Maiusc+Tab with one next to it.
                 if (e.key === 'Tab' && data.actions) {
                   e.preventDefault();

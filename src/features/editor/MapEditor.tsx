@@ -26,7 +26,6 @@ import { NodeStyleDialog } from './NodeStyleDialog';
 import { LinkWordDialog } from './LinkWordDialog';
 import { ExportDialog, type ExportChoice } from './ExportDialog';
 import { ReviewBar } from './ReviewBar';
-import { OutlineDialog } from './OutlineDialog';
 import { PhotoTextDialog } from '../ocr/PhotoTextDialog';
 import { BigButton } from '../../components/BigButton';
 import { Dialog } from '../../components/Dialog';
@@ -82,7 +81,6 @@ const edgeTypes: EdgeTypes = { bus: BusEdge, free: FreeEdge, tree: TreeEdge };
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
 /** The tools that may end up in «Altro», by key, and the tutorial's name for each. */
 const TOOL_TARGETS: Record<string, TutorialTarget> = {
-  outline: 'scaletta',
   photo: 'libro',
   layout: 'sposta',
   tidy: 'riordina',
@@ -108,7 +106,6 @@ type DialogState =
   | { kind: 'export' }
   | { kind: 'review' }
   | { kind: 'photo' }
-  | { kind: 'outline' }
   | { kind: 'more' }
   | { kind: 'delete'; id: string }
   | null;
@@ -174,8 +171,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     window.clearTimeout(noticeTimer.current);
     noticeTimer.current = window.setTimeout(() => setNotice((now) => (now === text ? null : now)), 5000);
   };
-  /** «Collega» or «Cambia ramo»: the next concept tapped is the other end. */
-  const [picking, setPicking] = useState<{ kind: 'link' | 'branch'; from: string } | null>(null);
+  /** «Cambia ramo»: the next concept tapped is the one to put it under. */
+  const [picking, setPicking] = useState<{ from: string } | null>(null);
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
   const [tutorialStep, setTutorialStep] = useState<number | null>(tutorial ? 0 : null);
   /** The tutorial coloured the map only to show how: it ends white, as it began («Annulla» brings the colours back). */
@@ -193,7 +190,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const markUsed = useCallback((tool: TutorialTool) => setUsed((u) => ({ ...u, [tool]: (u[tool] ?? 0) + 1 })), []);
   useEffect(() => {
     const kind = dialog?.kind;
-    if (kind === 'outline' || kind === 'photo' || kind === 'review' || kind === 'export' || kind === 'style') markUsed(kind);
+    if (kind === 'photo' || kind === 'review' || kind === 'export' || kind === 'style') markUsed(kind);
   }, [dialog?.kind]);
   // Libera and 5 W fill an A4 sheet by themselves, unless the child chose
   // to place the concepts by hand.
@@ -473,7 +470,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     if (page) void setViewport(page);
   };
 
-  /** After «Riordina», «Scaletta», a review: the page view if the map needs it, else all of it. */
+  /** After «Riordina», a review: the page view if the map needs it, else all of it. */
   const showMap = (delay: number) =>
     setTimeout(() => {
       const page = pageView();
@@ -647,8 +644,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   /**
    * Top-down layout (elkjs) of the concepts on screen. `followUp`: it
-   * completes the step just made («Dal libro», «Scaletta»), so one «Annulla»
-   * undoes both.
+   * completes the step just made («Dal libro»), so one «Annulla» undoes
+   * both.
    */
   const arrange = async ({ followUp = false } = {}) => {
     setArranging(true);
@@ -676,7 +673,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     }
   };
 
-  /** After «Dal libro» or «Scaletta»: a sheet orders itself, a map placed by hand stays so. */
+  /** After «Dal libro»: a sheet orders itself, a map placed by hand stays so. */
   const afterBulkEdit = () => (sheetTemplate ? showMap(150) : setTimeout(() => void arrange({ followUp: true }), 150));
 
   const dictate = async () => {
@@ -869,31 +866,23 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const editing = !review.active;
 
   const labelOf = (id: string) => useMapStore.getState().map?.nodes.find((n) => n.id === id)?.label ?? '';
-  /** The other end of «Collega» or «Cambia ramo», tapped on the map. */
+  /** Where «Cambia ramo» puts the concept: the one tapped on the map. */
   const pickTarget = (id: string) => {
     const pick = picking;
     setPicking(null);
     if (!pick || id === pick.from) return;
     const current = useMapStore.getState().map;
     if (!current) return;
-    if (pick.kind === 'link') {
-      if (current.edges.some((e) => (e.source === pick.from && e.target === id) || (e.source === id && e.target === pick.from))) {
-        return showNotice(`«${labelOf(pick.from)}» e «${labelOf(id)}» sono già collegati.`);
-      }
-      actions.connect(pick.from, id);
-      showNotice('Collegati. Tocca il «+» sulla freccia per scrivere come sono legati.');
-    } else {
-      const why = cannotMoveUnder(current, pick.from, id);
-      if (why === 'below') return showNotice(`«${labelOf(id)}» è nel ramo di «${labelOf(pick.from)}»: scegli un concetto fuori dal ramo.`);
-      if (why === 'already') return showNotice(`«${labelOf(pick.from)}» è già sotto «${labelOf(id)}».`);
-      actions.moveUnder(pick.from, id);
-    }
+    const why = cannotMoveUnder(current, pick.from, id);
+    if (why === 'below') return showNotice(`«${labelOf(id)}» è nel ramo di «${labelOf(pick.from)}»: scegli un concetto fuori dal ramo.`);
+    if (why === 'already') return showNotice(`«${labelOf(pick.from)}» è già sotto «${labelOf(id)}».`);
+    actions.moveUnder(pick.from, id);
     // After React Flow has selected the concept tapped: the one the child
     // started from stays in hand.
     setTimeout(() => actions.select(pick.from));
     reveal(pick.from);
   };
-  // Esc, or the back button, puts «Collega» and «Cambia ramo» away.
+  // Esc, or the back button, puts «Cambia ramo» away.
   useBackHandler(() => setPicking(null), picking !== null);
   useEffect(() => {
     if (!picking) return;
@@ -934,15 +923,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // Where they all fit they are in groups ('group-start'): what goes into the map,
   // then where it stays on the sheet.
   const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
-    {
-      key: 'outline',
-      icon: 'outline',
-      label: 'Scaletta',
-      title: 'Scrivi la mappa come un elenco puntato',
-      className: 'group-start',
-      onClick: () => setDialog({ kind: 'outline' }),
-    },
-    { key: 'photo', icon: 'camera', label: 'Dal libro', onClick: () => setDialog({ kind: 'photo' }) },
+    { key: 'photo', icon: 'camera', label: 'Dal libro', className: 'group-start', onClick: () => setDialog({ kind: 'photo' }) },
     ...(sheetMode
       ? [
           {
@@ -1080,7 +1061,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           }}
           onPaneClick={() => {
             cancelCloser();
-            // Tapping the empty map puts «Collega» or «Cambia ramo» away, nothing else.
+            // Tapping the empty map puts «Cambia ramo» away, nothing else.
             if (picking) return setPicking(null);
             actions.select(null);
           }}
@@ -1102,7 +1083,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onConnectEnd={() => setConnecting(false)}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
           nodesDraggable={editing && !locked}
-          // A finger draws lines with «Collega».
+          // Lines are drawn with the mouse only: on a touch screen a drag moves the concept.
           nodesConnectable={editing && !TOUCH}
           elementsSelectable={editing}
           // Our own handler (above): one undo step, and never behind a dialog.
@@ -1148,8 +1129,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           <div className="selection-bar" role="toolbar" aria-label="Concetto scelto">
             <BigButton icon="edit" label="Nome" onClick={() => useMapStore.getState().startEditing(selectedNode.id)} />
             <BigButton icon="image" label="Immagine" className={target('immagine')} onClick={() => setDialog({ kind: 'style' })} />
-            <BigButton icon="link" label="Collega" className={target('collega')} onClick={() => setPicking({ kind: 'link', from: selectedNode.id })} />
-            <BigButton icon="branch" label="Cambia ramo" className={target('cambia-ramo')} onClick={() => setPicking({ kind: 'branch', from: selectedNode.id })} />
+            <BigButton icon="branch" label="Cambia ramo" className={target('cambia-ramo')} onClick={() => setPicking({ from: selectedNode.id })} />
             <BigButton icon="trash" label="Elimina" variant="danger" className={target('elimina')} onClick={() => deleteConcept(selectedNode.id)} />
           </div>
         )}
@@ -1173,11 +1153,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         )}
         {picking && (
           <div className="pick-banner" role="status">
-            <p>
-              {picking.kind === 'link'
-                ? `Tocca il concetto da collegare a «${labelOf(picking.from)}».`
-                : `Tocca il concetto sotto cui mettere «${labelOf(picking.from)}».`}
-            </p>
+            <p>{`Tocca il concetto sotto cui mettere «${labelOf(picking.from)}».`}</p>
             <button type="button" className="pick-banner-close" aria-label="Esci" title="Esci" onClick={() => setPicking(null)}>
               <Icon name="close" />
             </button>
@@ -1283,15 +1259,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       )}
       {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
-      {dialog?.kind === 'outline' && (
-        <OutlineDialog
-          onClose={() => setDialog(null)}
-          onDone={() => {
-            setDialog(null);
-            afterBulkEdit();
-          }}
-        />
-      )}
       {dialog?.kind === 'more' && (
         <Dialog title="Altro" onClose={() => setDialog(null)} className="more-tools" sheet>
           <div className="more-grid">

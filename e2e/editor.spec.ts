@@ -213,7 +213,7 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
         .locator('.react-flow__handle:not(.handle-hidden)')
         .first()
         .evaluate((h) => getComputedStyle(h).opacity);
-    // On a touch screen lines are drawn with «Collega»: no dots at all.
+    // On a touch screen a drag moves the concept: no dots to draw lines.
     await expect.poll(() => handleOpacity('Vapore')).toBe(isMobile ? '0' : '1');
     await expect.poll(() => handleOpacity('Neve')).toBe('0');
   });
@@ -451,25 +451,14 @@ test.describe('Editor: la barra del concetto scelto', () => {
     await expect.poll(width).toBeCloseTo(before, 0);
   });
 
-  test('«Collega» e poi un altro concetto: nasce la freccia', async ({ page }) => {
-    await sampleMap(page);
-    const edges = await page.locator('.react-flow__edge').count();
-    await (await choose(page, 'Vapore')).getByRole('button', { name: 'Collega', exact: true }).click();
-    await expect(page.getByRole('status').filter({ hasText: 'Tocca il concetto da collegare a «Vapore»' })).toBeVisible();
-    await (await onScreen(page, node(page, 'Nuvole'))).click();
-    await expect(page.locator('.react-flow__edge')).toHaveCount(edges + 1);
-    await expect(link(page, 'Vapore', 'Nuvole')).toHaveCount(1);
-    await expect(page.locator('.pick-banner')).toHaveCount(0);
-  });
-
   test('la ✕, Esc o un tocco sulla mappa vuota lasciano perdere', async ({ page }) => {
     await sampleMap(page);
     const edges = await page.locator('.react-flow__edge').count();
     const bar = await choose(page, 'Vapore');
-    await bar.getByRole('button', { name: 'Collega', exact: true }).click();
+    await bar.getByRole('button', { name: 'Cambia ramo', exact: true }).click();
     await page.locator('.pick-banner').getByRole('button', { name: 'Esci' }).click();
     await expect(page.locator('.pick-banner')).toHaveCount(0);
-    await bar.getByRole('button', { name: 'Collega', exact: true }).click();
+    await bar.getByRole('button', { name: 'Cambia ramo', exact: true }).click();
     await page.keyboard.press('Escape');
     await expect(page.locator('.pick-banner')).toHaveCount(0);
     await expect(page.locator('.react-flow__edge')).toHaveCount(edges);

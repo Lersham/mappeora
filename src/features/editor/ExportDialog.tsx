@@ -3,6 +3,7 @@ import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
 import { OptionCard } from '../../components/OptionCard';
 import { isNative } from '../../services/platform';
+import { TOUCH } from '../../lib/touch';
 import type { PageCount, Paper } from '../../lib/pagePlan';
 
 export type ExportKind = 'pdf' | 'png' | 'file';
@@ -96,7 +97,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
 
       <div className="dialog-actions">
         <BigButton icon="close" label="Annulla" onClick={onClose} />
-        {kind === 'pdf' && !isNative() && <BigButton icon="print" label="Stampa" disabled={busy} onClick={() => run(true)} />}
+        {kind === 'pdf' && !isNative() && !TOUCH && <BigButton icon="print" label="Stampa" disabled={busy} onClick={() => run(true)} />}
         <BigButton
           icon={isNative() ? 'share' : 'save'}
           label={busy ? 'Preparo…' : isNative() ? 'Condividi' : 'Scarica'}

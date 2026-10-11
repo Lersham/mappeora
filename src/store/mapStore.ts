@@ -4,7 +4,6 @@ import type { ConceptMap, MapEdge, MapNode } from '../types/map';
 import { newId } from '../lib/id';
 import { DEFAULT_COLOR, branchColors } from '../lib/palette';
 import { collapseInfo } from '../lib/collapse';
-import { fromOutline, type OutlineRow } from '../lib/outline';
 import { moveUnder, removeBranch, removeLiftingChildren } from '../lib/branch';
 import { DEFAULT_SIZE } from '../lib/ladder';
 import { NEW_CONCEPT_LABEL } from '../lib/mapFactory';
@@ -48,8 +47,6 @@ interface MapState {
   connect(source: string, target: string): void;
   updateEdge(id: string, patch: Partial<Omit<MapEdge, 'id'>>): void;
   removeEdges(ids: string[]): void;
-  /** Rebuilds the map from the "scaletta" (see lib/outline.ts), as one undo step. */
-  applyOutline(rows: OutlineRow[]): void;
   setSize(id: string, size: Size): void;
 }
 
@@ -246,16 +243,6 @@ export const useMapStore = create<MapState>()(
         const gone = new Set(ids);
         set((s) => edit(s, (map) => (map.edges.some((e) => gone.has(e.id)) ? { edges: map.edges.filter((e) => !gone.has(e.id)) } : {})));
       },
-
-      applyOutline: (rows) =>
-        set((s) => {
-          const next = edit(s, (map) => {
-            const result = fromOutline(map, rows);
-            return result === map ? {} : result;
-          });
-          const gone = s.selectedId && !next.map?.nodes.some((n) => n.id === s.selectedId);
-          return gone ? { ...next, selectedId: null } : next;
-        }),
 
       setSize: (id, size) => set((s) => ({ sizes: { ...s.sizes, [id]: size } })),
     }),

@@ -64,28 +64,8 @@ describe('TUTORIAL_STEPS', () => {
     expect(done(at(pictured('☀️')), at(pictured('☀️')))).toBe(false);
   });
 
-  it('notices two concepts already there being linked, not a new concept', () => {
-    const done = step('Collega due idee');
-    const two = withChild('Luce');
-    const three: ConceptMap = { ...two, nodes: [...two.nodes, { id: 'c', label: 'Estate', position: { x: 0, y: 200 } }], edges: [...two.edges, { id: 'f', source: root.id, target: 'c' }] };
-    const linked: ConceptMap = { ...three, edges: [...three.edges, { id: 'g', source: 'c', target: 'b' }] };
-    expect(done(at(linked), at(three))).toBe(true);
-    expect(done(at(three), at(two))).toBe(false); // a new concept, with its own line
-    expect(done(at(three), at(three))).toBe(false);
-    // Only two concepts, already linked: a new one first, then the line.
-    expect(done(at(linked), at(two))).toBe(true);
-  });
-
-  it('asks for a new concept first when every concept is already linked', () => {
-    const linking = TUTORIAL_STEPS.find((s) => s.title === 'Collega due idee')!;
-    const two = withChild('Luna');
-    expect(guideFor(linking, two).target).toBe('concetto');
-    expect(guideFor(linking, two).text).toContain('«Concetto»');
-    expect(guideFor(linking, first).target).toBe('concetto');
-    const three: ConceptMap = { ...two, nodes: [...two.nodes, { id: 'c', label: 'Stelle', position: { x: 0, y: 200 } }], edges: [...two.edges, { id: 'f', source: 'b', target: 'c' }] };
-    expect(guideFor(linking, three)).toMatchObject({ text: linking.text, target: 'collega' });
-    // The other steps say the same thing on any map.
-    expect(guideFor(TUTORIAL_STEPS[0], two).text).toBe(TUTORIAL_STEPS[0].text);
+  it('says the same thing on any map, for a step that needs nothing first', () => {
+    expect(guideFor(TUTORIAL_STEPS[0], withChild('Luna')).text).toBe(TUTORIAL_STEPS[0].text);
   });
 
   it('notices a line taken away, not a concept deleted or moved', () => {
@@ -109,7 +89,7 @@ describe('TUTORIAL_STEPS', () => {
     expect(guideFor(taking, withChild('Luce')).target).toBeUndefined();
   });
 
-  it('notices the line put back, by «Annulla» or by «Collega»', () => {
+  it('notices the line put back by «Annulla»', () => {
     const done = step('Rimetti la freccia');
     const two = withChild('Luce');
     const apart: ConceptMap = { ...two, edges: [] };
@@ -176,7 +156,7 @@ describe('TUTORIAL_STEPS', () => {
 
   it('notices each tool opened since the step began, not before', () => {
     const tools = {
-      'La scaletta': 'outline',
+      'Tocca, ritocca, tieni premuto': 'style',
       'Dal libro': 'photo',
       Ripassa: 'review',
       'Stampa e manda': 'export',
@@ -187,12 +167,12 @@ describe('TUTORIAL_STEPS', () => {
       const done = step(title);
       expect(done(at(first, false, { [tool]: 1 }), at(first))).toBe(true);
       expect(done(at(first, false, { [tool]: 1 }), at(first, false, { [tool]: 1 }))).toBe(false);
-      expect(done(at(first, false, { outline: 1, photo: 1, review: 1, export: 1, settings: 1, focus: 1, [tool]: 0 }), at(first))).toBe(false);
+      expect(done(at(first, false, { style: 1, photo: 1, review: 1, export: 1, settings: 1, focus: 1, [tool]: 0 }), at(first))).toBe(false);
     }
   });
 
   it('says where every tool is, also when it is in «Altro»', () => {
-    for (const title of ['Metti i concetti dove vuoi', 'Bianca o colorata', 'La scaletta', 'Dal libro', 'Stampa e manda', 'Come la vedi']) {
+    for (const title of ['Metti i concetti dove vuoi', 'Bianca o colorata', 'Dal libro', 'Stampa e manda', 'Come la vedi']) {
       expect(TUTORIAL_STEPS.find((s) => s.title === title)?.text).toContain('«Altro»');
     }
   });

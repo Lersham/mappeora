@@ -29,7 +29,7 @@ test.describe('Impara facendo', () => {
     };
 
     await expect(coach.getByRole('heading', { name: 'L’idea principale' })).toBeVisible();
-    await expect(coach).toContainText('Passo 1 di 23');
+    await expect(coach).toContainText('Passo 1 di 21');
     await mascot(coach, 'indica');
     await expect(page.locator('.title-input')).toHaveValue('La mia prima mappa');
     // Until the step is done there is only «Salta».
@@ -83,28 +83,21 @@ test.describe('Impara facendo', () => {
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('sole');
     await page.locator('.illustration-tile').first().click();
     await expect(node(page, 'Estate').locator('.concept-illustration, .concept-emoji')).toBeVisible();
-    await next('Collega due idee');
-
-    // «Estate» is still the concept in hand: «Collega», then another concept.
-    const collega = page.getByRole('toolbar', { name: 'Concetto scelto' }).getByRole('button', { name: 'Collega', exact: true });
-    await expect(collega).toHaveClass(/tutorial-target/);
-    await collega.click();
-    await (await onScreen(page, node(page, 'Luce e calore'))).click();
     await next('Togli una freccia');
 
-    // The line just drawn goes; both concepts stay.
+    // «Estate»'s line goes; both concepts stay.
     const lines = page.locator('.react-flow__edge');
-    await expect(lines).toHaveCount(3);
-    await tapLink(page, 2);
-    await page.getByRole('dialog', { name: 'Parola di collegamento' }).getByRole('button', { name: 'Togli freccia' }).click();
     await expect(lines).toHaveCount(2);
+    await tapLink(page, 1);
+    await page.getByRole('dialog', { name: 'Parola di collegamento' }).getByRole('button', { name: 'Togli freccia' }).click();
+    await expect(lines).toHaveCount(1);
     await expect(nodes(page)).toHaveCount(3);
     await next('Rimetti la freccia');
 
     const undo = page.locator('.topbar').getByRole('button', { name: 'Annulla', exact: true });
     await expect(undo).toHaveClass(/tutorial-target/);
     await undo.click();
-    await expect(lines).toHaveCount(3);
+    await expect(lines).toHaveCount(2);
     await next('Cambia ramo');
     await expect(undo).not.toHaveClass(/tutorial-target/);
     // The other tools have a test of their own (below).
@@ -128,42 +121,10 @@ test.describe('Impara facendo', () => {
     const coach = page.getByRole('region', { name: 'Tutorial' });
     await coach.getByRole('button', { name: 'Salta' }).click();
     await expect(coach.getByRole('heading', { name: 'Un nuovo concetto' })).toBeVisible();
-    await expect(coach).toContainText('Passo 2 di 23');
+    await expect(coach).toContainText('Passo 2 di 21');
     await coach.getByRole('button', { name: 'Chiudi' }).click();
     await expect(coach).toHaveCount(0);
     await expect(page.locator('.tutorial-target')).toHaveCount(0);
-  });
-
-  test('«Collega due idee» con i riquadri già tutti collegati chiede prima un concetto nuovo', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Impara facendo' }).click();
-    const coach = page.getByRole('region', { name: 'Tutorial' });
-    const bar = page.getByRole('navigation', { name: 'Strumenti' });
-    const tools = page.getByRole('toolbar', { name: 'Concetto scelto' });
-    await coach.getByRole('button', { name: 'Salta' }).click();
-    // Only one concept, then «Salta» up to linking (no «Detta»): the two are already linked.
-    await addConcept(page, 'La mia prima mappa', 'Luna');
-    while (!(await coach.getByRole('heading', { name: 'Collega due idee' }).isVisible())) {
-      await coach.getByRole('button', { name: /^(Avanti|Salta)$/ }).click();
-    }
-    await expect(coach).toContainText('già tutti collegati');
-    await expect(bar.getByRole('button', { name: 'Concetto', exact: true })).toHaveClass(/tutorial-target/);
-    await coach.getByRole('button', { name: 'Ascolta' }).click();
-    await expect.poll(() => spoken(page)).toContainEqual(expect.stringContaining('già tutti collegati'));
-
-    // A new concept: now there is something to link.
-    await addConcept(page, 'Luna', 'Le stelle');
-    await expect(coach).toContainText('non è ancora unito');
-    await expect(bar.getByRole('button', { name: 'Concetto', exact: true })).not.toHaveClass(/tutorial-target/);
-    // «Le stelle» hangs from «Luna»: the main idea is still free to link to it.
-    await (await onScreen(page, node(page, 'La mia prima mappa'))).click();
-    await expect(tools.getByRole('button', { name: 'Collega', exact: true })).toHaveClass(/tutorial-target/);
-    await tools.getByRole('button', { name: 'Collega', exact: true }).click();
-    await (await onScreen(page, node(page, 'Le stelle'))).click();
-    await expect(coach.getByRole('status')).toContainText('Ben fatto');
-    // All three are linked now, but the step is done: it doesn't ask for another concept.
-    await expect(coach).not.toContainText('già tutti collegati');
-    await expect(bar.getByRole('button', { name: 'Concetto', exact: true })).not.toHaveClass(/tutorial-target/);
   });
 
   test('poi ogni altro pulsante, detto e indicato: anche quando è dentro «Altro»', async ({ page }) => {
@@ -254,10 +215,6 @@ test.describe('Impara facendo', () => {
     await expect(tools.getByRole('button', { name: 'Elimina', exact: true })).toHaveClass(/tutorial-target/);
     await tools.getByRole('button', { name: 'Elimina', exact: true }).click();
     await expect(node(page, 'Estate')).toHaveCount(0);
-    await next('La scaletta');
-
-    await useTool('Scaletta');
-    await page.getByRole('dialog', { name: 'Scaletta' }).getByRole('button', { name: 'Annulla' }).click();
     await next('Dal libro');
 
     await useTool('Dal libro');

@@ -87,20 +87,4 @@ test.describe('Tastiera', () => {
     await dialog.getByRole('button', { name: 'Fatto' }).click();
     await expect(page.getByRole('group', { name: /^Collegamento da «Il sistema solare» a .*: ha$/ })).toHaveCount(1);
   });
-
-  test('Scaletta: Esc dopo aver scritto chiede prima di perdere le righe', async ({ page }) => {
-    await newMap(page, 'Le piante');
-    await toolbar(page, 'Scaletta');
-    const outline = page.getByRole('dialog', { name: 'Scaletta' });
-    await outline.getByRole('button', { name: 'Nuova riga', exact: true }).click();
-    await page.keyboard.type('Radici');
-    page.once('dialog', (d) => void d.dismiss());
-    await page.keyboard.press('Escape');
-    await expect(outline).toBeVisible();
-    await expect(outline.locator('.outline-input').nth(1)).toHaveValue('Radici');
-    page.once('dialog', (d) => void d.accept());
-    await page.keyboard.press('Escape');
-    await expect(outline).toHaveCount(0);
-    await expect(nodes(page)).toHaveCount(1);
-  });
 });
