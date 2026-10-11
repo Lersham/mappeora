@@ -931,7 +931,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         </label>
         {editing ? (
           <>
-            <BigButton icon="undo" label="Annulla" aria-label="Annulla" title="Annulla" disabled={!canUndo} onClick={() => mapHistory().undo()} />
+            <BigButton
+              icon="undo"
+              label="Annulla"
+              aria-label="Annulla"
+              title="Annulla"
+              className={target('annulla')}
+              disabled={!canUndo}
+              onClick={() => mapHistory().undo()}
+            />
             <BigButton icon="redo" label="Ripeti" aria-label="Ripeti" title="Ripeti" disabled={!canRedo} onClick={() => mapHistory().redo()} />
             {mapTools.map(({ key, ...t }) => (
               <BigButton key={key} {...t} className={`topbar-map${key === 'save' ? ' group-start' : ''}`} />

@@ -2240,6 +2240,7 @@ textarea {
   }
 }
 /* The button the tutorial asks for. */
+.topbar .tutorial-target,
 .toolbar .tutorial-target,
 .selection-bar .tutorial-target {
   outline: 4px solid var(--primary);
@@ -2252,6 +2253,7 @@ textarea {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .topbar .tutorial-target,
   .toolbar .tutorial-target,
   .selection-bar .tutorial-target {
     animation: none;

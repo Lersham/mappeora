@@ -14,7 +14,7 @@ test.describe('Impara facendo', () => {
     };
 
     await expect(coach.getByRole('heading', { name: 'L’idea principale' })).toBeVisible();
-    await expect(coach).toContainText('Passo 1 di 9');
+    await expect(coach).toContainText('Passo 1 di 11');
     await mascot(coach, 'indica');
     await expect(page.locator('.title-input')).toHaveValue('La mia prima mappa');
     // Until the step is done there is only «Salta».
@@ -65,7 +65,23 @@ test.describe('Impara facendo', () => {
     await expect(collega).toHaveClass(/tutorial-target/);
     await collega.click();
     await (await onScreen(page, node(page, 'Luce e calore'))).click();
+    await next('Togli una freccia');
+
+    // The line just drawn goes; both concepts stay.
+    const lines = page.locator('.react-flow__edge');
+    await expect(lines).toHaveCount(3);
+    await tapLink(page, 2);
+    await page.getByRole('dialog', { name: 'Parola di collegamento' }).getByRole('button', { name: 'Togli freccia' }).click();
+    await expect(lines).toHaveCount(2);
+    await expect(nodes(page)).toHaveCount(3);
+    await next('Rimetti la freccia');
+
+    const undo = page.locator('.topbar').getByRole('button', { name: 'Annulla', exact: true });
+    await expect(undo).toHaveClass(/tutorial-target/);
+    await undo.click();
+    await expect(lines).toHaveCount(3);
     await next('Ce l’hai fatta!');
+    await expect(undo).not.toHaveClass(/tutorial-target/);
 
     await expect(coach.getByRole('button', { name: 'Chiudi' })).toHaveCount(0);
     await coach.getByRole('button', { name: 'Fine' }).click();
@@ -83,7 +99,7 @@ test.describe('Impara facendo', () => {
     const coach = page.getByRole('region', { name: 'Tutorial' });
     await coach.getByRole('button', { name: 'Salta' }).click();
     await expect(coach.getByRole('heading', { name: 'Un nuovo concetto' })).toBeVisible();
-    await expect(coach).toContainText('Passo 2 di 9');
+    await expect(coach).toContainText('Passo 2 di 11');
     await coach.getByRole('button', { name: 'Chiudi' }).click();
     await expect(coach).toHaveCount(0);
     await expect(page.locator('.tutorial-target')).toHaveCount(0);

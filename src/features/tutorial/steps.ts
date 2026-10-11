@@ -5,7 +5,7 @@ import { NEW_CONCEPT_LABEL } from '../../lib/mapFactory';
 export const TUTORIAL_TITLE = 'La mia prima mappa';
 
 /** The toolbar button a step asks for: it is highlighted. */
-export type TutorialTarget = 'concetto' | 'detta' | 'leggi' | 'immagine' | 'collega';
+export type TutorialTarget = 'concetto' | 'detta' | 'leggi' | 'immagine' | 'collega' | 'annulla';
 
 /** What the child has done so far, as the tutorial sees it. */
 export interface TutorialProgress {
@@ -34,6 +34,11 @@ function allLinked(map: ConceptMap): boolean {
   const pairs = new Set(map.edges.map((e) => [e.source, e.target].sort().join(' ')));
   const n = map.nodes.length;
   return pairs.size >= (n * (n - 1)) / 2;
+}
+
+/** Lines drawn (> 0) or taken away (< 0) since `start`, leaving out the ones that come and go with a concept. */
+function linesChanged(now: TutorialProgress, start: TutorialProgress): number {
+  return now.map.edges.length - start.map.edges.length - (now.map.nodes.length - start.map.nodes.length);
 }
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
@@ -94,8 +99,27 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
           }
         : undefined,
     // A new concept comes with its own line: only a line more than that counts.
+    done: (now, start) => linesChanged(now, start) > 0,
+  },
+  {
+    title: 'Togli una freccia',
+    text: 'Una freccia sbagliata si toglie: tocca il «+» sulla freccia (o la freccia stessa) e premi «Togli freccia». I due riquadri restano al loro posto.',
+    first: (map) =>
+      map.edges.length
+        ? undefined
+        : {
+            text: 'Qui non ci sono ancora frecce. Premi «Concetto»: nasce un riquadro, già unito da una freccia. Poi ti dico come toglierla.',
+            target: 'concetto',
+          },
+    // Not a concept deleted with its lines, nor one moved under another («Cambia ramo»).
     done: (now, start) =>
-      now.map.edges.length - start.map.edges.length > now.map.nodes.length - start.map.nodes.length,
+      linesChanged(now, start) < 0 && start.map.nodes.every((s) => now.map.nodes.some((n) => n.id === s.id)),
+  },
+  {
+    title: 'Rimetti la freccia',
+    text: 'Hai cambiato idea? Premi «Annulla», in alto: la freccia che hai tolto torna al suo posto. «Annulla» disfa l’ultima cosa che hai fatto, qualunque sia, e «Ripeti», lì accanto, la rifà.',
+    target: 'annulla',
+    done: (now, start) => linesChanged(now, start) > 0,
   },
   {
     title: 'Ce l’hai fatta!',
