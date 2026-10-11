@@ -159,6 +159,22 @@ describe('mapStore', () => {
     expect(color(c)).toBe(color(a));
   });
 
+  it('turns every concept white in one undo step, and adds none when already white', () => {
+    const root = state().map!.nodes[0];
+    state().addChild(root.id, 'A');
+    state().addChild(root.id, 'B');
+    state().colorBranches();
+    expect(state().map!.nodes.some((n) => n.color !== '#ffffff')).toBe(true);
+    const steps = mapHistory().pastStates.length;
+    state().clearColors();
+    expect(state().map!.nodes.every((n) => n.color === '#ffffff')).toBe(true);
+    expect(mapHistory().pastStates).toHaveLength(steps + 1);
+    state().clearColors();
+    expect(mapHistory().pastStates).toHaveLength(steps + 1);
+    mapHistory().undo();
+    expect(state().map!.nodes.some((n) => n.color !== '#ffffff')).toBe(true);
+  });
+
   it('a concept added under a hidden parent opens the branch that hides it', () => {
     const root = state().map!.nodes[0];
     const a = state().addChild(root.id, 'A');

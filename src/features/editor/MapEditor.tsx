@@ -169,6 +169,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const [picking, setPicking] = useState<{ kind: 'link' | 'branch'; from: string } | null>(null);
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
   const [tutorialStep, setTutorialStep] = useState<number | null>(tutorial ? 0 : null);
+  /** The tutorial coloured the map only to show how: it ends white, as it began («Annulla» brings the colours back). */
+  const endTutorial = () => {
+    setTutorialStep(null);
+    actions.clearColors();
+  };
   /** Set by the coach: it knows when a step must first ask for something else. */
   const [coachTarget, setCoachTarget] = useState<TutorialTarget>();
   const tutorialTarget = tutorialStep === null ? undefined : coachTarget;
@@ -1128,8 +1133,10 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           index={tutorialStep}
           used={used}
           hidden={review.active}
-          onNext={() => setTutorialStep((i) => (i === null || i + 1 >= TUTORIAL_STEPS.length ? null : i + 1))}
-          onClose={() => setTutorialStep(null)}
+          onNext={() =>
+            tutorialStep + 1 >= TUTORIAL_STEPS.length ? endTutorial() : setTutorialStep(tutorialStep + 1)
+          }
+          onClose={endTutorial}
           onTarget={setCoachTarget}
         />
       )}

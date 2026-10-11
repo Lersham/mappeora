@@ -36,6 +36,8 @@ interface MapState {
   applyPositions(positions: Record<string, MapNode['position']>, opts?: { auto?: boolean }): void;
   /** «Riordina e colora»: each branch in its own colour, as one undo step. */
   colorBranches(): void;
+  /** Every concept back to white, in one step «Annulla» can undo. */
+  clearColors(): void;
   removeNodes(ids: string[]): void;
   /** Removes `id`; the concepts under it go up one level. False when it has no parent to give them to. */
   removeLiftingChildren(id: string): boolean;
@@ -163,6 +165,15 @@ export const useMapStore = create<MapState>()(
             if (!map.nodes.some((n) => colors[n.id] && colors[n.id] !== n.color)) return {};
             return { nodes: map.nodes.map((n) => (colors[n.id] ? { ...n, color: colors[n.id] } : n)) };
           }),
+        ),
+
+      clearColors: () =>
+        set((s) =>
+          edit(s, (map) =>
+            map.nodes.some((n) => (n.color ?? DEFAULT_COLOR) !== DEFAULT_COLOR)
+              ? { nodes: map.nodes.map((n) => ({ ...n, color: DEFAULT_COLOR })) }
+              : {},
+          ),
         ),
 
       applyPositions: (positions, opts = {}) =>

@@ -191,8 +191,14 @@ test.describe('Impara facendo', () => {
     await useTool('Sposta');
     await next('Bianca o colorata');
 
+    // One branch only («Estate» is under «Luce»): first a second one under the main idea.
+    await expect(coach).toContainText('servono almeno due rami');
+    await expect(bar.getByRole('button', { name: 'Concetto', exact: true })).toHaveClass(/tutorial-target/);
+    await addConcept(page, 'La mia prima mappa', 'Il giorno');
+    await expect(coach).toContainText('La tua mappa è bianca');
+
     // White, as it starts; «Riordina e colora» gives it colours.
-    for (const label of ['Luce', 'Estate']) expect(await background(label)).toBe('rgb(255, 255, 255)');
+    for (const label of ['Luce', 'Estate', 'Il giorno']) expect(await background(label)).toBe('rgb(255, 255, 255)');
     await useTool('Riordina');
     await page.getByRole('dialog', { name: 'Riordina' }).getByRole('button', { name: /^Riordina e colora/ }).click();
     await settled(page);
@@ -242,6 +248,14 @@ test.describe('Impara facendo', () => {
     await expect(coach).toBeHidden();
     await page.getByRole('button', { name: 'Mostra i pulsanti' }).click();
     await next('Ce l’hai fatta!');
+
+    // The colours were only to show how: the tutorial leaves the map white.
+    expect(await background('Luce')).not.toBe('rgb(255, 255, 255)');
+    await coach.getByRole('button', { name: 'Fine' }).click();
+    await expect(coach).toHaveCount(0);
+    for (const label of ['La mia prima mappa', 'Luce', 'Il giorno']) {
+      await expect.poll(() => background(label)).toBe('rgb(255, 255, 255)');
+    }
   });
 
   test('una mappa nuova qualsiasi non ha la guida', async ({ page }) => {

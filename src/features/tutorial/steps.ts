@@ -76,6 +76,26 @@ const needsTwo = (map: ConceptMap) =>
       }
     : undefined;
 
+/** The main idea: the oval, or else the first concept nothing points to. */
+function mainIdea(map: ConceptMap) {
+  const targets = new Set(map.edges.map((e) => e.target));
+  return map.nodes.find((n) => n.shape === 'ellisse') ?? map.nodes.find((n) => !targets.has(n.id)) ?? map.nodes[0];
+}
+
+/** Colours go by branch: with fewer than two under the main idea there is nothing to tell apart. */
+const needsTwoBranches = (map: ConceptMap) => {
+  const root = mainIdea(map);
+  if (!root) return undefined;
+  const { parent } = spanningTree(map);
+  const branches = map.nodes.filter((n) => parent.get(n.id) === root.id).length;
+  return branches >= 2
+    ? undefined
+    : {
+        text: `Per vedere i colori servono almeno due rami sotto l’idea principale. Tocca «${root.label}» per sceglierla, poi premi «Concetto», in basso, e scrivi un’idea nuova, per esempio «Il giorno». Poi ti dico come colorare.`,
+        target: 'concetto' as const,
+      };
+};
+
 /** Where to find a tool that may not fit in the bottom bar. */
 const IN_ALTRO = 'Se non lo vedi, è dentro «Altro», l’ultimo pulsante in basso a destra (quello con le tre righe).';
 const TOP_OR_ALTRO = 'È in alto a destra; sul telefono è dentro «Altro», l’ultimo pulsante in basso a destra (quello con le tre righe).';
@@ -190,6 +210,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'Bianca o colorata',
     text: `La tua mappa è bianca, come un foglio nuovo. Per colorarla premi «Riordina», in basso, e scegli «Riordina e colora»: ogni ramo prende un colore pastello, uguale per tutti i suoi concetti. «Riordina» da solo rimette la mappa in ordine e lascia i colori come sono. Non ti piace? Premi «Annulla». ${IN_ALTRO}`,
     target: 'riordina',
+    first: needsTwoBranches,
     done: (now, start) =>
       now.map.nodes.some((n) => {
         const s = start.map.nodes.find((x) => x.id === n.id);
@@ -254,6 +275,6 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Ce l’hai fatta!',
-    text: 'Ora conosci tutti i pulsanti. Il titolo, in alto, si cambia toccandolo. Con «Mappe», in alto a sinistra, torni all’elenco: la tua mappa è lì, salvata. Puoi rifare questo giro quando vuoi: nella pagina iniziale premi «Impara facendo».',
+    text: 'Ora conosci tutti i pulsanti. Il titolo, in alto, si cambia toccandolo. Con «Mappe», in alto a sinistra, torni all’elenco: la tua mappa è lì, salvata. Quando premi «Fine» i colori se ne vanno e la mappa torna bianca: per ricolorarla, «Riordina e colora». Puoi rifare questo giro quando vuoi: nella pagina iniziale premi «Impara facendo».',
   },
 ];

@@ -157,6 +157,17 @@ describe('TUTORIAL_STEPS', () => {
     }
   });
 
+  it('asks for two branches under the main idea before colouring', () => {
+    const colours = TUTORIAL_STEPS.find((s) => s.title === 'Bianca o colorata')!;
+    const one = withChild('Luce');
+    expect(guideFor(colours, one).target).toBe('concetto');
+    expect(guideFor(colours, one).text).toContain(`«${root.label}»`);
+    // «Estate» under «Luce»: three concepts, but still one branch.
+    const chain: ConceptMap = { ...three(), edges: [one.edges[0], { id: 'f', source: 'b', target: 'c' }] };
+    expect(guideFor(colours, chain).target).toBe('concetto');
+    expect(guideFor(colours, three()).target).toBe('riordina');
+  });
+
   it('notices a concept taken away', () => {
     const done = step('Togli un concetto');
     expect(done(at(withChild('Luce')), at(three()))).toBe(true);
