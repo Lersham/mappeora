@@ -41,7 +41,14 @@ export async function onScreen(page: Page, target: Locator): Promise<Locator> {
   const [box, canvas] = [await target.boundingBox(), await page.locator('.react-flow').boundingBox()];
   const inside = (b: typeof box) =>
     !!b && !!canvas && b.x >= canvas.x && b.y >= canvas.y && b.x + b.width <= canvas.x + canvas.width && b.y + b.height <= canvas.y + canvas.height;
-  if (!inside(box)) await showAll(page);
+  // Inside the canvas is not enough: the top bar floats over its upper edge.
+  const uncovered = async () =>
+    target.first().evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return !!hit && el.contains(hit);
+    });
+  if (!inside(box) || !(await uncovered())) await showAll(page);
   return target;
 }
 
