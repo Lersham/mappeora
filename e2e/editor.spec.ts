@@ -206,16 +206,11 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     ]);
     expect(colours.sort()).toEqual(['branch-0', 'branch-1', 'branch-2']);
 
+    // No dots to drag new lines, not even on the concept in hand.
     await (await onScreen(page, node(page, 'Vapore'))).click();
-    const handleOpacity = (label: string) =>
-      page
-        .locator('.react-flow__node', { has: page.locator('.concept-label', { hasText: label }) })
-        .locator('.react-flow__handle:not(.handle-hidden)')
-        .first()
-        .evaluate((h) => getComputedStyle(h).opacity);
-    // On a touch screen a drag moves the concept: no dots to draw lines.
-    await expect.poll(() => handleOpacity('Vapore')).toBe(isMobile ? '0' : '1');
-    await expect.poll(() => handleOpacity('Neve')).toBe('0');
+    await node(page, 'Vapore').hover();
+    const visible = await page.locator('.react-flow__handle').evaluateAll((hs) => hs.filter((h) => getComputedStyle(h).opacity !== '0').length);
+    expect(visible).toBe(0);
   });
 
   test('i concetti nascono bianchi; «Colora i rami», dopo «Riordina», dà un colore pastello a ogni ramo', async ({ page }) => {

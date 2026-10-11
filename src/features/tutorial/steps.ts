@@ -221,7 +221,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Dal libro',
-    text: `Premi «Dal libro», in basso: fotografi una pagina, MappAmi legge il testo e tu tocchi le parole importanti, che diventano concetti della mappa. Se ora non hai un libro, guarda e premi «Chiudi». ${IN_ALTRO}`,
+    text: `Premi «Dal libro», in basso: fotografi una pagina e MappAmi legge il testo. Tocca le parole importanti, o passaci sopra il dito come un evidenziatore, anche andando a capo: diventano concetti della mappa. Sotto li vedi: con la catena ne unisci due, con le forbici ne dividi uno. La pagina resta lì per la volta dopo. Se ora non hai un libro, guarda e premi «Chiudi». ${IN_ALTRO}`,
     target: 'libro',
     done: opened('photo'),
   },

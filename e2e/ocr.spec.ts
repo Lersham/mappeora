@@ -61,6 +61,33 @@ test('dal testo della foto si scelgono le parole: col dito come un evidenziatore
   for (const label of ['Fotosintesi', 'Ossigeno', 'Clorofilla']) await expect(node(page, label)).toBeVisible();
 });
 
+test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'il dito');
+  const long = Array.from({ length: 12 }, (_, i) => `Frase ${i} sulle radici profonde degli alberi del bosco.`).join(' ');
+  await fakeOcr(page, 'Le piante hanno radici robuste e foglie verdi. ' + long);
+  await newMap(page, 'Le piante');
+  await toolbar(page, 'Dal libro');
+  const dialog = await photographPage(page);
+  const word = (w: string) => dialog.getByRole('button', { name: w, exact: true }).first();
+  const [a, b] = [(await word('hanno').boundingBox())!, (await word('robuste').boundingBox())!];
+  expect(b.y).toBeGreaterThan(a.y); // the stroke goes down to the next line
+  await highlight(page, word('hanno'), word('robuste'));
+  await expect(dialog.locator('.concept-preview .chip')).toHaveText(['Hanno radici robuste']);
+
+  // a finger on the margin of the text scrolls it, and highlights nothing
+  const text = dialog.locator('.ocr-pick');
+  const box = (await text.boundingBox())!;
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', y: number) =>
+    cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: box.x + box.width - 6, y }] });
+  const mid = box.y + box.height / 2;
+  await touch('touchStart', mid);
+  for (let i = 1; i <= 8; i++) await touch('touchMove', mid - i * 15);
+  await touch('touchEnd', mid - 120);
+  await expect.poll(() => text.evaluate((e) => e.scrollTop)).toBeGreaterThan(0);
+  await expect(dialog.locator('.concept-preview .chip')).toHaveText(['Hanno radici robuste']);
+});
+
 test('i concetti scelti si uniscono o si dividono a piacere, e la pagina resta per la volta dopo', async ({ page }) => {
   await fakeOcr(page, 'Le radici, il fusto e le foglie.');
   await newMap(page, 'Le piante');

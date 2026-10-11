@@ -1095,53 +1095,14 @@ textarea {
 .react-flow__edge-path.branch-line.branch-3 { stroke: var(--branch-3); }
 .react-flow__edge-path.branch-line.branch-4 { stroke: var(--branch-4); }
 .react-flow__edge-path.branch-line.branch-5 { stroke: var(--branch-5); }
-/* "Foglio" maps: connection points a concept's role doesn't use. */
-.react-flow__handle.handle-hidden {
+/* The points lines start and end at: never seen, new lines come from the
+   tree («Cambia ramo»), not from dragging a dot. Stronger than React Flow's
+   own .connectionindicator, or the hidden dots would still catch a finger. */
+.react-flow .react-flow__node .react-flow__handle {
   opacity: 0;
   pointer-events: none;
-}
-/* The dots to draw a line show on the concept in hand (and under the
-   mouse); while a line is being drawn, everywhere it can arrive. */
-.react-flow__node:not(.selected) .react-flow__handle:not(.handle-hidden) {
-  opacity: 0;
-  pointer-events: none;
-}
-@media (hover: hover) {
-  .react-flow__node:hover .react-flow__handle:not(.handle-hidden) {
-    opacity: 1;
-    pointer-events: all;
-  }
-}
-.is-connecting .react-flow__node .react-flow__handle:not(.handle-hidden) {
-  opacity: 1;
-  pointer-events: all;
-}
-/* Locked concepts draw no lines either: no dots at all. */
-.is-locked .react-flow__node .react-flow__handle:not(.handle-hidden) {
-  opacity: 0;
-  pointer-events: none;
-}
-/* On a touch screen lines are drawn with «Collega»: no dots to drag. */
-@media (pointer: coarse) {
-  .react-flow__node .react-flow__handle:not(.handle-hidden) {
-    opacity: 0;
-    pointer-events: none;
-  }
-}
-.react-flow__handle {
   width: 16px;
   height: 16px;
-  background: var(--primary);
-  border: 2px solid var(--surface);
-}
-/* On a touch screen a finger hits a wider area than the dot it sees. */
-@media (pointer: coarse) {
-  .react-flow__handle::before {
-    content: '';
-    position: absolute;
-    inset: -12px;
-    border-radius: 50%;
-  }
 }
 /* A concept or a link reached with Tab shows where the keyboard is. */
 .react-flow__node:focus-visible > .concept-node {
@@ -1779,8 +1740,7 @@ textarea {
   border-radius: 10px;
   pointer-events: none;
 }
-/* Collapse / expand: a round tab on the bottom-right corner, clear of the
-   handle used to drag new links. */
+/* Collapse / expand: a round tab on the bottom-right corner. */
 .concept-resize {
   position: absolute;
   top: 50%;
@@ -1851,9 +1811,6 @@ textarea {
 }
 .concept-node.review-current {
   box-shadow: 0 0 0 6px var(--highlight);
-}
-.is-reviewing .react-flow__handle {
-  visibility: hidden;
 }
 .concept-node.review-dim {
   opacity: 0.4;
@@ -2031,6 +1988,9 @@ textarea {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+  /* Sideways drags highlight; up and down still scroll the text. On the box,
+     not on the words: browsers ignore touch-action on inline elements. */
+  touch-action: pan-y;
 }
 .ocr-editor {
   width: 100%;
@@ -2048,8 +2008,6 @@ textarea {
   letter-spacing: inherit;
   word-spacing: inherit;
   cursor: pointer;
-  /* Sideways drags highlight; up and down still scroll the page. */
-  touch-action: pan-y;
 }
 .ocr-word.is-selected {
   background: color-mix(in srgb, var(--primary) 25%, transparent);

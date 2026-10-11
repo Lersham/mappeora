@@ -163,7 +163,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     return () => canvas.removeEventListener('scroll', back, true);
   }, []);
   /** A line is being drawn from a concept: every connection point shows. */
-  const [connecting, setConnecting] = useState(false);
   const noticeTimer = useRef<number | undefined>(undefined);
   /** A short message that goes away by itself. */
   const showNotice = (text: string) => {
@@ -985,7 +984,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   return (
     <div
-      className={`editor${picking ? ' is-picking' : ''}${review.active ? ' is-reviewing' : ''}${connecting ? ' is-connecting' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
+      className={`editor${picking ? ' is-picking' : ''}${review.active ? ' is-reviewing' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
       onPointerDownCapture={(e) => {
         touch();
         // A press anywhere but on a concept (a button, the map) is something
@@ -1044,7 +1043,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={({ source, target }) => actions.connect(source, target)}
           onNodeDragStart={() => {
             cancelCloser();
             dragging.current = true;
@@ -1079,12 +1077,10 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             const i = review.order[node.id];
             if (i !== undefined) review.goTo(i);
           }}
-          onConnectStart={() => setConnecting(true)}
-          onConnectEnd={() => setConnecting(false)}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
           nodesDraggable={editing && !locked}
-          // Lines are drawn with the mouse only: on a touch screen a drag moves the concept.
-          nodesConnectable={editing && !TOUCH}
+          // Lines come from the tree itself («Cambia ramo»): no dots to drag new ones.
+          nodesConnectable={false}
           elementsSelectable={editing}
           // Our own handler (above): one undo step, and never behind a dialog.
           deleteKeyCode={null}
