@@ -1,5 +1,20 @@
+import type { Page } from '@playwright/test';
 import { test, expect, say, spoken } from './fixtures';
 import { addConcept, mascot, newMap, node, nodes, onScreen, rename, settled, tapLink, toolbar } from './helpers';
+
+/** The concepts not wholly in sight: out of the map's area, or under a bar floating over it. */
+const hidden = (page: Page) =>
+  page.evaluate(() => {
+    const flow = document.querySelector('.react-flow')!.getBoundingClientRect();
+    const bars = [...document.querySelectorAll('.selection-bar')].map((b) => b.getBoundingClientRect().top);
+    const bottom = Math.min(flow.bottom, ...bars);
+    return [...document.querySelectorAll('.concept-node')]
+      .filter((n) => {
+        const r = n.getBoundingClientRect();
+        return r.top < flow.top || r.left < flow.left || r.right > flow.right || r.bottom > bottom;
+      })
+      .map((n) => n.querySelector('.concept-label')?.textContent);
+  });
 
 test.describe('Impara facendo', () => {
   test('dalla home costruisce una mappa vera, un passo alla volta', async ({ page }) => {
@@ -197,12 +212,24 @@ test.describe('Impara facendo', () => {
     await addConcept(page, 'La mia prima mappa', 'Il giorno');
     await expect(coach).toContainText('La tua mappa è bianca');
 
+    // A picture, as in the guide's own map: taller concepts, a map that on a
+    // phone is no longer wide enough to fill the strip the guide leaves it.
+    await choose('Estate');
+    await tools.getByRole('button', { name: 'Immagine', exact: true }).click();
+    await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('sole');
+    await page.locator('.illustration-tile').first().click();
+    await expect(node(page, 'Estate').locator('.concept-illustration, .concept-emoji')).toBeVisible();
+
     // White, as it starts; «Riordina e colora» gives it colours.
     for (const label of ['Luce', 'Estate', 'Il giorno']) expect(await background(label)).toBe('rgb(255, 255, 255)');
     await useTool('Riordina');
     await page.getByRole('dialog', { name: 'Riordina' }).getByRole('button', { name: /^Riordina e colora/ }).click();
     await settled(page);
     expect(await background('Luce')).not.toBe('rgb(255, 255, 255)');
+    // The colours are to be seen: on a phone the map's area is a strip wider
+    // than it is tall, and no concept may end up under the tools of the one
+    // in hand.
+    expect(await hidden(page)).toEqual([]);
     await next('Un colore tutto suo');
 
     await choose('Estate');

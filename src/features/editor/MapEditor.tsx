@@ -435,12 +435,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     // the top, where the main concept is, not centred and cut at both ends.
     if (whole < MIN_ZOOM) return top(Math.max(MIN_ZOOM, wide));
     if (mustFit || px * whole >= READABLE_PX) return null;
+    // The screen, not the map's area: on a phone the guide takes the lower
+    // half and leaves the map a strip wider than it is tall, and a page view
+    // there hid the branches under the tools of the concept in hand.
+    if (window.innerWidth <= window.innerHeight) return null;
     if (wide >= whole * 1.5) return top(wide);
-    // A map wider than the screen (a sheet spread in rows): on a screen wider
-    // than it is tall, names that can be read, from the top and around the
-    // main concept; the rest is a scroll away. A phone sees all of it, and
-    // a tap brings a branch close.
-    if (box.width <= box.height) return null;
+    // A map wider than the screen (a sheet spread in rows): names that can
+    // be read, from the top and around the main concept; the rest is a
+    // scroll away. A phone sees all of it, and a tap brings a branch close.
     const zoom = Math.min(MAX_READ_ZOOM, COMFORT_PX / px);
     const head = visible.reduce((a, n) => (n.position.y < a.position.y ? n : a));
     const centre = head.position.x + (head.measured?.width ?? 0) / 2;
