@@ -48,15 +48,15 @@ describe('review mode', () => {
 
   it('in ripetimi lights up the concepts named, then rings the ones left out', () => {
     useReview.getState().start(steps, 'ripetimi');
-    expect([vis('a'), vis('b'), vis('c')]).toEqual(['dim', 'dim', 'dim']);
+    expect([vis('a'), vis('b'), vis('c')]).toEqual(['normal', 'normal', 'normal']);
     useReview.getState().hear(['a', 'zzz']);
-    expect([vis('a'), vis('b'), vis('c')]).toEqual(['normal', 'dim', 'dim']);
+    expect([vis('a'), vis('b'), vis('c')]).toEqual(['heard', 'normal', 'normal']);
     useReview.getState().toggleHeard('c');
     useReview.getState().finish();
-    expect([vis('a'), vis('b'), vis('c')]).toEqual(['normal', 'current', 'normal']);
+    expect([vis('a'), vis('b'), vis('c')]).toEqual(['heard', 'current', 'heard']);
     useReview.getState().retry();
     useReview.getState().toggleHeard('c');
-    expect([vis('a'), vis('b'), vis('c')]).toEqual(['normal', 'dim', 'dim']);
+    expect([vis('a'), vis('b'), vis('c')]).toEqual(['heard', 'normal', 'normal']);
     expect(Object.keys(useReview.getState().heard)).toEqual(['a']);
   });
 

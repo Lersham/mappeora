@@ -19,6 +19,7 @@
   --primary: #2b54b0;
   --primary-text: #ffffff;
   --danger: #b3412f;
+  --success: #2e7d32;
   --focus: #e07a00;
   --highlight: #ffe066;
   --edge: #556070;
@@ -86,6 +87,7 @@
   --primary: #7fb0e6;
   --primary-text: #10161f;
   --danger: #ef8f7d;
+  --success: #7bc47f;
   --edge: #aab2bf;
   --branch-0: #7fb0e6;
   --branch-1: #f0a35c;

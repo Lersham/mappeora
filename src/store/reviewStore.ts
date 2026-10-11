@@ -80,7 +80,7 @@ export const useReview = create<ReviewState>()((set) => ({
 }));
 
 /** How a node should look during review. */
-export type ReviewVisibility = 'normal' | 'hidden' | 'current' | 'mystery' | 'dim';
+export type ReviewVisibility = 'normal' | 'hidden' | 'current' | 'mystery' | 'dim' | 'heard';
 
 export function reviewVisibility(
   s: Pick<ReviewState, 'active' | 'mode' | 'order' | 'index' | 'revealed'> & Partial<Pick<ReviewState, 'heard' | 'done'>>,
@@ -89,7 +89,8 @@ export function reviewVisibility(
   if (!s.active) return 'normal';
   const i = s.order[nodeId];
   // Named concepts light up; at the end the forgotten ones are ringed.
-  if (s.mode === 'ripetimi') return i === undefined || s.heard?.[nodeId] ? 'normal' : s.done ? 'current' : 'dim';
+  // The map stays readable: only the explained concepts are marked.
+  if (s.mode === 'ripetimi') return i === undefined ? 'normal' : s.heard?.[nodeId] ? 'heard' : s.done ? 'current' : 'normal';
   if (s.mode === 'interrogazione') return i === s.index ? 'current' : 'dim';
   if (i === undefined || i > s.index) return 'hidden';
   if (i < s.index) return 'normal';

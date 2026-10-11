@@ -108,15 +108,17 @@ test.describe('Lettura, ripasso e voce', () => {
     await toolbar(page, 'Ripassa');
     await page.getByRole('button', { name: /^Ripetimi/ }).click();
     await expect(nodes(page)).toHaveCount(9);
-    // ciclo dell'acqua, evaporazione, calore del sole, condensazione, nuvole
-    await expect(page.locator('.concept-node.review-dim')).toHaveCount(4);
+    // the map stays readable; ciclo dell'acqua, evaporazione, calore del sole,
+    // condensazione, nuvole get the tick
+    await expect(page.locator('.concept-node.review-dim')).toHaveCount(0);
+    await expect(page.locator('.concept-node.review-heard')).toHaveCount(5);
     const bar = page.getByRole('navigation', { name: 'Ripetimi' });
     await expect(bar.getByLabel('Concetti spiegati')).toHaveText('5 / 9');
     await expect(page.locator('.present-caption')).toContainText('infine piove');
     // the microphone did not catch it: a tap lights the concept up
     await settled(page);
     await node(page, 'Pioggia').click();
-    await expect(page.locator('.concept-node.review-dim')).toHaveCount(3);
+    await expect(page.locator('.concept-node.review-heard')).toHaveCount(6);
     await bar.getByRole('button', { name: 'Ho finito' }).click();
     const summary = 'Hai spiegato 6 concetti su 9. Ti mancano: ';
     await expect(page.locator('.present-caption')).toContainText(summary);
@@ -126,7 +128,7 @@ test.describe('Lettura, ripasso e voce', () => {
     await expect.poll(async () => (await spoken(page)).join()).toContain(summary);
     await expect.poll(() => page.evaluate(() => (window as unknown as { __micsOpen: number }).__micsOpen)).toBe(0);
     await bar.getByRole('button', { name: 'Fine' }).click();
-    await expect(page.locator('.review-dim, .review-current')).toHaveCount(0);
+    await expect(page.locator('.review-dim, .review-current, .review-heard')).toHaveCount(0);
   });
 
   test('dettatura: «nuovo concetto …» aggiunge un concetto, «annulla» lo toglie', async ({ page }) => {
