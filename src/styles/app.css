@@ -495,7 +495,10 @@ textarea {
   cursor: pointer;
 }
 .map-text {
-  display: grid;
+  /* Not a grid: its column would grow to a word longer than the card and
+     widen the page; here the lines get the card's width and the word wraps. */
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 .map-title {
@@ -836,14 +839,21 @@ textarea {
 }
 /* Narrow screens: one row, the map gets the height. «Mappe», «Annulla» and
    «Ripeti» show only their icon (the most familiar ones there are), their
-   word stays in aria-label and title; a long title ends with «…». */
+   word stays for screen readers (hidden as .sr-only, not removed: not every
+   button has an aria-label); a long title ends with «…». */
 @media (max-width: 760px) {
   .topbar .big-button {
     min-width: 44px;
     padding: 2px 8px;
   }
   .topbar .big-button-label {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }
 /* Phones: «Stampa e manda» and «Aspetto» are in «Altro». */
@@ -1487,6 +1497,13 @@ textarea {
   margin: 16px calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));
   padding: 12px var(--card-pad) var(--card-pad);
   background: var(--surface);
+}
+/* A phone on its side: kept at the bottom, the buttons would cover nearly
+   all the window. They come after the words instead. */
+@media (max-height: 480px) {
+  .overlay-card > .dialog-actions {
+    position: static;
+  }
 }
 .overlay-card fieldset {
   border: none;

@@ -106,7 +106,8 @@ export function PhotoTextDialog({ mapId, onAdd, onClose }: Props) {
       if (job.current !== current) return;
       job.current = null;
       const clean = cleanOcrText(raw);
-      if (!clean) {
+      // Only dots and dashes: nothing to choose from.
+      if (!clean || !tokenize(clean).some((t) => t.word >= 0)) {
         setStep({ kind: 'error', message: 'Non ho trovato parole nella foto. Prova con più luce e la pagina dritta.' });
         return;
       }

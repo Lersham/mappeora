@@ -271,7 +271,9 @@ export async function highlight(page: Page, from: Locator, to: Locator) {
 export function drawnBadly(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const out: string[] = [];
-    const inMap = (el: Element) => !!el.closest('.react-flow__viewport, .react-flow__renderer, .sr-only');
+    // Words only for screen readers (.sr-only, or hidden the same way) are not drawn.
+    const inMap = (el: Element) =>
+      !!el.closest('.react-flow__viewport, .react-flow__renderer, .sr-only') || getComputedStyle(el).clip === 'rect(0px, 0px, 0px, 0px)';
     const shown = (el: Element) => {
       const s = getComputedStyle(el);
       const r = el.getBoundingClientRect();
