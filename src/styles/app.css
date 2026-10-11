@@ -2268,7 +2268,9 @@ textarea {
 /* The button the tutorial asks for. */
 .topbar .tutorial-target,
 .toolbar .tutorial-target,
-.selection-bar .tutorial-target {
+.selection-bar .tutorial-target,
+.more-grid .tutorial-target,
+.react-flow__controls .tutorial-target {
   outline: 4px solid var(--primary);
   outline-offset: -4px;
   animation: tutorial-glow 1.4s ease-in-out infinite;
@@ -2281,7 +2283,9 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .topbar .tutorial-target,
   .toolbar .tutorial-target,
-  .selection-bar .tutorial-target {
+  .selection-bar .tutorial-target,
+  .more-grid .tutorial-target,
+  .react-flow__controls .tutorial-target {
     animation: none;
   }
 }

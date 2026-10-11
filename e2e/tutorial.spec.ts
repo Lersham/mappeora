@@ -1,5 +1,5 @@
 import { test, expect, say, spoken } from './fixtures';
-import { addConcept, mascot, newMap, node, nodes, onScreen, rename, tapLink, toolbar } from './helpers';
+import { addConcept, mascot, newMap, node, nodes, onScreen, rename, settled, tapLink, toolbar } from './helpers';
 
 test.describe('Impara facendo', () => {
   test('dalla home costruisce una mappa vera, un passo alla volta', async ({ page }) => {
@@ -14,7 +14,7 @@ test.describe('Impara facendo', () => {
     };
 
     await expect(coach.getByRole('heading', { name: 'L’idea principale' })).toBeVisible();
-    await expect(coach).toContainText('Passo 1 di 11');
+    await expect(coach).toContainText('Passo 1 di 22');
     await mascot(coach, 'indica');
     await expect(page.locator('.title-input')).toHaveValue('La mia prima mappa');
     // Until the step is done there is only «Salta».
@@ -80,8 +80,12 @@ test.describe('Impara facendo', () => {
     await expect(undo).toHaveClass(/tutorial-target/);
     await undo.click();
     await expect(lines).toHaveCount(3);
-    await next('Ce l’hai fatta!');
+    await next('Cambia ramo');
     await expect(undo).not.toHaveClass(/tutorial-target/);
+    // The other tools have a test of their own (below).
+    while (!(await coach.getByRole('heading', { name: 'Ce l’hai fatta!' }).isVisible())) {
+      await coach.getByRole('button', { name: /^(Avanti|Salta)$/ }).click();
+    }
 
     await expect(coach.getByRole('button', { name: 'Chiudi' })).toHaveCount(0);
     await coach.getByRole('button', { name: 'Fine' }).click();
@@ -99,7 +103,7 @@ test.describe('Impara facendo', () => {
     const coach = page.getByRole('region', { name: 'Tutorial' });
     await coach.getByRole('button', { name: 'Salta' }).click();
     await expect(coach.getByRole('heading', { name: 'Un nuovo concetto' })).toBeVisible();
-    await expect(coach).toContainText('Passo 2 di 11');
+    await expect(coach).toContainText('Passo 2 di 22');
     await coach.getByRole('button', { name: 'Chiudi' }).click();
     await expect(coach).toHaveCount(0);
     await expect(page.locator('.tutorial-target')).toHaveCount(0);
@@ -135,6 +139,123 @@ test.describe('Impara facendo', () => {
     // All three are linked now, but the step is done: it doesn't ask for another concept.
     await expect(coach).not.toContainText('già tutti collegati');
     await expect(bar.getByRole('button', { name: 'Concetto', exact: true })).not.toHaveClass(/tutorial-target/);
+  });
+
+  test('poi ogni altro pulsante, detto e indicato: anche quando è dentro «Altro»', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Impara facendo' }).click();
+    const coach = page.getByRole('region', { name: 'Tutorial' });
+    const bar = page.getByRole('navigation', { name: 'Strumenti' });
+    const tools = page.getByRole('toolbar', { name: 'Concetto scelto' });
+    const next = async (title: string) => {
+      await expect(coach.getByRole('status')).toContainText('Ben fatto');
+      await coach.getByRole('button', { name: 'Avanti' }).click();
+      await expect(coach.getByRole('heading', { name: title })).toBeVisible();
+    };
+    /** A concept that is not the one in hand (a tap on that one opens «Immagine e colore»). */
+    const choose = async (label: string) => {
+      await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
+      await (await onScreen(page, node(page, label))).click();
+    };
+    /** The tool asked for stands out where it is: in a bar, or in «Altro» (which stands out too). */
+    const useTool = async (name: string) => {
+      for (const place of [bar, page.locator('.topbar')]) {
+        const tool = place.getByRole('button', { name, exact: true });
+        if (await tool.isVisible()) {
+          await expect(tool).toHaveClass(/tutorial-target/);
+          return tool.click();
+        }
+      }
+      const more = bar.getByRole('button', { name: 'Altro', exact: true });
+      await expect(more).toHaveClass(/tutorial-target/);
+      await more.click();
+      const tool = page.getByRole('dialog', { name: 'Altro' }).getByRole('button', { name, exact: true });
+      await expect(tool).toHaveClass(/tutorial-target/);
+      await tool.click();
+    };
+    const background = (label: string) => node(page, label).evaluate((e) => getComputedStyle(e).backgroundColor);
+
+    await coach.getByRole('button', { name: 'Salta' }).click();
+    await addConcept(page, 'La mia prima mappa', 'Luce');
+    await addConcept(page, 'La mia prima mappa', 'Estate');
+    while (!(await coach.getByRole('heading', { name: 'Cambia ramo' }).isVisible())) {
+      await coach.getByRole('button', { name: /^(Avanti|Salta)$/ }).click();
+    }
+
+    await choose('Estate');
+    await expect(tools.getByRole('button', { name: 'Cambia ramo', exact: true })).toHaveClass(/tutorial-target/);
+    await tools.getByRole('button', { name: 'Cambia ramo', exact: true }).click();
+    await (await onScreen(page, node(page, 'Luce'))).click();
+    await next('Metti i concetti dove vuoi');
+
+    await useTool('Sposta');
+    await next('Bianca o colorata');
+
+    // One branch only («Estate» is under «Luce»): first a second one under the main idea.
+    await expect(coach).toContainText('servono almeno due rami');
+    await expect(bar.getByRole('button', { name: 'Concetto', exact: true })).toHaveClass(/tutorial-target/);
+    await addConcept(page, 'La mia prima mappa', 'Il giorno');
+    await expect(coach).toContainText('La tua mappa è bianca');
+
+    // White, as it starts; «Riordina e colora» gives it colours.
+    for (const label of ['Luce', 'Estate', 'Il giorno']) expect(await background(label)).toBe('rgb(255, 255, 255)');
+    await useTool('Riordina');
+    await page.getByRole('dialog', { name: 'Riordina' }).getByRole('button', { name: /^Riordina e colora/ }).click();
+    await settled(page);
+    expect(await background('Luce')).not.toBe('rgb(255, 255, 255)');
+    await next('Un colore tutto suo');
+
+    await choose('Estate');
+    await expect(tools.getByRole('button', { name: 'Immagine', exact: true })).toHaveClass(/tutorial-target/);
+    await (await onScreen(page, node(page, 'Estate'))).click(); // a second tap: «Immagine e colore»
+    const style = page.getByRole('dialog', { name: 'Immagine e colore' });
+    await style.locator('.color-swatch[aria-pressed="false"]').first().click();
+    await style.getByRole('button', { name: 'Fatto' }).click();
+    await next('Togli un concetto');
+
+    await choose('Estate');
+    await expect(tools.getByRole('button', { name: 'Elimina', exact: true })).toHaveClass(/tutorial-target/);
+    await tools.getByRole('button', { name: 'Elimina', exact: true }).click();
+    await expect(node(page, 'Estate')).toHaveCount(0);
+    await next('La scaletta');
+
+    await useTool('Scaletta');
+    await page.getByRole('dialog', { name: 'Scaletta' }).getByRole('button', { name: 'Annulla' }).click();
+    await next('Dal libro');
+
+    await useTool('Dal libro');
+    await page.getByRole('dialog', { name: 'Dal libro' }).getByRole('button', { name: 'Chiudi' }).click();
+    await next('Ripassa');
+
+    // During the review the guide steps aside, and remembers the step is done.
+    await useTool('Ripassa');
+    await page.getByRole('dialog', { name: 'Ripassa' }).getByRole('button', { name: /^Un passo alla volta/ }).click();
+    await expect(coach).toHaveCount(0);
+    await page.locator('.topbar').getByRole('button', { name: 'Esci' }).click();
+    await next('Salva, stampa, manda');
+
+    await useTool('Salva');
+    await page.getByRole('dialog', { name: 'Salva, esporta o stampa' }).getByRole('button', { name: 'Annulla' }).click();
+    await next('Come la vedi');
+
+    await useTool('Aspetto');
+    await page.getByRole('dialog', { name: 'Aspetto e voce' }).getByRole('button', { name: 'Chiudi' }).click();
+    await next('Solo la mappa');
+
+    const focus = page.getByRole('button', { name: 'Solo la mappa: nascondi i pulsanti' });
+    await expect(focus).toHaveClass(/tutorial-target/);
+    await focus.click();
+    await expect(coach).toBeHidden();
+    await page.getByRole('button', { name: 'Mostra i pulsanti' }).click();
+    await next('Ce l’hai fatta!');
+
+    // The colours were only to show how: the tutorial leaves the map white.
+    expect(await background('Luce')).not.toBe('rgb(255, 255, 255)');
+    await coach.getByRole('button', { name: 'Fine' }).click();
+    await expect(coach).toHaveCount(0);
+    for (const label of ['La mia prima mappa', 'Luce', 'Il giorno']) {
+      await expect.poll(() => background(label)).toBe('rgb(255, 255, 255)');
+    }
   });
 
   test('una mappa nuova qualsiasi non ha la guida', async ({ page }) => {

@@ -9,6 +9,10 @@ import { Mascot } from '../../components/Mascot';
 
 interface Props {
   index: number;
+  /** How many times each tool has been opened. */
+  used: TutorialProgress['used'];
+  /** Out of the way (during «Ripassa»), without forgetting what has been done. */
+  hidden?: boolean;
   onNext(): void;
   onClose(): void;
   /** The button to highlight: it can change with the map, as the text does. */
@@ -19,14 +23,14 @@ interface Props {
  * «Impara facendo»: one step at a time, below the map. The child does the
  * step for real, on a map of their own; the card notices it and lets them go on.
  */
-export function TutorialCoach({ index, onNext, onClose, onTarget }: Props) {
+export function TutorialCoach({ index, used, hidden, onNext, onClose, onTarget }: Props) {
   const step = TUTORIAL_STEPS[index];
   const last = index === TUTORIAL_STEPS.length - 1;
   const map = useMapStore((s) => s.map);
   const { readText } = useReadAloud();
   const [start] = useState<TutorialProgress | null>(() => {
     const now = useMapStore.getState().map;
-    return now && { map: now, read: false };
+    return now && { map: now, read: false, used };
   });
   // Reading aloud can start and end between two renders: catch it as it happens.
   const [read, setRead] = useState(false);
@@ -34,11 +38,12 @@ export function TutorialCoach({ index, onNext, onClose, onTarget }: Props) {
   // Once done, a step stays done (even after «Annulla»).
   const [done, setDone] = useState(false);
   useEffect(() => {
-    if (!done && map && start && step.done?.({ map, read }, start)) setDone(true);
-  }, [map, read]);
+    if (!done && map && start && step.done?.({ map, read, used }, start)) setDone(true);
+  }, [map, read, used]);
   // Done: back to what the step asked, whatever the map looks like now.
   const guide = done ? step : guideFor(step, map);
   useLayoutEffect(() => onTarget(guide.target), [guide.target]);
+  if (hidden) return null;
 
   return (
     <section className={`tutorial${done ? ' is-done' : ''}`} aria-label="Tutorial">
