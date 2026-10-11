@@ -20,6 +20,11 @@ const ERROR_CODES: Record<string, DictationError> = {
   SERVER_DISCONNECTED: 'service',
 };
 
+/** What went wrong, from an error thrown by `speech().listen()`. */
+export function dictationError(e: unknown): DictationError {
+  return ERROR_CODES[e instanceof Error ? e.message : ''] ?? 'other';
+}
+
 export function useDictation() {
   const [listening, setListening] = useState(false);
   const [partial, setPartial] = useState('');
@@ -49,8 +54,7 @@ export function useDictation() {
         },
       });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '';
-      setError(ERROR_CODES[msg] ?? 'other');
+      setError(dictationError(e));
       return '';
     } finally {
       live.current = false;

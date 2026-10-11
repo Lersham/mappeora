@@ -5,9 +5,11 @@ import type { ReadingStep } from '../lib/readingOrder';
  * - "passo": the map is revealed one concept at a time, read aloud;
  * - "quiz": like "passo", but the concept shows "?" until "Scopri";
  * - "interrogazione": the whole map stays visible and the child walks
- *   through it, one concept in focus at a time, while explaining it.
+ *   through it, one concept in focus at a time, while explaining it;
+ * - "ripetimi": the child explains the map aloud and the concepts named
+ *   light up; at the end the ones left out are shown.
  */
-export type ReviewMode = 'passo' | 'quiz' | 'interrogazione';
+export type ReviewMode = 'passo' | 'quiz' | 'interrogazione' | 'ripetimi';
 
 interface ReviewState {
   active: boolean;
@@ -17,6 +19,10 @@ interface ReviewState {
   order: Record<string, number>;
   index: number;
   revealed: boolean;
+  /** Ripetimi: the concepts the child has named so far. */
+  heard: Record<string, true>;
+  /** Ripetimi: «Ho finito» was pressed, the missing concepts are shown. */
+  done: boolean;
 
   start(steps: ReadingStep[], mode: ReviewMode): void;
   next(): void;
@@ -24,6 +30,10 @@ interface ReviewState {
   goTo(index: number): void;
   reveal(): void;
   exit(): void;
+  hear(ids: string[]): void;
+  toggleHeard(id: string): void;
+  finish(): void;
+  retry(): void;
 }
 
 export const useReview = create<ReviewState>()((set) => ({
@@ -33,6 +43,8 @@ export const useReview = create<ReviewState>()((set) => ({
   order: {},
   index: 0,
   revealed: false,
+  heard: {},
+  done: false,
 
   start: (steps, mode) =>
     set({
@@ -42,25 +54,53 @@ export const useReview = create<ReviewState>()((set) => ({
       order: Object.fromEntries(steps.map((s, i) => [s.nodeId, i])),
       index: 0,
       revealed: mode !== 'quiz',
+      heard: {},
+      done: false,
     }),
   next: () => set((s) => (s.index < s.steps.length - 1 ? { index: s.index + 1, revealed: s.mode !== 'quiz' } : {})),
   prev: () => set((s) => (s.index > 0 ? { index: s.index - 1, revealed: true } : {})),
   goTo: (index) => set((s) => (index >= 0 && index < s.steps.length ? { index, revealed: true } : {})),
   reveal: () => set({ revealed: true }),
-  exit: () => set({ active: false, steps: [], order: {}, index: 0 }),
+  exit: () => set({ active: false, steps: [], order: {}, index: 0, heard: {}, done: false }),
+  hear: (ids) =>
+    set((s) => {
+      const fresh = ids.filter((id) => !s.heard[id] && id in s.order);
+      return fresh.length ? { heard: { ...s.heard, ...Object.fromEntries(fresh.map((id) => [id, true as const])) } } : {};
+    }),
+  toggleHeard: (id) =>
+    set((s) => {
+      if (!(id in s.order)) return {};
+      const heard = { ...s.heard };
+      if (heard[id]) delete heard[id];
+      else heard[id] = true;
+      return { heard };
+    }),
+  finish: () => set({ done: true }),
+  retry: () => set({ done: false }),
 }));
 
 /** How a node should look during review. */
 export type ReviewVisibility = 'normal' | 'hidden' | 'current' | 'mystery' | 'dim';
 
 export function reviewVisibility(
-  s: Pick<ReviewState, 'active' | 'mode' | 'order' | 'index' | 'revealed'>,
+  s: Pick<ReviewState, 'active' | 'mode' | 'order' | 'index' | 'revealed'> & Partial<Pick<ReviewState, 'heard' | 'done'>>,
   nodeId: string,
 ): ReviewVisibility {
   if (!s.active) return 'normal';
   const i = s.order[nodeId];
+  // Named concepts light up; at the end the forgotten ones are ringed.
+  if (s.mode === 'ripetimi') return i === undefined || s.heard?.[nodeId] ? 'normal' : s.done ? 'current' : 'dim';
   if (s.mode === 'interrogazione') return i === s.index ? 'current' : 'dim';
   if (i === undefined || i > s.index) return 'hidden';
   if (i < s.index) return 'normal';
   return s.revealed ? 'current' : 'mystery';
+}
+
+/** Ripetimi, at the end: how many concepts were explained and which are missing. */
+export function ripetimiSummary(s: Pick<ReviewState, 'steps' | 'heard'>): string {
+  const missing = s.steps.filter((step) => !s.heard[step.nodeId]).map((step) => step.text);
+  const total = s.steps.length;
+  if (missing.length === 0) return `Perfetto! Hai spiegato tutti i concetti: ${total} su ${total}.`;
+  const explained = total - missing.length;
+  return `Hai spiegato ${explained} ${explained === 1 ? 'concetto' : 'concetti'} su ${total}. ${missing.length === 1 ? 'Ti manca' : 'Ti mancano'}: ${missing.join(', ')}.`;
 }

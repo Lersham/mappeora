@@ -14,7 +14,7 @@ import {
 } from '@xyflow/react';
 import { useStore } from 'zustand';
 import { beginStep, endStep, mapHistory, untracked, useMapStore } from '../../store/mapStore';
-import { reviewVisibility, useReview, type ReviewMode } from '../../store/reviewStore';
+import { reviewVisibility, ripetimiSummary, useReview, type ReviewMode } from '../../store/reviewStore';
 import { ConceptNode, type ConceptActions, type ConceptFlowNode } from './ConceptNode';
 import { FreeEdge } from './FreeEdge';
 import { BusEdge } from './BusEdge';
@@ -32,7 +32,9 @@ import { BigButton } from '../../components/BigButton';
 import { Dialog } from '../../components/Dialog';
 import { DictationOverlay } from '../../components/DictationOverlay';
 import { useReadAloud } from '../../hooks/useReadAloud';
-import { useDictation } from '../../hooks/useDictation';
+import { DICTATION_ERRORS, useDictation } from '../../hooks/useDictation';
+import { useRipetimi } from '../../hooks/useRipetimi';
+import { speech } from '../../services/speech';
 import { useCrowded } from '../../hooks/useCrowded';
 import { autoLayout } from '../../services/layout';
 import { exportMap, saveMapFile } from '../../services/export';
@@ -749,7 +751,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     actions.select(null);
     // Full screen helps on the class whiteboard; not every WebView allows it.
     if (mode === 'interrogazione') document.documentElement.requestFullscreen?.().catch(() => {});
-    review.start(readingOrder(visiblePart(map), { depthFirst: sheetTemplate }), mode);
+    const steps = readingOrder(visiblePart(map), { depthFirst: sheetTemplate });
+    if (mode !== 'ripetimi') return review.start(steps, mode);
+    // The child names the concepts, not the whole propositions.
+    const labels = new Map(map.nodes.map((n) => [n.id, n.label.replace(/\s+/g, ' ').trim()]));
+    review.start(
+      steps.map((s) => ({ nodeId: s.nodeId, text: labels.get(s.nodeId) ?? s.text })),
+      mode,
+    );
+    showMap(50);
   };
 
   const exitReview = () => {
@@ -760,12 +770,18 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   };
 
   useBackHandler(exitReview, review.active);
+  const ripetimi = useRipetimi(review.active && review.mode === 'ripetimi' && !review.done);
+  const finishRipetimi = () => {
+    review.finish();
+    void reader.readText(ripetimiSummary(useReview.getState()));
+  };
   const overview = () => void fitView({ padding: fitPadding(0.15), duration: motion(500) }).then(fromTopIfTooBig);
 
   // Review: follow the current concept and read it once it is visible.
   const current = review.active ? review.steps[review.index] : undefined;
   useEffect(() => {
-    if (!current) return;
+    // At «Ripetimi» the whole map stays in view.
+    if (!current || review.mode === 'ripetimi') return;
     const node = useMapStore.getState().map?.nodes.find((n) => n.id === current.nodeId);
     if (!node) return;
     const size = useMapStore.getState().sizes[node.id] ?? { width: 180, height: 72 };
@@ -1076,6 +1092,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
               cancelCloser();
               return setDialog({ kind: 'style' });
             }
+            // Ripetimi: a tap lights up (or turns off) a concept the microphone missed.
+            if (review.mode === 'ripetimi') return review.toggleHeard(node.id);
             if (review.mode !== 'interrogazione') return;
             const i = review.order[node.id];
             if (i !== undefined) review.goTo(i);
@@ -1172,6 +1190,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           {current.text}
         </p>
       )}
+      {review.active && review.mode === 'ripetimi' && (
+        <p className="present-caption ripetimi-caption" aria-live="polite">
+          {review.done
+            ? ripetimiSummary(review)
+            : ripetimi.error
+              ? DICTATION_ERRORS[ripetimi.error]
+              : ripetimi.said || 'Spiega la mappa a voce: i concetti che nomini si accendono.'}
+        </p>
+      )}
       {tutorialStep !== null && (
         <TutorialCoach
           key={tutorialStep}
@@ -1186,7 +1213,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         />
       )}
       {review.active ? (
-        <ReviewBar onRepeat={() => current && void reader.readSteps([current])} onOverview={overview} onExit={exitReview} />
+        <ReviewBar
+          onRepeat={() => current && void reader.readSteps([current])}
+          onOverview={overview}
+          onExit={exitReview}
+          onFinish={finishRipetimi}
+        />
       ) : (
         <div className="dock">
           <nav ref={toolbarRef} className={`toolbar${crowded ? ' is-crowded' : ''}`} aria-label="Strumenti">
@@ -1338,6 +1370,14 @@ function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): vo
         description="Tutta la mappa davanti a te, a schermo intero: spiega un concetto alla volta e vai avanti con le frecce."
         onClick={() => onStart('interrogazione')}
       />
+      {speech().sttSupported && (
+        <OptionCard
+          icon="🗣️"
+          name="Ripetimi"
+          description="Spiega la mappa a voce: i concetti che nomini si accendono. Alla fine ti dico cosa hai saltato."
+          onClick={() => onStart('ripetimi')}
+        />
+      )}
       <div className="dialog-actions">
         <BigButton icon="close" label="Annulla" onClick={onClose} />
       </div>
