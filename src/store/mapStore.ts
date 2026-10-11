@@ -34,7 +34,7 @@ interface MapState {
   moveNode(id: string, position: MapNode['position']): void;
   /** `auto`: placed by the automatic layout, not an edit by the child. */
   applyPositions(positions: Record<string, MapNode['position']>, opts?: { auto?: boolean }): void;
-  /** «Riordina e colora»: each branch in its own colour, as one undo step. */
+  /** «Colora i rami»: each branch in its own colour, as one undo step. */
   colorBranches(): void;
   /** Every concept back to white, in one step «Annulla» can undo. */
   clearColors(): void;

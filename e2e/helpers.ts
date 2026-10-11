@@ -115,7 +115,7 @@ export async function tapLink(page: Page, index = 0) {
 
 /**
  * Uses a tool of the editor: in the toolbar, above it for the chosen concept
- * (Immagine, Elimina), in the top bar (Salva, Aspetto) or, where they do not
+ * (Immagine, Elimina), in the top bar (Stampa e manda, Aspetto) or, where they do not
  * fit (a phone), under «Altro».
  */
 export async function toolbar(page: Page, name: string) {
@@ -128,13 +128,10 @@ export async function toolbar(page: Page, name: string) {
   await page.getByRole('dialog', { name: 'Altro' }).getByRole('button', { name, exact: true }).click();
 }
 
-/** «Riordina», then one of its two choices: just tidy, or tidy and colour the branches. */
+/** «Riordina»; with `color`, then «Colora i rami», which it offers after. */
 export async function tidyUp(page: Page, color = false) {
   await toolbar(page, 'Riordina');
-  await page
-    .getByRole('dialog', { name: 'Riordina' })
-    .getByRole('button', { name: color ? /^Riordina e colora/ : /^Riordina(?! e colora)/ })
-    .click();
+  if (color) await page.getByRole('button', { name: 'Colora i rami' }).click();
 }
 
 /** On-screen boxes of the visible concepts. */

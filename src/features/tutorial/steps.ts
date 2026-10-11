@@ -24,7 +24,7 @@ export type TutorialTarget =
   | 'elimina'
   | 'solo-mappa';
 
-/** A window the editor opens: «Ripassa», «Salva»… ('settings' is «Aspetto», 'focus' «Solo la mappa»). */
+/** A window the editor opens: «Ripassa», «Stampa e manda»… ('settings' is «Aspetto», 'focus' «Solo la mappa»). */
 export type TutorialTool = 'outline' | 'photo' | 'review' | 'export' | 'settings' | 'focus';
 
 /** What the child has done so far, as the tutorial sees it. */
@@ -208,7 +208,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Bianca o colorata',
-    text: `La tua mappa è bianca, come un foglio nuovo. Per colorarla premi «Riordina», in basso, e scegli «Riordina e colora»: ogni ramo prende un colore pastello, uguale per tutti i suoi concetti. «Riordina» da solo rimette la mappa in ordine e lascia i colori come sono. Non ti piace? Premi «Annulla». ${IN_ALTRO}`,
+    text: `La tua mappa è bianca, come un foglio nuovo. Per colorarla premi «Riordina», in basso: la mappa torna in ordine e in alto compare «🎨 Colora i rami». Premilo: ogni ramo prende un colore pastello, uguale per tutti i suoi concetti. Non ti piace? Premi «Annulla». ${IN_ALTRO}`,
     target: 'riordina',
     first: needsTwoBranches,
     done: (now, start) =>
@@ -256,8 +256,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     done: opened('review'),
   },
   {
-    title: 'Salva, stampa, manda',
-    text: `La mappa si salva da sola, mentre lavori. «Salva» serve a portarla fuori: «PDF da stampare» per il quaderno, «Immagine» da mandare in chat, «File modificabile» per continuarla su un altro dispositivo. ${TOP_OR_ALTRO}`,
+    title: 'Stampa e manda',
+    text: `La mappa si salva da sola, mentre lavori. «Stampa e manda» serve a portarla fuori: «PDF da stampare» per il quaderno, «Immagine» da mandare in chat, «File modificabile» per continuarla su un altro dispositivo. ${TOP_OR_ALTRO}`,
     target: 'salva',
     done: opened('export'),
   },
@@ -275,6 +275,6 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Ce l’hai fatta!',
-    text: 'Ora conosci tutti i pulsanti. Il titolo, in alto, si cambia toccandolo. Con «Mappe», in alto a sinistra, torni all’elenco: la tua mappa è lì, salvata. Quando premi «Fine» i colori se ne vanno e la mappa torna bianca: per ricolorarla, «Riordina e colora». Puoi rifare questo giro quando vuoi: nella pagina iniziale premi «Impara facendo».',
+    text: 'Ora conosci tutti i pulsanti. Il titolo, in alto, si cambia toccandolo. Con «Mappe», in alto a sinistra, torni all’elenco: la tua mappa è lì, salvata. Quando premi «Fine» i colori se ne vanno e la mappa torna bianca: per ricolorarla, «Riordina» e poi «Colora i rami». Puoi rifare questo giro quando vuoi: nella pagina iniziale premi «Impara facendo».',
   },
 ];

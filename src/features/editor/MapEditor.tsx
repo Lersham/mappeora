@@ -42,7 +42,7 @@ import { spanningTree } from '../../lib/tree';
 import { branchOf as branchIds, cannotMoveUnder, childrenOf } from '../../lib/branch';
 import { layoutOf, templateInfo } from '../../lib/templates';
 import { NEW_MAP_TITLE } from '../../lib/mapFactory';
-import { DEFAULT_COLOR } from '../../lib/palette';
+import { DEFAULT_COLOR, branchColors } from '../../lib/palette';
 import type { ConceptMap, MapNode } from '../../types/map';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 import { useBackHandler } from '../../lib/backButton';
@@ -87,7 +87,7 @@ const TOOL_TARGETS: Record<string, TutorialTarget> = {
   save: 'salva',
   settings: 'aspetto',
 };
-/** Where Salva and Aspetto leave the top bar for «Altro» (see .topbar-map). */
+/** Where «Stampa e manda» and Aspetto leave the top bar for «Altro» (see .topbar-map). */
 const PHONE = '(max-width: 560px)';
 function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(
@@ -109,7 +109,6 @@ type DialogState =
   | { kind: 'outline' }
   | { kind: 'more' }
   | { kind: 'delete'; id: string }
-  | { kind: 'tidy' }
   | null;
 
 interface Props {
@@ -133,6 +132,13 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const reader = useReadAloud();
   const dictation = useDictation();
   const [arranging, setArranging] = useState(false);
+  // After «Riordina»: the offer to colour the branches too, for a while.
+  const [colorOffer, setColorOffer] = useState(false);
+  useEffect(() => {
+    if (!colorOffer) return;
+    const t = setTimeout(() => setColorOffer(false), 10000);
+    return () => clearTimeout(t);
+  }, [colorOffer]);
   const [exporting, setExporting] = useState(false);
   /** Bumped by «Annulla»: an export still running then stops before saving. */
   const exportRun = useRef(0);
@@ -232,7 +238,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // it stays out of the undo history.
   const shown = held.current ?? sheet;
   // A white map is white all over: a branch's line and border take its colour
-  // only once its first concept has one («Riordina e colora», or by hand).
+  // only once its first concept has one («Colora i rami», or by hand).
   const painted = useMemo(() => {
     const colors = new Map(map.nodes.map((n) => [n.id, n.color ?? DEFAULT_COLOR]));
     return new Set(Object.entries(shown?.heads ?? {}).filter(([id]) => colors.get(id) !== DEFAULT_COLOR).map(([, b]) => b));
@@ -619,6 +625,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   latest.current = { toggleInPlace, addNear };
 
+  /** «Riordina»: the order at once, colours untouched; colouring the branches is offered after. */
+  const tidyAndOffer = () => {
+    const { nodes, edges } = map;
+    const colors = branchColors(nodes, edges);
+    setColorOffer(nodes.some((n) => (n.color ?? DEFAULT_COLOR) !== colors[n.id]));
+    void tidy();
+  };
+
   const tidy = async () => {
     // A "foglio" map is always in order: just show all of it. One placed by
     // hand goes back on the sheet.
@@ -668,7 +682,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     if (!command) return;
     if (command.type === 'add') addConcept(command.label);
     else if (command.type === 'read') reader.readMap();
-    else if (command.type === 'tidy') await tidy();
+    else if (command.type === 'tidy') tidyAndOffer();
     else if (command.type === 'undo') mapHistory().undo();
     else if (command.type === 'redo') mapHistory().redo();
   };
@@ -931,15 +945,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       key: 'tidy',
       icon: 'tidy',
       label: 'Riordina',
-      title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4, e se vuoi colora i rami.' : 'Rimetti la mappa in ordine, e se vuoi colora i rami.',
+      title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4. I colori restano come sono.' : 'Rimetti la mappa in ordine. I colori restano come sono.',
       className: sheetMode ? undefined : 'group-start',
-      onClick: () => setDialog({ kind: 'tidy' }),
+      onClick: tidyAndOffer,
       disabled: arranging,
     },
   ];
   // The map as a whole: in the top bar (on a phone, in «Altro»).
   const mapTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
-    { key: 'save', icon: 'save', label: 'Salva', onClick: () => setDialog({ kind: 'export' }) },
+    { key: 'save', icon: 'share', label: 'Stampa e manda', onClick: () => setDialog({ kind: 'export' }) },
     {
       key: 'settings',
       icon: 'palette',
@@ -1121,6 +1135,24 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             <BigButton icon="trash" label="Elimina" variant="danger" className={target('elimina')} onClick={() => deleteConcept(selectedNode.id)} />
           </div>
         )}
+        {colorOffer && !picking && (
+          <div className="pick-banner color-offer" role="status">
+            <p>Mappa in ordine.</p>
+            <button
+              type="button"
+              className="color-offer-button"
+              onClick={() => {
+                setColorOffer(false);
+                actions.colorBranches();
+              }}
+            >
+              🎨 Colora i rami
+            </button>
+            <button type="button" className="pick-banner-close" aria-label="Chiudi" title="Chiudi" onClick={() => setColorOffer(false)}>
+              <Icon name="close" />
+            </button>
+          </div>
+        )}
         {picking && (
           <div className="pick-banner" role="status">
             <p>
@@ -1217,16 +1249,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           onClose={() => setDialog(null)}
         />
       )}
-      {dialog?.kind === 'tidy' && (
-        <TidyDialog
-          onTidy={(color) => {
-            setDialog(null);
-            if (color) actions.colorBranches();
-            void tidy();
-          }}
-          onClose={() => setDialog(null)}
-        />
-      )}
       {dialog?.kind === 'photo' && <PhotoTextDialog onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'outline' && (
@@ -1298,24 +1320,6 @@ function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
       ) : (
         <p>È l’idea principale della mappa: finché ha concetti sotto non si può eliminare. Puoi cambiarle nome con «Nome».</p>
       )}
-      <div className="dialog-actions">
-        <BigButton icon="close" label="Annulla" onClick={onClose} />
-      </div>
-    </Dialog>
-  );
-}
-
-/** «Riordina»: just the order, or each branch in its own colour too. */
-function TidyDialog({ onTidy, onClose }: { onTidy(color: boolean): void; onClose(): void }) {
-  return (
-    <Dialog title="Riordina" onClose={onClose} className="tidy-dialog" sheet>
-      <OptionCard icon="✨" name="Riordina" description="Rimette in ordine la mappa. I colori restano come sono." onClick={() => onTidy(false)} />
-      <OptionCard
-        icon="🎨"
-        name="Riordina e colora"
-        description="Rimette in ordine la mappa e dà a ogni ramo un colore pastello, uguale per tutti i concetti del ramo."
-        onClick={() => onTidy(true)}
-      />
       <div className="dialog-actions">
         <BigButton icon="close" label="Annulla" onClick={onClose} />
       </div>

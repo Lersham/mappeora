@@ -84,7 +84,7 @@ test.describe('Strumenti', () => {
     // It comes up from the bottom, where the bar it was opened from is (once it has slid in).
     const card = more.locator('.overlay-card');
     await expect.poll(async () => card.boundingBox().then((b) => Math.round(b!.y + b!.height))).toBe(page.viewportSize()!.height);
-    for (const name of ['Scaletta', 'Dal libro', 'Sposta', 'Salva', 'Aspetto'])
+    for (const name of ['Scaletta', 'Dal libro', 'Sposta', 'Stampa e manda', 'Aspetto'])
       await expect(more.getByRole('button', { name, exact: true })).toBeVisible();
     await more.getByRole('button', { name: 'Chiudi' }).click();
     await expect(more).toHaveCount(0);

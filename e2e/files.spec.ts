@@ -11,10 +11,10 @@ test.describe('File .mappami', () => {
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('neve');
     await page.locator('.illustration-tile').first().click();
 
-    await toolbar(page, 'Salva');
+    await toolbar(page, 'Stampa e manda');
     await page.getByRole('button', { name: /^File modificabile/ }).click();
     const download = page.waitForEvent('download');
-    await page.locator('.dialog-actions').getByRole('button', { name: 'Salva' }).click();
+    await page.locator('.dialog-actions').getByRole('button', { name: 'Scarica' }).click();
     const file = info.outputPath('mappa.mappami');
     await (await download).saveAs(file);
     expect((await download).suggestedFilename()).toBe('il-ciclo-dell-acqua.mappami');
@@ -41,10 +41,10 @@ test.describe('File .mappami', () => {
 
   test('esporta un’immagine PNG', async ({ page }) => {
     await newMap(page, 'Le stagioni');
-    await toolbar(page, 'Salva');
+    await toolbar(page, 'Stampa e manda');
     await page.getByRole('dialog').getByRole('button', { name: /^Immagine/ }).click();
     const download = page.waitForEvent('download');
-    await page.locator('.dialog-actions').getByRole('button', { name: 'Salva' }).click();
+    await page.locator('.dialog-actions').getByRole('button', { name: 'Scarica' }).click();
     const buf = await readFile((await (await download).path())!);
     expect(buf.subarray(1, 4).toString()).toBe('PNG');
   });

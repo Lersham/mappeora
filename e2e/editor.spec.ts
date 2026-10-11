@@ -218,7 +218,7 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await expect.poll(() => handleOpacity('Neve')).toBe('0');
   });
 
-  test('i concetti nascono bianchi; «Riordina e colora» dà un colore pastello a ogni ramo', async ({ page }) => {
+  test('i concetti nascono bianchi; «Colora i rami», dopo «Riordina», dà un colore pastello a ogni ramo', async ({ page }) => {
     await sampleMap(page);
     const background = (label: string) => node(page, label).evaluate((e) => getComputedStyle(e).backgroundColor);
     for (const label of ['Il ciclo dell’acqua', 'Evaporazione', 'Vapore', 'Neve']) expect(await background(label)).toBe('rgb(255, 255, 255)');
@@ -238,6 +238,14 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     // one «Annulla» takes the colours back off
     await toolbar(page, 'Annulla');
     await expect.poll(() => background('Vapore')).toBe('rgb(255, 255, 255)');
+
+    // «Riordina» alone leaves the colours as they are and offers them; «Chiudi» lets it be
+    await toolbar(page, 'Riordina');
+    const offer = page.getByRole('status').filter({ hasText: 'Colora i rami' });
+    await expect(offer).toBeVisible();
+    expect(await background('Vapore')).toBe('rgb(255, 255, 255)');
+    await offer.getByRole('button', { name: 'Chiudi' }).click();
+    await expect(offer).toBeHidden();
   });
 
   test('sul telefono, toccando un concetto di una mappa vista da lontano, il suo ramo si avvicina', async ({ page, isMobile }) => {

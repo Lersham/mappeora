@@ -832,7 +832,7 @@ textarea {
     display: none;
   }
 }
-/* Phones: «Salva» and «Aspetto» are in «Altro». */
+/* Phones: «Stampa e manda» and «Aspetto» are in «Altro». */
 @media (max-width: 560px) {
   .topbar {
     padding-block: max(4px, env(safe-area-inset-top)) 4px;
@@ -935,6 +935,18 @@ textarea {
 .pick-banner p {
   margin: 0;
   font-weight: 600;
+}
+.color-offer-button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--primary-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
 }
 .is-picking .react-flow__node {
   cursor: crosshair;

@@ -220,10 +220,10 @@ test.describe('Impara facendo', () => {
     await page.locator('.illustration-tile').first().click();
     await expect(node(page, 'Estate').locator('.concept-illustration, .concept-emoji')).toBeVisible();
 
-    // White, as it starts; «Riordina e colora» gives it colours.
+    // White, as it starts; «Riordina», then «Colora i rami», gives it colours.
     for (const label of ['Luce', 'Estate', 'Il giorno']) expect(await background(label)).toBe('rgb(255, 255, 255)');
     await useTool('Riordina');
-    await page.getByRole('dialog', { name: 'Riordina' }).getByRole('button', { name: /^Riordina e colora/ }).click();
+    await page.getByRole('button', { name: 'Colora i rami' }).click();
     await settled(page);
     expect(await background('Luce')).not.toBe('rgb(255, 255, 255)');
     // The colours are to be seen: on a phone the map's area is a strip wider
@@ -259,10 +259,10 @@ test.describe('Impara facendo', () => {
     await page.getByRole('dialog', { name: 'Ripassa' }).getByRole('button', { name: /^Un passo alla volta/ }).click();
     await expect(coach).toHaveCount(0);
     await page.locator('.topbar').getByRole('button', { name: 'Esci' }).click();
-    await next('Salva, stampa, manda');
+    await next('Stampa e manda');
 
-    await useTool('Salva');
-    await page.getByRole('dialog', { name: 'Salva, esporta o stampa' }).getByRole('button', { name: 'Annulla' }).click();
+    await useTool('Stampa e manda');
+    await page.getByRole('dialog', { name: 'Stampa e manda' }).getByRole('button', { name: 'Annulla' }).click();
     await next('Come la vedi');
 
     await useTool('Aspetto');

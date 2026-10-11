@@ -148,7 +148,7 @@ describe('TUTORIAL_STEPS', () => {
     expect(done(at(before), at(before))).toBe(false);
   });
 
-  it('notices the map coloured, by «Riordina e colora» or by one concept', () => {
+  it('notices the map coloured, by «Colora i rami» or by one concept', () => {
     const before = three();
     const coloured: ConceptMap = { ...before, nodes: before.nodes.map((n) => (n.id === 'b' ? { ...n, color: '#ffaebc' } : n)) };
     for (const title of ['Bianca o colorata', 'Un colore tutto suo']) {
@@ -179,7 +179,7 @@ describe('TUTORIAL_STEPS', () => {
       'La scaletta': 'outline',
       'Dal libro': 'photo',
       Ripassa: 'review',
-      'Salva, stampa, manda': 'export',
+      'Stampa e manda': 'export',
       'Come la vedi': 'settings',
       'Solo la mappa': 'focus',
     } as const;
@@ -192,7 +192,7 @@ describe('TUTORIAL_STEPS', () => {
   });
 
   it('says where every tool is, also when it is in «Altro»', () => {
-    for (const title of ['Metti i concetti dove vuoi', 'Bianca o colorata', 'La scaletta', 'Dal libro', 'Salva, stampa, manda', 'Come la vedi']) {
+    for (const title of ['Metti i concetti dove vuoi', 'Bianca o colorata', 'La scaletta', 'Dal libro', 'Stampa e manda', 'Come la vedi']) {
       expect(TUTORIAL_STEPS.find((s) => s.title === title)?.text).toContain('«Altro»');
     }
   });
