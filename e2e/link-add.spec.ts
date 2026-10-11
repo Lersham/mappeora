@@ -1,17 +1,20 @@
 import { test, expect } from './fixtures';
-import { addConcept, newMap, toolbar } from './helpers';
+import { addConcept, newMap, node, onScreen, toolbar } from './helpers';
 
 const PLUS = { name: 'Aggiungi le parole che collegano' };
 
 test.describe('Il «+» sulle linee senza parole', () => {
-  test('foglio: il «+» sul ramo e dentro il ramo apre le parole che collegano', async ({ page }) => {
+  test('foglio: il «+» sulle linee del concetto in mano apre le parole che collegano', async ({ page }) => {
     await newMap(page, 'Il sole');
     await addConcept(page, 'Il sole', 'Luce');
     await addConcept(page, 'Luce', 'Colori');
+    // Only the lines of the concept in hand have a «+»: the others need no room for it.
     const plus = page.getByRole('button', PLUS);
-    await expect(plus).toHaveCount(2);
+    await expect(plus).toHaveCount(1);
     const dialog = page.getByRole('dialog', { name: 'Parola di collegamento' });
     for (const word of ['dà', 'si divide in'] as const) {
+      if (word === 'si divide in') await (await onScreen(page, node(page, 'Luce'))).click();
+      await expect(plus).toHaveCount(1);
       await plus.first().click();
       if (word === 'dà') {
         await dialog.getByRole('textbox').fill(word);
