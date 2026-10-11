@@ -17,7 +17,8 @@ const img = (g) => {
   return { kind: 'illustrazione', ref: p, src: `data:image/png;base64,${b64}` };
 };
 
-const C = { root: '#ffd166', cause: '#ffaebc', inizio: '#a0e7e5', fasi: '#cdb4db', conseguenze: '#b4f8c8', persone: '#fbe7c6', motto: '#ffffff' };
+// Bianca, come una mappa nuova: «Riordina e colora» dà un colore pastello a ogni ramo.
+const C = { root: '#ffffff', cause: '#ffffff', inizio: '#ffffff', fasi: '#ffffff', conseguenze: '#ffffff', persone: '#ffffff', motto: '#ffffff' };
 
 // [label, color, emoji?, linkWords?, children?]
 const tree = ['La Rivoluzione francese\n1789 – 1799', C.root, '✊', null, [

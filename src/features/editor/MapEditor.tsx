@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentProps } from 'react';
 import {
   Background,
   type EdgeTypes,
@@ -51,7 +51,7 @@ import { MAP_ARIA_LABELS, edgeAriaLabel, spokenLabel } from './a11yLabels';
 import { SaveProblemNotice } from './SaveProblemNotice';
 import { OptionCard } from '../../components/OptionCard';
 import { TutorialCoach } from '../tutorial/TutorialCoach';
-import { TUTORIAL_STEPS, type TutorialTarget } from '../tutorial/steps';
+import { TUTORIAL_STEPS, type TutorialProgress, type TutorialTarget, type TutorialTool } from '../tutorial/steps';
 import { Icon } from '../../components/Icon';
 
 const nodeTypes = { concept: ConceptNode };
@@ -74,6 +74,30 @@ function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined 
 /** A failed share sheet the child closed is not an error. */
 const isCancel = (e: unknown) => e instanceof Error && /cancel/i.test(e.message);
 const edgeTypes: EdgeTypes = { bus: BusEdge, free: FreeEdge, tree: TreeEdge };
+
+/** Class names, leaving out the empty ones. */
+const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
+/** The tools that may end up in «Altro», by key, and the tutorial's name for each. */
+const TOOL_TARGETS: Record<string, TutorialTarget> = {
+  outline: 'scaletta',
+  photo: 'libro',
+  layout: 'sposta',
+  tidy: 'riordina',
+  save: 'salva',
+  settings: 'aspetto',
+};
+/** Where Salva and Aspetto leave the top bar for «Altro» (see .topbar-map). */
+const PHONE = '(max-width: 560px)';
+function useMediaQuery(query: string): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const m = window.matchMedia?.(query);
+      m?.addEventListener('change', onChange);
+      return () => m?.removeEventListener('change', onChange);
+    },
+    () => window.matchMedia?.(query).matches ?? false,
+  );
+}
 
 type DialogState =
   | { kind: 'style' }
@@ -150,6 +174,13 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const tutorialTarget = tutorialStep === null ? undefined : coachTarget;
   /** The button the tutorial is asking for stands out. */
   const target = (name: typeof tutorialTarget) => (name && tutorialTarget === name ? 'tutorial-target' : undefined);
+  /** How many times each tool has been opened: the tutorial notices the ones it asks for. */
+  const [used, setUsed] = useState<TutorialProgress['used']>({});
+  const markUsed = useCallback((tool: TutorialTool) => setUsed((u) => ({ ...u, [tool]: (u[tool] ?? 0) + 1 })), []);
+  useEffect(() => {
+    const kind = dialog?.kind;
+    if (kind === 'outline' || kind === 'photo' || kind === 'review' || kind === 'export') markUsed(kind);
+  }, [dialog?.kind]);
   // Libera and 5 W fill an A4 sheet by themselves, unless the child chose
   // to place the concepts by hand.
   const sheetTemplate = templateInfo(map.template).layout === 'foglio';
@@ -850,6 +881,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   }, [selectedId, editing]);
 
   const [toolbarRef, crowded] = useCrowded();
+  const phone = useMediaQuery(PHONE);
   // Where they do not all fit (a phone, large text): these go in «Altro» (see .toolbar-more).
   // Where they all fit they are in groups ('group-start'): what goes into the map,
   // then where it stays on the sheet.
@@ -890,8 +922,20 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // The map as a whole: in the top bar (on a phone, in «Altro»).
   const mapTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
     { key: 'save', icon: 'save', label: 'Salva', onClick: () => setDialog({ kind: 'export' }) },
-    { key: 'settings', icon: 'palette', label: 'Aspetto', onClick: onOpenSettings },
+    {
+      key: 'settings',
+      icon: 'palette',
+      label: 'Aspetto',
+      onClick: () => {
+        markUsed('settings');
+        onOpenSettings();
+      },
+    },
   ];
+  // The tool the tutorial asks for may be in «Altro»: then «Altro» stands out too.
+  const inMore =
+    (crowded && moreTools.some((t) => TOOL_TARGETS[t.key] === tutorialTarget)) ||
+    (phone && mapTools.some((t) => TOOL_TARGETS[t.key] === tutorialTarget));
 
   /**
    * «Solo la mappa»: every bar goes away, for studying the map or showing it
@@ -899,6 +943,9 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
    */
   const [focus, setFocus] = useState(false);
   const focusMode = focus && editing;
+  useEffect(() => {
+    if (focusMode) markUsed('focus');
+  }, [focusMode]);
   useBackHandler(() => setFocus(false), focusMode);
   useEffect(() => {
     if (!focusMode) return;
@@ -952,7 +999,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             />
             <BigButton icon="redo" label="Ripeti" aria-label="Ripeti" title="Ripeti" disabled={!canRedo} onClick={() => mapHistory().redo()} />
             {mapTools.map(({ key, ...t }) => (
-              <BigButton key={key} {...t} className={`topbar-map${key === 'save' ? ' group-start' : ''}`} />
+              <BigButton key={key} {...t} className={cx('topbar-map', key === 'save' && 'group-start', target(TOOL_TARGETS[key]))} />
             ))}
           </>
         ) : (
@@ -1036,7 +1083,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           >
             {editing && (
               <ControlButton
-                className="focus-button"
+                className={cx('focus-button', target('solo-mappa'))}
                 onClick={() => setFocus(true)}
                 aria-label="Solo la mappa: nascondi i pulsanti"
                 title="Solo la mappa: nascondi i pulsanti"
@@ -1052,8 +1099,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             <BigButton icon="edit" label="Nome" onClick={() => useMapStore.getState().startEditing(selectedNode.id)} />
             <BigButton icon="image" label="Immagine" className={target('immagine')} onClick={() => setDialog({ kind: 'style' })} />
             <BigButton icon="link" label="Collega" className={target('collega')} onClick={() => setPicking({ kind: 'link', from: selectedNode.id })} />
-            <BigButton icon="branch" label="Cambia ramo" onClick={() => setPicking({ kind: 'branch', from: selectedNode.id })} />
-            <BigButton icon="trash" label="Elimina" variant="danger" onClick={() => deleteConcept(selectedNode.id)} />
+            <BigButton icon="branch" label="Cambia ramo" className={target('cambia-ramo')} onClick={() => setPicking({ kind: 'branch', from: selectedNode.id })} />
+            <BigButton icon="trash" label="Elimina" variant="danger" className={target('elimina')} onClick={() => deleteConcept(selectedNode.id)} />
           </div>
         )}
         {picking && (
@@ -1075,10 +1122,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           {current.text}
         </p>
       )}
-      {!review.active && tutorialStep !== null && (
+      {tutorialStep !== null && (
         <TutorialCoach
           key={tutorialStep}
           index={tutorialStep}
+          used={used}
+          hidden={review.active}
           onNext={() => setTutorialStep((i) => (i === null || i + 1 >= TUTORIAL_STEPS.length ? null : i + 1))}
           onClose={() => setTutorialStep(null)}
           onTarget={setCoachTarget}
@@ -1096,11 +1145,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             ) : (
               <BigButton icon="speak" label="Leggi" className={target('leggi')} onClick={reader.readMap} />
             )}
-            <BigButton icon="brain" label="Ripassa" onClick={() => setDialog({ kind: 'review' })} />
+            <BigButton icon="brain" label="Ripassa" className={target('ripassa')} onClick={() => setDialog({ kind: 'review' })} />
             {moreTools.map(({ key, className = '', ...t }) => (
-              <BigButton key={key} {...t} className={`toolbar-extra ${className}`} />
+              <BigButton key={key} {...t} className={cx('toolbar-extra', className, target(TOOL_TARGETS[key]))} />
             ))}
-            <BigButton icon="menu" label="Altro" className="toolbar-more" aria-haspopup="dialog" onClick={() => setDialog({ kind: 'more' })} />
+            <BigButton icon="menu" label="Altro" className={cx('toolbar-more', inMore && 'tutorial-target')} aria-haspopup="dialog" onClick={() => setDialog({ kind: 'more' })} />
           </nav>
         </div>
       )}
@@ -1176,6 +1225,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
               <BigButton
                 key={key}
                 {...t}
+                className={target(TOOL_TARGETS[key])}
                 onClick={(e) => {
                   setDialog(null); // a tool may open its own dialog right after
                   onClick?.(e);

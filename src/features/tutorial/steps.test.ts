@@ -8,7 +8,7 @@ const step = (title: string) => {
   if (!found?.done) throw new Error(`passo senza controllo: ${title}`);
   return found.done;
 };
-const at = (map: ConceptMap, read = false): TutorialProgress => ({ map, read });
+const at = (map: ConceptMap, read = false, used: TutorialProgress['used'] = {}): TutorialProgress => ({ map, read, used });
 
 const first = createMap(TUTORIAL_TITLE);
 const root = first.nodes[0];
@@ -118,6 +118,72 @@ describe('TUTORIAL_STEPS', () => {
     expect(done(at(apart), at(apart))).toBe(false);
     // A new concept comes with its own line: that is not the one taken away.
     expect(done(at({ ...apart, nodes: [...apart.nodes, { id: 'c', label: 'Estate', position: { x: 0, y: 200 } }], edges: [{ id: 'f', source: root.id, target: 'c' }] }), at(apart))).toBe(false);
+  });
+
+  /** Root, «Luce» and «Estate», both under the root. */
+  const three = (): ConceptMap => {
+    const two = withChild('Luce');
+    return { ...two, nodes: [...two.nodes, { id: 'c', label: 'Estate', position: { x: 0, y: 200 } }], edges: [...two.edges, { id: 'f', source: root.id, target: 'c' }] };
+  };
+
+  it('notices a concept put under another with «Cambia ramo», and asks for two concepts first', () => {
+    const done = step('Cambia ramo');
+    const before = three();
+    const moved: ConceptMap = { ...before, edges: [before.edges[0], { id: 'f', source: 'b', target: 'c' }] };
+    expect(done(at(moved), at(before))).toBe(true);
+    expect(done(at(before), at(before))).toBe(false);
+    // A new concept is not a concept moved.
+    expect(done(at(before), at(withChild('Luce')))).toBe(false);
+    const branching = TUTORIAL_STEPS.find((s) => s.title === 'Cambia ramo')!;
+    expect(guideFor(branching, withChild('Luce')).target).toBe('concetto');
+    expect(guideFor(branching, before).target).toBe('cambia-ramo');
+  });
+
+  it('notices «Sposta», or a concept dragged', () => {
+    const done = step('Metti i concetti dove vuoi');
+    const before = three();
+    expect(done(at({ ...before, freeLayout: true }), at(before))).toBe(true);
+    const dragged: ConceptMap = { ...before, nodes: before.nodes.map((n) => (n.id === 'c' ? { ...n, position: { x: 300, y: 200 } } : n)) };
+    expect(done(at(dragged), at(before))).toBe(true);
+    expect(done(at(before), at(before))).toBe(false);
+  });
+
+  it('notices the map coloured, by «Riordina e colora» or by one concept', () => {
+    const before = three();
+    const coloured: ConceptMap = { ...before, nodes: before.nodes.map((n) => (n.id === 'b' ? { ...n, color: '#ffaebc' } : n)) };
+    for (const title of ['Bianca o colorata', 'Un colore tutto suo']) {
+      expect(step(title)(at(coloured), at(before))).toBe(true);
+      expect(step(title)(at(before), at(before))).toBe(false);
+    }
+  });
+
+  it('notices a concept taken away', () => {
+    const done = step('Togli un concetto');
+    expect(done(at(withChild('Luce')), at(three()))).toBe(true);
+    expect(done(at(three()), at(three()))).toBe(false);
+  });
+
+  it('notices each tool opened since the step began, not before', () => {
+    const tools = {
+      'La scaletta': 'outline',
+      'Dal libro': 'photo',
+      Ripassa: 'review',
+      'Salva, stampa, manda': 'export',
+      'Come la vedi': 'settings',
+      'Solo la mappa': 'focus',
+    } as const;
+    for (const [title, tool] of Object.entries(tools)) {
+      const done = step(title);
+      expect(done(at(first, false, { [tool]: 1 }), at(first))).toBe(true);
+      expect(done(at(first, false, { [tool]: 1 }), at(first, false, { [tool]: 1 }))).toBe(false);
+      expect(done(at(first, false, { outline: 1, photo: 1, review: 1, export: 1, settings: 1, focus: 1, [tool]: 0 }), at(first))).toBe(false);
+    }
+  });
+
+  it('says where every tool is, also when it is in «Altro»', () => {
+    for (const title of ['Metti i concetti dove vuoi', 'Bianca o colorata', 'La scaletta', 'Dal libro', 'Salva, stampa, manda', 'Come la vedi']) {
+      expect(TUTORIAL_STEPS.find((s) => s.title === title)?.text).toContain('«Altro»');
+    }
   });
 
   it('ends with a step that has nothing to check', () => {
