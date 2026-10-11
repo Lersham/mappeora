@@ -276,13 +276,17 @@ test.describe('Impara facendo', () => {
     await page.getByRole('button', { name: 'Mostra i pulsanti' }).click();
     await next('Ce l’hai fatta!');
 
-    // The colours were only to show how: the tutorial leaves the map white.
+    // The colours were only to show how: the tutorial leaves the map white,
+    // lines and borders too.
     expect(await background('Luce')).not.toBe('rgb(255, 255, 255)');
+    const tinted = page.locator('.react-flow__edge-path.branch-line, .concept-node.sheet-branch[class*="branch-"]');
+    await expect(tinted.first()).toBeAttached();
     await coach.getByRole('button', { name: 'Fine' }).click();
     await expect(coach).toHaveCount(0);
     for (const label of ['La mia prima mappa', 'Luce', 'Il giorno']) {
       await expect.poll(() => background(label)).toBe('rgb(255, 255, 255)');
     }
+    await expect(tinted).toHaveCount(0);
   });
 
   test('una mappa nuova qualsiasi non ha la guida', async ({ page }) => {

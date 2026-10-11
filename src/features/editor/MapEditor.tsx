@@ -42,6 +42,7 @@ import { spanningTree } from '../../lib/tree';
 import { branchOf as branchIds, cannotMoveUnder, childrenOf } from '../../lib/branch';
 import { layoutOf, templateInfo } from '../../lib/templates';
 import { NEW_MAP_TITLE } from '../../lib/mapFactory';
+import { DEFAULT_COLOR } from '../../lib/palette';
 import type { ConceptMap, MapNode } from '../../types/map';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 import { useBackHandler } from '../../lib/backButton';
@@ -230,6 +231,13 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // collapsing, dropping a dragged concept). Not an edit by the child, so
   // it stays out of the undo history.
   const shown = held.current ?? sheet;
+  // A white map is white all over: a branch's line and border take its colour
+  // only once its first concept has one («Riordina e colora», or by hand).
+  const painted = useMemo(() => {
+    const colors = new Map(map.nodes.map((n) => [n.id, n.color ?? DEFAULT_COLOR]));
+    return new Set(Object.entries(shown?.heads ?? {}).filter(([id]) => colors.get(id) !== DEFAULT_COLOR).map(([, b]) => b));
+  }, [map.nodes, shown]);
+  const paint = (branch?: number) => (branch !== undefined && painted.has(branch) ? branch : undefined);
   // A drop on a sheet is recorded once the sheet has put the concept in its
   // place: a concept that snaps back leaves no empty undo step.
   const dropPending = useRef(false);
@@ -278,6 +286,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         layout,
         shown?.roles[n.id],
         shown?.heads[n.id],
+        paint(shown?.heads[n.id]),
         parents.has(n.id),
         collapse.hiddenBelow[n.id] ?? 0,
       ];
@@ -303,6 +312,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           layout,
           role: shown?.roles[n.id],
           branch: shown?.heads[n.id],
+          tinted: paint(shown?.heads[n.id]) !== undefined,
           hasChildren: parents.has(n.id),
           collapsed: n.collapsed,
           hiddenBelow: collapse.hiddenBelow[n.id] ?? 0,
@@ -314,7 +324,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     });
     flowCache.current = next;
     return result;
-  }, [map.nodes, selectedId, sizes, review, layout, collapse, parents, shown, secret, conceptActions]);
+  }, [map.nodes, selectedId, sizes, review, layout, collapse, parents, shown, painted, secret, conceptActions]);
   // The links' spoken names need the concepts' names, not their positions:
   // a string that stays the same while a concept is dragged.
   const nodeNames = useMemo(() => JSON.stringify(map.nodes.map((n) => [n.id, n.label])), [map.nodes]);
@@ -336,7 +346,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           type: 'bus',
           sourceHandle: 's-bottom',
           targetHandle: 't-top',
-          data: { points: bus.points, own: bus.own, branch: bus.branch, column: bus.column, onEdit: onEdit(e.id), near },
+          data: { points: bus.points, own: bus.own, branch: paint(bus.branch), column: bus.column, onEdit: onEdit(e.id), near },
         };
       }
       if (sheetTemplate && !shown) return { ...base, type: 'free', data: { onEdit: onEdit(e.id), near } }; // placed by hand
@@ -351,7 +361,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         labelBgBorderRadius: 6,
       };
     });
-  }, [map.edges, nodeNames, shown, sheetTemplate, review.active, secret, selectedId, locked]);
+  }, [map.edges, nodeNames, shown, painted, sheetTemplate, review.active, secret, selectedId, locked]);
 
   const onNodesChange = useCallback((changes: NodeChange<ConceptFlowNode>[]) => {
     const s = useMapStore.getState();

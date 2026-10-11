@@ -31,6 +31,8 @@ export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image
   role?: NodeRole;
   /** "Foglio" maps: the number of the main concept's branch this concept starts. */
   branch?: number;
+  /** The branch has a colour: its first concept's border takes it. */
+  tinted?: boolean;
   hasChildren?: boolean;
   /** How many concepts this one hides while collapsed. */
   hiddenBelow?: number;
@@ -102,7 +104,7 @@ function SheetHandles({ role, kind }: { role: NodeRole; kind: 'source' | 'target
 
 /** "Foglio" maps: the main concept and the first concept of each branch stand out, like headings. */
 const sheetClass = (data: ConceptNodeData) =>
-  data.layout !== 'foglio' ? '' : data.role === 'root' ? ' sheet-root' : data.branch !== undefined ? ` sheet-branch branch-${data.branch % BRANCH_COLORS}` : '';
+  data.layout !== 'foglio' ? '' : data.role === 'root' ? ' sheet-root' : data.branch === undefined ? '' : data.tinted ? ` sheet-branch branch-${data.branch % BRANCH_COLORS}` : ' sheet-branch';
 
 function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const updateNode = useMapStore((s) => s.updateNode);

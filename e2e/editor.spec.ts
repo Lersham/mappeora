@@ -196,6 +196,10 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
 
   test('ogni ramo ha le linee del suo colore; i pallini per collegare solo sul concetto scelto', async ({ page, isMobile }) => {
     await sampleMap(page);
+    // a white map is white all over: no coloured lines until the branches have a colour
+    await expect(page.locator('.react-flow__edge-path.branch-line')).toHaveCount(0);
+    await tidyUp(page, true);
+    await settled(page);
     const colours = await page.locator('.react-flow__edge-path.branch-line').evaluateAll((paths) => [
       ...new Set(paths.map((p) => [...p.classList].find((c) => /^branch-\d$/.test(c)))),
     ]);
