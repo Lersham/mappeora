@@ -1988,9 +1988,6 @@ textarea {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  /* Sideways drags highlight; up and down still scroll the text. On the box,
-     not on the words: browsers ignore touch-action on inline elements. */
-  touch-action: pan-y;
 }
 .ocr-editor {
   width: 100%;
@@ -1998,7 +1995,12 @@ textarea {
   resize: vertical;
 }
 .ocr-word {
-  display: inline;
+  /* A finger that starts on a word highlights, in any direction: the phone
+     decides at the first touch whether a gesture scrolls, so the word itself
+     must say no (touch-action works on inline-block, not on inline). From the
+     spaces and the margins the text still scrolls. */
+  display: inline-block;
+  touch-action: none;
   padding: 2px 1px;
   margin: 0;
   border: none;

@@ -71,6 +71,8 @@ test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', as
   const word = (w: string) => dialog.getByRole('button', { name: w, exact: true }).first();
   const [a, b] = [(await word('hanno').boundingBox())!, (await word('robuste').boundingBox())!];
   expect(b.y).toBeGreaterThan(a.y); // the stroke goes down to the next line
+  // A real phone decides at the first touch whether to scroll: the word must refuse it.
+  expect(await word('hanno').evaluate((el) => getComputedStyle(el).touchAction)).toBe('none');
   await highlight(page, word('hanno'), word('robuste'));
   await expect(dialog.locator('.concept-preview .chip')).toHaveText(['Hanno radici robuste']);
 
