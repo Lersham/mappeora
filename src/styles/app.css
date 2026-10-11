@@ -11,6 +11,13 @@ body,
   margin: 0;
 }
 
+/* Pulling down past the top must not reload the app (Android's
+   pull-to-refresh): a half-written concept would go with it. */
+html,
+body {
+  overscroll-behavior: none;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -29,6 +36,13 @@ textarea {
   letter-spacing: inherit;
   word-spacing: inherit;
   color: inherit;
+}
+/* Under 16px, the iPhone zooms into a field when it is touched and does
+   not zoom back out: the smallest text sizes stop there in the fields. */
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
 }
 
 :focus-visible {
@@ -1309,6 +1323,8 @@ textarea {
   width: min(calc(520px * var(--text-scale) / 1.15), 100%);
   max-height: 100%;
   overflow-y: auto;
+  /* At the end of its words the scroll stops here, not in the page behind. */
+  overscroll-behavior: contain;
   --card-pad: 24px;
   padding: var(--card-pad);
   border-radius: 20px;
