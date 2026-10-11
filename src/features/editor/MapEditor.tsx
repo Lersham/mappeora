@@ -17,7 +17,6 @@ import { beginStep, endStep, mapHistory, untracked, useMapStore } from '../../st
 import { reviewVisibility, useReview, type ReviewMode } from '../../store/reviewStore';
 import { ConceptNode, type ConceptActions, type ConceptFlowNode } from './ConceptNode';
 import { FreeEdge } from './FreeEdge';
-import { LadderEdge } from './LadderEdge';
 import { BusEdge } from './BusEdge';
 import { TreeEdge } from './TreeEdge';
 import { sheetLayout, type SheetResult } from '../../lib/sheetLayout';
@@ -74,7 +73,7 @@ function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined 
 
 /** A failed share sheet the child closed is not an error. */
 const isCancel = (e: unknown) => e instanceof Error && /cancel/i.test(e.message);
-const edgeTypes: EdgeTypes = { ladder: LadderEdge, bus: BusEdge, free: FreeEdge, tree: TreeEdge };
+const edgeTypes: EdgeTypes = { bus: BusEdge, free: FreeEdge, tree: TreeEdge };
 
 type DialogState =
   | { kind: 'style' }
@@ -241,6 +240,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         sizes[n.id],
         layout,
         shown?.roles[n.id],
+        shown?.heads[n.id],
         parents.has(n.id),
         collapse.hiddenBelow[n.id] ?? 0,
       ];
@@ -265,6 +265,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           image: n.image,
           layout,
           role: shown?.roles[n.id],
+          branch: shown?.heads[n.id],
           hasChildren: parents.has(n.id),
           collapsed: n.collapsed,
           hiddenBelow: collapse.hiddenBelow[n.id] ?? 0,
@@ -291,18 +292,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       const base = { id: e.id, source: e.source, target: e.target, label: e.label, ariaLabel, interactionWidth: locked ? 16 : 40, className: 'concept-edge' };
       // The «+» for linking words stands out on the lines of the concept in hand.
       const near = !review.active && (e.source === selectedId || e.target === selectedId);
-      const kind = shown?.edges[e.id];
-      if (kind?.kind === 'bus') {
+      const bus = shown?.edges[e.id];
+      if (bus) {
         return {
           ...base,
           type: 'bus',
           sourceHandle: 's-bottom',
           targetHandle: 't-top',
-          data: { points: kind.points, own: kind.own, branch: kind.branch, onEdit: onEdit(e.id), near },
+          data: { points: bus.points, own: bus.own, branch: bus.branch, column: bus.column, onEdit: onEdit(e.id), near },
         };
-      }
-      if (kind?.kind === 'ladder') {
-        return { ...base, type: 'ladder', sourceHandle: 's-spine', targetHandle: 't-left', data: { branch: kind.branch, onEdit: onEdit(e.id), near } };
       }
       if (sheetTemplate && !shown) return { ...base, type: 'free', data: { onEdit: onEdit(e.id), near } }; // placed by hand
       return {
@@ -476,7 +474,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     }
     let head = id;
     if (shown) {
-      while (shown.roles[head] === 'item' && above.has(head)) head = above.get(head)!;
+      while (shown.roles[head] === 'item' && !(head in shown.heads) && above.has(head)) head = above.get(head)!;
       if (shown.roles[head] === 'root') return [head];
     }
     const out: string[] = [];

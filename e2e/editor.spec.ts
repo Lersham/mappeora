@@ -47,12 +47,12 @@ test.describe('Editor', () => {
     const at = (label: string) => b.find((x) => x.label === label)!;
     const root = at('Il ciclo dell’acqua');
     for (const x of b.filter((x) => x !== root)) expect(x.y).toBeGreaterThan(root.y);
-    // branches side by side, each one's concepts below it and indented
+    // branches side by side, and each one's concepts side by side below it
     expect(at('Condensazione').y).toBeCloseTo(at('Evaporazione').y, 0);
     expect(at('Condensazione').x).toBeGreaterThan(at('Evaporazione').x);
     expect(at('Calore del sole').y).toBeGreaterThan(at('Evaporazione').y);
-    expect(at('Calore del sole').x).toBeGreaterThan(at('Evaporazione').x);
-    expect(at('Vapore').y).toBeGreaterThan(at('Calore del sole').y);
+    expect(at('Vapore').y).toBeCloseTo(at('Calore del sole').y, 0);
+    expect(at('Vapore').x).toBeGreaterThan(at('Calore del sole').x);
   });
 
   test('trascinando un concetto si cambia l’ordine nel ramo', async ({ page, isMobile }) => {
@@ -62,16 +62,16 @@ test.describe('Editor', () => {
     const calore = await node(page, 'Calore del sole').boundingBox();
     await page.mouse.move(vapore!.x + 20, vapore!.y + 8);
     await page.mouse.down();
-    // well above it: the view scrolls by itself when dragging near the edge
-    await page.mouse.move(vapore!.x + 20, calore!.y - 60, { steps: 10 });
+    // well to the left of it, in its row
+    await page.mouse.move(calore!.x - 60, vapore!.y + 8, { steps: 10 });
     await page.mouse.up();
     await settled(page);
     const [v, c] = [await node(page, 'Vapore').boundingBox(), await node(page, 'Calore del sole').boundingBox()];
-    expect(v!.y).toBeLessThan(c!.y);
+    expect(v!.x).toBeLessThan(c!.x);
     // one undo puts it back
     await page.getByRole('button', { name: 'Annulla' }).click();
     await settled(page);
-    expect((await node(page, 'Vapore').boundingBox())!.y).toBeGreaterThan((await node(page, 'Calore del sole').boundingBox())!.y);
+    expect((await node(page, 'Vapore').boundingBox())!.x).toBeGreaterThan((await node(page, 'Calore del sole').boundingBox())!.x);
   });
 
   test('«Sposta» lascia i concetti dove li metti, «Riordina» rimette la mappa sul foglio A4', async ({ page, isMobile }) => {
@@ -97,10 +97,10 @@ test.describe('Editor', () => {
     await settled(page);
     const tidy = await boxes(page);
     expect(overlapping(tidy)).toEqual([]);
-    // back in its place on the sheet, below "Pioggia" in the same column
+    // back in its place on the sheet, next to "Pioggia" in the same row
     const at = (b: typeof tidy, label: string) => b.find((x) => x.label === label)!;
-    expect(at(tidy, 'Neve').x).toBeCloseTo(at(tidy, 'Pioggia').x, 0);
-    expect(at(tidy, 'Neve').y).toBeGreaterThan(at(tidy, 'Pioggia').y);
+    expect(at(tidy, 'Neve').y).toBeCloseTo(at(tidy, 'Pioggia').y, 0);
+    expect(at(tidy, 'Neve').x).toBeGreaterThan(at(tidy, 'Pioggia').x);
     expect(tidy.length).toBe(onSheet.length);
     // and every other concept back where the sheet had it
     // (the view may frame it at another zoom: compare from the main concept, to scale)

@@ -10,6 +10,7 @@ import { useReadAloud } from '../../hooks/useReadAloud';
 import { reviewVisibility, useReview } from '../../store/reviewStore';
 import { illustrationUrl } from '../../services/illustrations';
 import { Icon } from '../../components/Icon';
+import { BRANCH_COLORS } from './branchColor';
 
 /** Holding a concept this long (ms), then letting go, opens it for renaming. */
 const HOLD_MS = 500;
@@ -26,8 +27,10 @@ export interface ConceptActions {
 
 export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'collapsed'> & {
   layout: MapLayout;
-  /** "Foglio" maps: main concept, branch, or concept inside a branch. */
+  /** "Foglio" maps: which lines the concept has (see NodeRole). */
   role?: NodeRole;
+  /** "Foglio" maps: the number of the main concept's branch this concept starts. */
+  branch?: number;
   hasChildren?: boolean;
   /** How many concepts this one hides while collapsed. */
   hiddenBelow?: number;
@@ -76,28 +79,30 @@ function NodeImageView({ image }: { image: NonNullable<ConceptNodeData['image']>
 }
 
 /**
- * "Foglio" maps: lines reach a branch from above and the concepts inside it
- * from the left; they leave the main concept from the bottom centre and
- * the others from the bottom-left (the branch's vertical line). Every node
- * has all four, the ones its role doesn't use are invisible. A fifth, never
- * seen, on the left: an extra line towards a concept higher up leaves from
- * there, so it doesn't loop behind its own box.
+ * "Foglio" maps: lines reach a concept from above and leave from the bottom
+ * centre. Two more, never seen: an extra line leaves from the bottom-left,
+ * or from the left towards a concept higher up (from the bottom it would
+ * loop behind its own box), and reaches the other concept from the left.
  */
 function SheetHandles({ role, kind }: { role: NodeRole; kind: 'source' | 'target' }) {
   const hidden = (shown: boolean) => (shown ? undefined : 'handle-hidden');
   return kind === 'target' ? (
     <>
-      <Handle id="t-top" type="target" position={Position.Top} className={hidden(role === 'head')} />
-      <Handle id="t-left" type="target" position={Position.Left} className={hidden(role === 'item')} />
+      <Handle id="t-top" type="target" position={Position.Top} className={hidden(role !== 'root')} />
+      <Handle id="t-left" type="target" position={Position.Left} className="handle-hidden" />
     </>
   ) : (
     <>
-      <Handle id="s-bottom" type="source" position={Position.Bottom} className={hidden(role === 'root')} />
-      <Handle id="s-spine" type="source" position={Position.Bottom} style={{ left: LADDER.spine }} className={hidden(role !== 'root')} />
+      <Handle id="s-bottom" type="source" position={Position.Bottom} className={hidden(role !== 'item')} />
+      <Handle id="s-spine" type="source" position={Position.Bottom} style={{ left: LADDER.spine }} className="handle-hidden" />
       <Handle id="s-left" type="source" position={Position.Left} className="handle-hidden" />
     </>
   );
 }
+
+/** "Foglio" maps: the main concept and the first concept of each branch stand out, like headings. */
+const sheetClass = (data: ConceptNodeData) =>
+  data.layout !== 'foglio' ? '' : data.role === 'root' ? ' sheet-root' : data.branch !== undefined ? ` sheet-branch branch-${data.branch % BRANCH_COLORS}` : '';
 
 function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const updateNode = useMapStore((s) => s.updateNode);
@@ -160,7 +165,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
 
   return (
     <div
-      className={`concept-node shape-${data.shape ?? 'rettangolo'}${selected ? ' is-selected' : ''}${isReading ? ' is-reading' : ''}${armed ? ' is-armed' : ''} review-${visibility}`}
+      className={`concept-node shape-${data.shape ?? 'rettangolo'}${sheetClass(data)}${selected ? ' is-selected' : ''}${isReading ? ' is-reading' : ''}${armed ? ' is-armed' : ''} review-${visibility}`}
       style={{ background: data.color }}
       onPointerDown={(e) => {
         swallow.current = false;
