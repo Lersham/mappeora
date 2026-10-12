@@ -46,7 +46,8 @@ import { branchOf as branchIds, cannotMoveUnder, childrenOf } from '../../lib/br
 import { layoutOf, templateInfo } from '../../lib/templates';
 import { NEW_MAP_TITLE } from '../../lib/mapFactory';
 import { DEFAULT_COLOR, branchColors } from '../../lib/palette';
-import type { ConceptMap, MapNode } from '../../types/map';
+import { closeUpView, MAX_READ_ZOOM, MIN_ZOOM, pageView as pageViewOf, READABLE_PX, revealView } from './camera';
+import { closeUpGroup, isUntouchedNewMap, movedPositions, paintedBranches, parentForNear, parentForNew as parentFor, sheetAnchor, stillInPlace } from './concepts';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 import { useBackHandler } from '../../lib/backButton';
 import { motion } from '../../lib/motion';
@@ -59,21 +60,6 @@ import { TUTORIAL_STEPS, type TutorialProgress, type TutorialTarget, type Tutori
 import { Icon } from '../../components/Icon';
 
 const nodeTypes = { concept: ConceptNode };
-
-/** Names smaller than this on screen (px) are brought closer when tapped. */
-const READABLE_PX = 12;
-/** …to this size, comfortable to read on a phone. */
-const COMFORT_PX = 16;
-const MAX_READ_ZOOM = 1.2;
-/** The farthest the map can be seen from. */
-const MIN_ZOOM = 0.05;
-
-/** Where a new concept goes when none is selected: under the main one. */
-function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined {
-  const visible = map.nodes.filter((n) => !hidden.has(n.id));
-  const targets = new Set(map.edges.map((e) => e.target));
-  return visible.find((n) => n.shape === 'ellisse') ?? visible.find((n) => !targets.has(n.id)) ?? visible[0];
-}
 
 /** A failed share sheet the child closed is not an error. */
 const isCancel = (e: unknown) => e instanceof Error && /cancel/i.test(e.message);
@@ -225,25 +211,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     // Not worked out again at every frame of a drag: nothing would show it.
     if (dragging.current && held.current) return held.current;
     const part = visiblePart(map);
-    const targets = new Set(part.edges.map((e) => e.target));
-    const roots = part.nodes.filter((n) => !targets.has(n.id));
-    const first = (roots.length ? roots : part.nodes).reduce<MapNode | undefined>(
-      (best, n) => (!best || n.position.y < best.position.y || (n.position.y === best.position.y && n.position.x < best.position.x) ? n : best),
-      undefined,
-    );
-    return sheetLayout(part.nodes, part.edges, sizes, first?.position, scale);
+    return sheetLayout(part.nodes, part.edges, sizes, sheetAnchor(part), scale);
   }, [sheetMode, map, sizes, scale, dragTick]);
 
   // Keep the sheet in order after every change (adding, deleting,
   // collapsing, dropping a dragged concept). Not an edit by the child, so
   // it stays out of the undo history.
   const shown = held.current ?? sheet;
-  // A white map is white all over: a branch's line and border take its colour
-  // only once its first concept has one («Colora i rami», or by hand).
-  const painted = useMemo(() => {
-    const colors = new Map(map.nodes.map((n) => [n.id, n.color ?? DEFAULT_COLOR]));
-    return new Set(Object.entries(shown?.heads ?? {}).filter(([id]) => colors.get(id) !== DEFAULT_COLOR).map(([, b]) => b));
-  }, [map.nodes, shown]);
+  const painted = useMemo(() => paintedBranches(map.nodes, shown?.heads ?? {}), [map.nodes, shown]);
   const paint = (branch?: number) => (branch !== undefined && painted.has(branch) ? branch : undefined);
   // A drop on a sheet is recorded once the sheet has put the concept in its
   // place: a concept that snaps back leaves no empty undo step.
@@ -256,11 +231,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       endStep();
     };
     if (!sheet || review.active) return finishDrop();
-    const moved = Object.entries(sheet.positions).filter(([id, p]) => {
-      const n = map.nodes.find((x) => x.id === id);
-      return n && (Math.abs(n.position.x - p.x) > 0.5 || Math.abs(n.position.y - p.y) > 0.5);
-    });
-    if (moved.length > 0) untracked(() => actions.applyPositions(Object.fromEntries(moved), { auto: true }));
+    const moved = movedPositions(map.nodes, sheet.positions);
+    if (Object.keys(moved).length > 0) untracked(() => actions.applyPositions(moved, { auto: true }));
     finishDrop();
   }, [sheet, dragTick, review.active]);
 
@@ -397,10 +369,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   const parentForNew = () => {
     const { map: current, selectedId: selected } = useMapStore.getState();
-    if (!current) return null;
-    const hidden = collapseInfo(current).hidden;
-    if (selected && current.nodes.some((n) => n.id === selected) && !hidden.has(selected)) return selected;
-    return mainConcept(current, hidden)?.id ?? null;
+    return current ? parentFor(current, selected) : null;
   };
 
   /** Size on screen (px) of a concept's name at the current zoom, and at zoom 1. */
@@ -429,42 +398,19 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     return { x: p, top: p, bottom: `${Math.max(p * box.height, hidden)}px` as const };
   };
 
-  /**
-   * A sheet is tall. On a screen wider than it is tall (a computer, a
-   * Chromebook, a tablet held sideways) the whole map fits the height: two
-   * empty bands at its sides and names too small to read. Then the map is
-   * shown as wide as the screen, from the top, like a page: the rest is a
-   * scroll away. Null when the whole map reads fine, or when the screen is
-   * no wider than the sheet (a phone, a tablet held upright: no bands, and
-   * a tap brings a branch close). `mustFit`: only when the whole map cannot
-   * be seen even from afar.
-   */
+  /** The map seen like a page, when it needs it (see camera.ts). */
   const pageView = (mustFit = false) => {
     const box = document.querySelector('.react-flow')?.getBoundingClientRect();
     const visible = getNodes().filter((n) => !n.hidden);
     if (!box || visible.length === 0) return null;
-    const b = getNodesBounds(visible);
-    const px = Math.min(...visible.map((n) => textOnScreen(n.id).px));
-    const pad = 32;
-    const whole = Math.min(MAX_READ_ZOOM, (box.width - pad * 2) / b.width, (box.height - pad * 2) / b.height);
-    const wide = Math.min(MAX_READ_ZOOM, (box.width - pad * 2) / b.width);
-    const top = (zoom: number) => ({ x: (box.width - b.width * zoom) / 2 - b.x * zoom, y: pad - b.y * zoom, zoom });
-    // Too big to be seen whole even from afar (large text on a phone): from
-    // the top, where the main concept is, not centred and cut at both ends.
-    if (whole < MIN_ZOOM) return top(Math.max(MIN_ZOOM, wide));
-    if (mustFit || px * whole >= READABLE_PX) return null;
-    // The screen, not the map's area: on a phone the guide takes the lower
-    // half and leaves the map a strip wider than it is tall, and a page view
-    // there hid the branches under the tools of the concept in hand.
-    if (window.innerWidth <= window.innerHeight) return null;
-    if (wide >= whole * 1.5) return top(wide);
-    // A map wider than the screen (a sheet spread in rows): names that can
-    // be read, from the top and around the main concept; the rest is a
-    // scroll away. A phone sees all of it, and a tap brings a branch close.
-    const zoom = Math.min(MAX_READ_ZOOM, COMFORT_PX / px);
-    const head = visible.reduce((a, n) => (n.position.y < a.position.y ? n : a));
-    const centre = head.position.x + (head.measured?.width ?? 0) / 2;
-    return { x: box.width / 2 - centre * zoom, y: pad - b.y * zoom, zoom };
+    return pageViewOf({
+      area: box,
+      bounds: getNodesBounds(visible),
+      concepts: visible,
+      textPx: Math.min(...visible.map((n) => textOnScreen(n.id).px)),
+      landscape: window.innerWidth > window.innerHeight,
+      mustFit,
+    });
   };
 
   const fromTopIfTooBig = () => {
@@ -509,51 +455,17 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       const n = getInternalNode(id);
       const box = document.querySelector('.react-flow')?.getBoundingClientRect();
       if (!n || n.hidden || !box) return;
-      const { x, y, zoom } = getViewport();
       const { width = 180, height = 72 } = n.measured;
-      const p = n.internals.positionAbsolute;
-      const text = textOnScreen(id);
-      const tooSmall = readable && text.onScreen < READABLE_PX;
-      const [left, top] = [p.x * zoom + x, p.y * zoom + y];
-      const m = 24;
       // The bars floating over the map (on a wide screen, the toolbar; the
       // tools of the concept in hand) hide what is under them.
       const bottom = Math.min(
         box.height,
         ...[...document.querySelectorAll('.editor.has-dock .dock, .selection-bar')].map((el) => el.getBoundingClientRect().top - box.top),
       );
-      if (!tooSmall && left >= m && top >= m && left + width * zoom <= box.width - m && top + height * zoom <= bottom - m) return;
-      const z = tooSmall ? Math.min(MAX_READ_ZOOM, COMFORT_PX / text.px) : zoom;
-      void setCenter(p.x + width / 2, p.y + height / 2, { zoom: z, duration: motion(300) });
+      const concept = { ...n.internals.positionAbsolute, width, height };
+      const to = revealView(concept, getViewport(), { width: box.width, bottom }, textOnScreen(id).px, readable);
+      if (to) void setCenter(to.x, to.y, { zoom: to.zoom, duration: motion(300) });
     }, 150);
-
-  /** The concepts of `id`'s branch: on a sheet, from the branch's first concept down. */
-  const branchOf = (id: string): string[] => {
-    const current = useMapStore.getState().map;
-    if (!current) return [id];
-    const below = new Map<string, string[]>();
-    const above = new Map<string, string>();
-    for (const e of spanningTree(current).forward) {
-      if (above.has(e.target)) continue;
-      above.set(e.target, e.source);
-      below.set(e.source, [...(below.get(e.source) ?? []), e.target]);
-    }
-    let head = id;
-    if (shown) {
-      while (shown.roles[head] === 'item' && !(head in shown.heads) && above.has(head)) head = above.get(head)!;
-      if (shown.roles[head] === 'root') return [head];
-    }
-    const out: string[] = [];
-    const visit = (n: string) => {
-      if (out.includes(n)) return;
-      out.push(n);
-      // Without a sheet: the concept and the ones right under it.
-      if (!shown && n !== id) return;
-      for (const c of below.get(n) ?? []) visit(c);
-    };
-    visit(head);
-    return out;
-  };
 
   /**
    * On a map seen from afar (a phone, a long map) the names are too small
@@ -572,23 +484,16 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       const text = textOnScreen(id);
       const box = document.querySelector('.react-flow')?.getBoundingClientRect();
       if (text.onScreen >= READABLE_PX || !box) return;
-      const want = Math.min(MAX_READ_ZOOM, COMFORT_PX / text.px);
-      const boxes = branchOf(id).flatMap((b) => {
+      const current = useMapStore.getState().map;
+      const group = current ? closeUpGroup(current, id, shown) : [id];
+      const boxes = group.flatMap((b) => {
         const n = getInternalNode(b);
         if (!n || n.hidden) return [];
         const { width = 180, height = 72 } = n.measured;
         return [{ id: b, x: n.internals.positionAbsolute.x, y: n.internals.positionAbsolute.y, width, height }];
       });
-      const self = boxes.find((b) => b.id === id);
-      if (!self) return;
-      const left = Math.min(...boxes.map((b) => b.x));
-      const top = Math.min(...boxes.map((b) => b.y));
-      const right = Math.max(...boxes.map((b) => b.x + b.width));
-      const bottom = Math.max(...boxes.map((b) => b.y + b.height));
-      const pad = 24;
-      const fit = Math.min(MAX_READ_ZOOM, (box.width - pad * 2) / (right - left), (box.height - pad * 2) / (bottom - top));
-      if (fit >= want) void setCenter((left + right) / 2, (top + bottom) / 2, { zoom: fit, duration: motion(400) });
-      else void setCenter(self.x + self.width / 2, self.y + self.height / 2, { zoom: want, duration: motion(400) });
+      const to = closeUpView(boxes, id, box, text.px);
+      if (to) void setCenter(to.x, to.y, { zoom: to.zoom, duration: motion(400) });
     }, 350);
   };
 
@@ -603,9 +508,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   /** Tab while writing a concept: one under it. Maiusc+Tab: one next to it. */
   const addNear = (id: string, where: 'child' | 'sibling') => {
     const current = useMapStore.getState().map;
-    if (!current) return;
-    const parent = where === 'sibling' ? spanningTree(current).forward.find((e) => e.target === id)?.source : undefined;
-    addConcept(undefined, parent ?? id);
+    if (current) addConcept(undefined, parentForNear(current, id, where));
   };
 
   /**
@@ -662,8 +565,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       // any concept moved since.
       const now = useMapStore.getState().map;
       if (!now || now.id !== current.id) return;
-      const before = new Map(current.nodes.map((n) => [n.id, n.position]));
-      const fresh = Object.fromEntries(Object.entries(carryHidden(current, positions)).filter(([id]) => now.nodes.find((n) => n.id === id)?.position === before.get(id)));
+      const fresh = stillInPlace(carryHidden(current, positions), current, now);
       if (followUp) untracked(() => actions.applyPositions(fresh));
       else actions.applyPositions(fresh);
       // Give React Flow a frame to render the new positions before fitting.
@@ -695,9 +597,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     beginStep();
     // A map just made and still empty: the first word chosen is its main
     // concept and its title, the others hang from it.
-    const [root] = map.nodes;
-    if (map.nodes.length === 1 && map.title === NEW_MAP_TITLE && root.label === NEW_MAP_TITLE && concepts.length > 0) {
-      actions.updateNode(root.id, { label: concepts[0] });
+    if (isUntouchedNewMap(map) && concepts.length > 0) {
+      actions.updateNode(map.nodes[0].id, { label: concepts[0] });
       actions.setTitle(concepts[0]);
       rest = concepts.slice(1);
     }
