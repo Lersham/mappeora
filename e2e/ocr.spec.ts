@@ -24,8 +24,9 @@ test('«Dal libro» offre fotocamera e galleria, e spiega se manca internet', as
   await expect(dialog.getByRole('button', { name: 'Riprova' })).toBeVisible({ timeout: 20_000 });
   // even if the browser thinks it is online (e.g. a school network blocking the CDN)
   await expect(dialog.getByRole('alert')).toContainText('La prima volta serve internet');
-  // Expected here: Tesseract's worker reports the failed download itself.
-  const unrelated = consoleErrors.filter((e) => !/tesseract/i.test(e));
+  // Expected here: Tesseract's worker reports the failed download itself
+  // (Safari says only «Load failed», without the address).
+  const unrelated = consoleErrors.filter((e) => !/tesseract/i.test(e) && e !== 'pageerror: Load failed');
   consoleErrors.splice(0, consoleErrors.length, ...unrelated);
 });
 
