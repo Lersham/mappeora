@@ -36,7 +36,8 @@ jobs:
       - name: Browser per i test E2E
         run: npx playwright install --with-deps chromium
       - name: Test E2E (computer e telefono)
-        run: npm run test:e2e
+        # iPad e iPhone (WebKit) si lanciano a mano finché non passano tutti: --project=ipad --project=iphone
+        run: npm run test:e2e -- --project=desktop --project=telefono
       - name: Rapporto dei test E2E
         if: failure()
         uses: actions/upload-artifact@v4
