@@ -226,10 +226,10 @@ test.describe('Impara facendo', () => {
     await page.getByRole('dialog', { name: 'Ripassa' }).getByRole('button', { name: /^Un passo alla volta/ }).click();
     await expect(coach).toHaveCount(0);
     await page.locator('.topbar').getByRole('button', { name: 'Esci' }).click();
-    await next('Stampa e manda');
+    await next('Salva e manda');
 
-    await useTool('Stampa e manda');
-    await page.getByRole('dialog', { name: 'Stampa e manda' }).getByRole('button', { name: 'Annulla' }).click();
+    await useTool('Salva e manda');
+    await page.getByRole('dialog', { name: 'Salva e manda' }).getByRole('button', { name: 'Annulla' }).click();
     await next('Come la vedi');
 
     await useTool('Aspetto');

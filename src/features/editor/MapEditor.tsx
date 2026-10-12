@@ -87,7 +87,7 @@ const TOOL_TARGETS: Record<string, TutorialTarget> = {
   save: 'salva',
   settings: 'aspetto',
 };
-/** Where «Stampa e manda» and Aspetto leave the top bar for «Altro» (see .topbar-map). */
+/** Where «Salva e manda» and Aspetto leave the top bar for «Altro» (see .topbar-map). */
 const PHONE = '(max-width: 560px)';
 function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(
@@ -952,7 +952,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   ];
   // The map as a whole: in the top bar (on a phone, in «Altro»).
   const mapTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
-    { key: 'save', icon: 'share', label: 'Stampa e manda', onClick: () => setDialog({ kind: 'export' }) },
+    { key: 'save', icon: 'share', label: 'Salva e manda', onClick: () => setDialog({ kind: 'export' }) },
     {
       key: 'settings',
       icon: 'palette',

@@ -856,7 +856,7 @@ textarea {
     white-space: nowrap;
   }
 }
-/* Phones: «Stampa e manda» and «Aspetto» are in «Altro». */
+/* Phones: «Salva e manda» and «Aspetto» are in «Altro». */
 @media (max-width: 560px) {
   .topbar {
     padding-block: max(4px, env(safe-area-inset-top)) 4px;

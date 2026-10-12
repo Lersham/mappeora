@@ -117,7 +117,7 @@ test('Testo grande, OpenDyslexic e spaziatura ampia: in nessuna schermata parole
   }
   for (const [tool, dialog] of [
     ['Ripassa', 'Ripassa'],
-    ['Stampa e manda', 'Stampa e manda'],
+    ['Salva e manda', 'Salva e manda'],
     ['Aspetto', 'Aspetto e voce'],
   ]) {
     await toolbar(page, tool);
