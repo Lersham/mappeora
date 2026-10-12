@@ -15,6 +15,7 @@ import { titleMatches } from '../../lib/searchText';
 import { forgetBookPage } from '../../lib/bookPage';
 import { MicButton } from '../../components/MicButton';
 import { Mascot } from '../../components/Mascot';
+import { useUpdateReady } from '../../services/pwaUpdate';
 
 /** One of the ways to start, with a line that says what it does. The line is the
  *  button's description (aria-describedby), not its name: the name stays the single word. */
@@ -83,6 +84,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(welcomeNeeded);
   const { readText } = useReadAloud();
+  const updateWaiting = useUpdateReady((s) => s.ready);
 
   const [listError, setListError] = useState<string | null>(null);
   /** What «Salva tutte le mappe» or a safety copy just did. */
@@ -270,6 +272,14 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         </p>
       )}
 
+      {updateWaiting && (
+        <section className="home-notice" aria-label="Nuova versione">
+          <p role="status">
+            <strong>È uscita una nuova versione di MappAmi.</strong>
+          </p>
+          <BigButton icon="check" label="Aggiorna" variant="primary" onClick={() => window.location.reload()} />
+        </section>
+      )}
       {homeHint && (
         <section className="home-notice" aria-label="Consiglio per iPhone e iPad">
           <p>

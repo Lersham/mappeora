@@ -141,10 +141,10 @@ export default function App() {
     showMap(null);
   };
 
-  // A new version of the app waits for the list of maps (see pwaUpdate).
+  // A new version of the app loads by itself only while nobody is looking:
+  // on the list, the page goes out of sight (see pwaUpdate; HomeScreen has «Aggiorna»).
   useEffect(() => {
     if (hasMap) return;
-    reloadIfSafe();
     const onHide = () => document.visibilityState === 'hidden' && reloadIfSafe();
     document.addEventListener('visibilitychange', onHide);
     return () => document.removeEventListener('visibilitychange', onHide);
