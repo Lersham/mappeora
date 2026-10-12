@@ -18,6 +18,18 @@ body {
   overscroll-behavior: none;
 }
 
+/* The page itself never scrolls: #root does. On the iPad a scroll of the
+   page leaves full screen, a scroll inside an element does not. */
+html,
+body {
+  overflow: hidden;
+}
+
+#root {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
