@@ -183,4 +183,12 @@ describe('mapStore', () => {
     state().addChild(b, 'C');
     expect(state().map!.nodes.find((n) => n.id === a)?.collapsed).toBe(false);
   });
+
+  it('records no undo step for an edit that changes nothing', () => {
+    const root = state().map!.nodes[0];
+    state().updateNode(root.id, { label: root.label, position: { ...root.position } });
+    expect(mapHistory().pastStates).toHaveLength(0);
+    state().updateNode(root.id, { label: 'Nuovo' });
+    expect(mapHistory().pastStates).toHaveLength(1);
+  });
 });

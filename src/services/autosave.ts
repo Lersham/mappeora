@@ -168,7 +168,8 @@ export function recovered(): Promise<void> {
       }
       localStorage.removeItem(SLOT);
     } catch {
-      // Kept for the next start.
+      // Kept for the next try: opening a map, or the next start.
+      recovery = undefined;
     }
   })();
   return recovery;

@@ -73,6 +73,14 @@ function freeSpot(map: ConceptMap, sizes: Record<string, Size>, start: MapNode['
  * Applies `fn` to the current map and bumps updatedAt. Nothing happens (no
  * undo step, no save) without a map or when `fn` changes nothing.
  */
+/** True when `patch` would change `item` (a moved-to-the-same-place position does not). */
+function changes<T extends object>(item: T, patch: Partial<T>): boolean {
+  return Object.entries(patch).some(([k, v]) => {
+    const old = item[k as keyof T];
+    return v !== old && JSON.stringify(v) !== JSON.stringify(old);
+  });
+}
+
 function edit(state: MapState, fn: (map: ConceptMap) => Partial<ConceptMap>, opts: { touch?: boolean } = {}): Partial<MapState> {
   if (!state.map) return {};
   const patch = fn(state.map);
@@ -142,7 +150,7 @@ export const useMapStore = create<MapState>()(
 
       updateNode: (id, patch) =>
         set((s) =>
-          edit(s, (map) => (map.nodes.some((n) => n.id === id) ? { nodes: map.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) } : {})),
+          edit(s, (map) => (map.nodes.some((n) => n.id === id && changes(n, patch)) ? { nodes: map.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) } : {})),
         ),
 
       toggleCollapsed: (id) => {
@@ -236,7 +244,7 @@ export const useMapStore = create<MapState>()(
 
       updateEdge: (id, patch) =>
         set((s) =>
-          edit(s, (map) => (map.edges.some((e) => e.id === id) ? { edges: map.edges.map((e) => (e.id === id ? { ...e, ...patch } : e)) } : {})),
+          edit(s, (map) => (map.edges.some((e) => e.id === id && changes(e, patch)) ? { edges: map.edges.map((e) => (e.id === id ? { ...e, ...patch } : e)) } : {})),
         ),
 
       removeEdges: (ids) => {

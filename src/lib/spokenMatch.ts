@@ -10,10 +10,10 @@ const words = (text: string) => fold(text).split(/[^\p{L}\p{N}]+/u).filter(Boole
  */
 export function sameWord(said: string, written: string): boolean {
   if (said === written || stem(said) === stem(written)) return true;
+  // Four letters in common are not enough: «piano» and «pianeta», «carta» and «cartello».
   let common = 0;
   while (common < said.length && said[common] === written[common]) common++;
-  const shorter = Math.min(said.length, written.length);
-  return common >= 5 || (common >= 4 && common >= shorter - 1);
+  return common >= 5;
 }
 
 /**
