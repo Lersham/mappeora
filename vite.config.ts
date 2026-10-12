@@ -65,5 +65,7 @@ export default defineConfig({
     environment: 'jsdom',
     // e2e/ is the Playwright suite (npm run test:e2e), not Vitest's.
     exclude: ['**/node_modules/**', 'e2e/**'],
+    // The default fork pool crashes its workers on Windows ("Unhandled Errors").
+    pool: 'threads',
   },
 });
