@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MapFileError, parseAnyMapFile, parseMapFile, serializeArchive, serializeMap, textToDataUrl } from './mapFile';
+import { MapFileError, parseAnyMapFile, parseMapFile, parseStoredMap, sanitizeStoredMap, serializeArchive, serializeMap, textToDataUrl } from './mapFile';
 import { createMap } from './mapFactory';
 
 describe('mapFile', () => {
@@ -133,5 +133,27 @@ describe('mapFile', () => {
     expect(parseAnyMapFile(text).maps.map((m) => m.title)).toEqual(['Gli animali']);
     expect(() => parseAnyMapFile(JSON.stringify({ format: 'mappeora-archivio', version: 1, maps: [] }))).toThrow(MapFileError);
     expect(() => parseMapFile(serializeArchive([map]))).toThrow(/Apri file/);
+  });
+
+  it('reads a stored map back whole: same id, dates and every field', () => {
+    const map = { ...createMap('Le stagioni', 'causa-effetto'), freeLayout: true, createdAt: 1000, updatedAt: 2000 };
+    map.nodes[0] = {
+      ...map.nodes[0],
+      color: '#ffcc00',
+      shape: 'nuvola',
+      image: { kind: 'foto', ref: 'data:image/jpeg;base64,AAAA' },
+      collapsed: true,
+      width: 240,
+    };
+    map.edges = [{ id: 'e1', source: map.nodes[0].id, target: map.nodes[1].id, label: 'causa' }];
+    const text = JSON.stringify(map);
+    expect(parseStoredMap(text)).toEqual(map);
+    expect(sanitizeStoredMap(JSON.parse(text))).toEqual(map);
+  });
+
+  it('rejects a damaged stored map', () => {
+    expect(() => parseStoredMap('{non json')).toThrow(MapFileError);
+    expect(() => parseStoredMap('{"id":"x","nodes":[]}')).toThrow(MapFileError);
+    expect(() => sanitizeStoredMap(null)).toThrow(MapFileError);
   });
 });

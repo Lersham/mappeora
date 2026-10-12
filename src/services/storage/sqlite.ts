@@ -1,5 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 import type { ConceptMap, MapSummary } from '../../types/map';
+import { parseStoredMap } from '../../lib/mapFile';
 import type { StorageService } from './types';
 
 const DB_NAME = 'mappeora';
@@ -54,7 +55,7 @@ export class SqliteStorage implements StorageService {
     const db = await this.connection();
     const res = await db.query('SELECT data FROM maps WHERE id = ?', [id]);
     const row = res.values?.[0];
-    return row ? (JSON.parse(row.data) as ConceptMap) : undefined;
+    return row ? parseStoredMap(row.data) : undefined;
   }
 
   async save(map: ConceptMap): Promise<void> {

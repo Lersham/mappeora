@@ -123,7 +123,8 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
   const remove = async (m: MapSummary, index: number) => {
     let map: ConceptMap | undefined;
     try {
-      map = await storage().get(m.id);
+      // A damaged map can still be deleted: it just has no «Annulla».
+      map = await storage().get(m.id).catch(() => undefined);
       await storage().remove(m.id);
       forgetBookPage(m.id);
     } catch {

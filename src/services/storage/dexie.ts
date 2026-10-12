@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type { ConceptMap, MapSummary } from '../../types/map';
+import { sanitizeStoredMap } from '../../lib/mapFile';
 import type { StorageService } from './types';
 
 class MappeoraDB extends Dexie {
@@ -33,8 +34,9 @@ export class DexieStorage implements StorageService {
     return this.db.summaries.orderBy('updatedAt').reverse().toArray();
   }
 
-  get(id: string) {
-    return this.db.maps.get(id);
+  async get(id: string) {
+    const stored = await this.db.maps.get(id);
+    return stored && sanitizeStoredMap(stored);
   }
 
   async save(map: ConceptMap) {

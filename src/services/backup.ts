@@ -41,7 +41,7 @@ function writeState(patch: Partial<BackupState>) {
 /** Every map of the device in one file: downloaded on the web, «Condividi» in the app. */
 export async function saveAllMaps(): Promise<number> {
   const list = await storage().list();
-  const maps = (await Promise.all(list.map((m) => storage().get(m.id)))).filter((m): m is ConceptMap => !!m);
+  const maps = (await Promise.all(list.map((m) => storage().get(m.id).catch(() => undefined)))).filter((m): m is ConceptMap => !!m);
   const date = new Date().toISOString().slice(0, 10);
   await shareFile(textToDataUrl(serializeArchive(maps), 'application/json'), `mappami-tutte-le-mappe-${date}${MAP_FILE_EXTENSION}`, 'Le mie mappe');
   writeState({ savedAt: Date.now(), snoozedUntil: undefined });
