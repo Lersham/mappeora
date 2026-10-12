@@ -57,6 +57,9 @@ export function installWebBack(onBack: () => unknown, wanted: () => boolean, wat
   /** Pages taken back by the app itself: their popstate is not a Back. */
   let ignore = 0;
   const sync = () => {
+    // Safari stops loading a page whose history moves before `load` (after a
+    // reload with a map open): no `load` event, and what was still downloading is dropped.
+    if (document.readyState !== 'complete') return void window.addEventListener('load', sync, { once: true });
     if (wanted() && !armed) {
       history.pushState({ [MARK]: true }, '');
       armed = true;
@@ -81,6 +84,7 @@ export function installWebBack(onBack: () => unknown, wanted: () => boolean, wat
   sync();
   return () => {
     window.removeEventListener('popstate', onPop);
+    window.removeEventListener('load', sync);
     unwatch();
     unwatchHandlers();
   };

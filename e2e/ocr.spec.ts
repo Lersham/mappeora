@@ -61,8 +61,9 @@ test('dal testo della foto si scelgono le parole: col dito come un evidenziatore
   for (const label of ['Fotosintesi', 'Ossigeno', 'Clorofilla']) await expect(node(page, label)).toBeVisible();
 });
 
-test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', async ({ page, isMobile }) => {
+test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', async ({ page, isMobile, browserName }) => {
   test.skip(!isMobile, 'il dito');
+  test.skip(browserName !== 'chromium', 'il dito vero (CDP) si simula solo in Chromium: qui lo prova il telefono');
   const long = Array.from({ length: 12 }, (_, i) => `Frase ${i} sulle radici profonde degli alberi del bosco.`).join(' ');
   await fakeOcr(page, 'Le piante hanno radici robuste e foglie verdi. ' + long);
   await newMap(page, 'Le piante');
