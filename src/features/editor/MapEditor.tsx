@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentProps } from 'react';
-import { canFullscreen, enterFullscreen, exitFullscreen, fullscreenProps, isFullscreen, useFullscreen } from '../../lib/fullscreen';
-import { FullscreenButton } from '../../components/FullscreenButton';
+import { enterFullscreen, exitFullscreen, fullscreenProps, isFullscreen, useFullscreen } from '../../lib/fullscreen';
+import { FullscreenButton, FullscreenHint, fullscreenKind, homeFullscreenProps } from '../../components/FullscreenButton';
 import {
   Background,
   type EdgeTypes,
@@ -109,6 +109,7 @@ type DialogState =
   | { kind: 'review' }
   | { kind: 'photo' }
   | { kind: 'more' }
+  | { kind: 'fullscreen' }
   | { kind: 'delete'; id: string }
   | null;
 
@@ -749,7 +750,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     actions.select(null);
     // Full screen helps on the class whiteboard; not every WebView allows it.
     // Only if the child is not already in full screen: then they keep it when leaving.
-    if (mode === 'interrogazione' && canFullscreen() && !isFullscreen()) {
+    if (mode === 'interrogazione' && fullscreenKind() === 'api' && !isFullscreen()) {
       enteredFullscreen.current = true;
       void enterFullscreen();
     }
@@ -977,7 +978,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         onOpenSettings();
       },
     },
-    ...(canFullscreen() ? [{ key: 'fullscreen', ...fullscreenProps(inFullscreen) }] : []),
+    ...(fullscreenKind() === 'api' ? [{ key: 'fullscreen', ...fullscreenProps(inFullscreen) }] : []),
+    ...(fullscreenKind() === 'home' ? [{ key: 'fullscreen', ...homeFullscreenProps(() => setDialog({ kind: 'fullscreen' })) }] : []),
   ];
   // The tool the tutorial asks for may be in «Altro»: then «Altro» stands out too.
   const inMore =
@@ -1278,6 +1280,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       )}
       {dialog?.kind === 'photo' && <PhotoTextDialog mapId={map.id} onAdd={addFromPhoto} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'review' && <ReviewStartDialog onStart={startReview} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'fullscreen' && <FullscreenHint onClose={() => setDialog(null)} />}
       {dialog?.kind === 'more' && (
         <Dialog title="Altro" onClose={() => setDialog(null)} className="more-tools" sheet>
           <div className="more-grid">

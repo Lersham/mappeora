@@ -24,8 +24,9 @@ test('«Dal libro» offre fotocamera e galleria, e spiega se manca internet', as
   await expect(dialog.getByRole('button', { name: 'Riprova' })).toBeVisible({ timeout: 20_000 });
   // even if the browser thinks it is online (e.g. a school network blocking the CDN)
   await expect(dialog.getByRole('alert')).toContainText('La prima volta serve internet');
-  // Expected here: Tesseract's worker reports the failed download itself.
-  const unrelated = consoleErrors.filter((e) => !/tesseract/i.test(e));
+  // Expected here: Tesseract's worker reports the failed download itself
+  // (Safari says only «Load failed», without the address).
+  const unrelated = consoleErrors.filter((e) => !/tesseract/i.test(e) && e !== 'pageerror: Load failed');
   consoleErrors.splice(0, consoleErrors.length, ...unrelated);
 });
 
@@ -61,8 +62,9 @@ test('dal testo della foto si scelgono le parole: col dito come un evidenziatore
   for (const label of ['Fotosintesi', 'Ossigeno', 'Clorofilla']) await expect(node(page, label)).toBeVisible();
 });
 
-test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', async ({ page, isMobile }) => {
+test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', async ({ page, isMobile, browserName }) => {
   test.skip(!isMobile, 'il dito');
+  test.skip(browserName !== 'chromium', 'il dito vero (CDP) si simula solo in Chromium: qui lo prova il telefono');
   const long = Array.from({ length: 12 }, (_, i) => `Frase ${i} sulle radici profonde degli alberi del bosco.`).join(' ');
   await fakeOcr(page, 'Le piante hanno radici robuste e foglie verdi. ' + long);
   await newMap(page, 'Le piante');
