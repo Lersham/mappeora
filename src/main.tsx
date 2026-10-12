@@ -32,6 +32,10 @@ if (!isNative()) {
       });
     },
   });
+
+  // The maps live only in this browser: ask it not to delete them when the
+  // phone runs out of space (Chrome and Safari decide on their own, Firefox asks).
+  void navigator.storage?.persisted?.().then((done) => done || navigator.storage.persist()).catch(() => {});
 }
 
 // A part loaded later (Riordina, PDF…) belongs to an older version that is
