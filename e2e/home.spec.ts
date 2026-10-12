@@ -27,6 +27,16 @@ test.describe('Schermata iniziale', () => {
     await expect(nodes(page)).toHaveCount(1);
   });
 
+  test('un titolo lunghissimo va a capo e non allarga la schermata', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await newMap(page, 'Prova');
+    await page.locator('.title-input').fill('Laprecipitazioneatmosfericanellezonetemperatedell’emisferoboreale');
+    await page.getByRole('button', { name: 'Mappe' }).click();
+    await expect(page.locator('.map-title')).toHaveCount(1);
+    const [scroll, width] = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
+    expect(scroll).toBeLessThanOrEqual(width);
+  });
+
   test('ricaricando la pagina dall’editor, subito dopo una modifica, non si perde niente', async ({ page }) => {
     await newMap(page, 'I vulcani');
     await addConcept(page, 'I vulcani', 'Lava');
@@ -40,8 +50,8 @@ test.describe('Schermata iniziale', () => {
   test('«Indietro» del browser chiude la finestra aperta, poi torna alle mappe, senza uscire dal sito', async ({ page, isMobile }) => {
     test.skip(isMobile, 'basta provarlo una volta');
     await newMap(page, 'I fiumi');
-    await toolbar(page, 'Stampa e manda');
-    const dialog = page.getByRole('dialog', { name: 'Stampa e manda' });
+    await toolbar(page, 'Salva e manda');
+    const dialog = page.getByRole('dialog', { name: 'Salva e manda' });
     await expect(dialog).toBeVisible();
     await page.goBack();
     await expect(dialog).toBeHidden();

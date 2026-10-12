@@ -22,7 +22,7 @@ export type TutorialTarget =
   | 'elimina'
   | 'solo-mappa';
 
-/** A window the editor opens: «Ripassa», «Stampa e manda»… ('settings' is «Aspetto», 'focus' «Solo la mappa», 'style' «Immagine e colore»). */
+/** A window the editor opens: «Ripassa», «Salva e manda»… ('settings' is «Aspetto», 'focus' «Solo la mappa», 'style' «Immagine e colore»). */
 export type TutorialTool = 'photo' | 'review' | 'export' | 'settings' | 'focus' | 'style';
 
 /** What the child has done so far, as the tutorial sees it. */
@@ -232,8 +232,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     done: opened('review'),
   },
   {
-    title: 'Stampa e manda',
-    text: `La mappa si salva da sola, mentre lavori. «Stampa e manda» serve a portarla fuori: «PDF da stampare» per il quaderno, «Immagine» da mandare in chat, «File modificabile» per continuarla su un altro dispositivo. ${TOP_OR_ALTRO}`,
+    title: 'Salva e manda',
+    text: `La mappa si salva da sola, mentre lavori. «Salva e manda» ne fa una copia da tenere sul dispositivo o da mandare: «PDF da stampare» per il quaderno, «Immagine» da mandare in chat, «File modificabile» per continuarla su un altro dispositivo. ${TOP_OR_ALTRO}`,
     target: 'salva',
     done: opened('export'),
   },

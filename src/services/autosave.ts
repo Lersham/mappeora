@@ -125,12 +125,19 @@ async function write(map: ConceptMap) {
 }
 
 /** Saves the changes now. True when everything is saved. */
-export function flushAutosave(): Promise<boolean> {
-  clearTimeout(timer);
-  const map = pending;
-  pending = null;
-  if (map) chain = chain.then(() => write(map));
-  return chain.then(() => pending === null && useSaveStatus.getState().problem === null);
+export async function flushAutosave(): Promise<boolean> {
+  // A change made while saving (a name closing, the sheet settling around
+  // it) is saved too: it is not a failure to save.
+  for (let round = 0; round < 5; round++) {
+    clearTimeout(timer);
+    const map = pending;
+    pending = null;
+    if (map) chain = chain.then(() => write(map));
+    await chain;
+    if (useSaveStatus.getState().problem !== null) return false;
+    if (pending === null) return true;
+  }
+  return false;
 }
 
 let recovery: Promise<void> | undefined;

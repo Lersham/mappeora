@@ -17,7 +17,26 @@ import { updateReady } from './services/pwaUpdate';
 import { flushAutosave } from './services/autosave';
 
 // The native apps bundle their assets: the service worker is only for web/PWA.
-if (!isNative()) registerSW({ immediate: true, onNeedReload: updateReady });
+if (!isNative()) {
+  registerSW({
+    immediate: true,
+    onNeedReload: updateReady,
+    // An installed app is resumed, not reopened: the browser would not look
+    // for a new version for days. Look each time it comes back, and hourly.
+    onRegisteredSW: (_url, registration) => {
+      if (!registration) return;
+      const check = () => void registration.update().catch(() => {});
+      setInterval(check, 60 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') check();
+      });
+    },
+  });
+
+  // The maps live only in this browser: ask it not to delete them when the
+  // phone runs out of space (Chrome and Safari decide on their own, Firefox asks).
+  void navigator.storage?.persisted?.().then((done) => done || navigator.storage.persist()).catch(() => {});
+}
 
 // A part loaded later (Riordina, PDF…) belongs to an older version that is
 // gone: only the new version has it. Save, then load the new version.

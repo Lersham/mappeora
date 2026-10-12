@@ -156,6 +156,8 @@ function describe(e: unknown): string {
 
 function untilAborted<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
   if (!signal) return promise;
+  // Once cancelled nobody waits for it: its failure must not surface as an error.
+  promise.catch(() => {});
   if (signal.aborted) return Promise.reject(signal.reason);
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => reject(signal.reason);

@@ -3,7 +3,6 @@ import { storage } from './storage';
 import { isNative } from './platform';
 import { shareFile } from './export';
 import { MAP_FILE_EXTENSION, serializeArchive, textToDataUrl } from '../lib/mapFile';
-import { newId } from '../lib/id';
 
 /**
  * The maps live only on this device. «Salva tutte le mappe» makes one file
@@ -65,7 +64,14 @@ export async function restoreMaps(maps: ConceptMap[]): Promise<{ added: number; 
     } else if (here.updatedAt >= map.updatedAt) {
       already++;
     } else {
-      await storage().save({ ...map, id: newId(), title: `${map.title} (dalla copia)` });
+      // Always the same id for the same version: opening the copy twice
+      // does not bring it back twice.
+      const id = `${map.id}-copia-${map.updatedAt}`;
+      if (await storage().get(id)) {
+        already++;
+        continue;
+      }
+      await storage().save({ ...map, id, title: `${map.title} (dalla copia)` });
       added++;
     }
   }

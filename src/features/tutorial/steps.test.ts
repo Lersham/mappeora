@@ -159,7 +159,7 @@ describe('TUTORIAL_STEPS', () => {
       'Tocca, ritocca, tieni premuto': 'style',
       'Dal libro': 'photo',
       Ripassa: 'review',
-      'Stampa e manda': 'export',
+      'Salva e manda': 'export',
       'Come la vedi': 'settings',
       'Solo la mappa': 'focus',
     } as const;
@@ -172,7 +172,7 @@ describe('TUTORIAL_STEPS', () => {
   });
 
   it('says where every tool is, also when it is in «Altro»', () => {
-    for (const title of ['Metti i concetti dove vuoi', 'Bianca o colorata', 'Dal libro', 'Stampa e manda', 'Come la vedi']) {
+    for (const title of ['Metti i concetti dove vuoi', 'Bianca o colorata', 'Dal libro', 'Salva e manda', 'Come la vedi']) {
       expect(TUTORIAL_STEPS.find((s) => s.title === title)?.text).toContain('«Altro»');
     }
   });

@@ -40,6 +40,26 @@ test.describe('Copia di sicurezza', () => {
     await expect(page.locator('.map-removed')).toHaveCount(0);
   });
 
+  test('una versione più nuova dalla copia torna una volta sola, anche aprendo il file due volte', async ({ page }) => {
+    await newMap(page, 'Le stagioni');
+    await page.getByRole('button', { name: 'Mappe' }).click();
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Salva tutte le mappe' }).click();
+    const json = JSON.parse((await readFile((await (await download).path())!)).toString('utf8'));
+    // The copy holds a later version than the one on the device.
+    json.maps[0].updatedAt += 60_000;
+    const buffer = Buffer.from(JSON.stringify(json));
+
+    for (const [i, note] of ['Ho ritrovato 1 mappa', 'sono già tutte qui'].entries()) {
+      const chooser = page.waitForEvent('filechooser');
+      await page.getByRole('button', { name: 'Apri file' }).click();
+      await (await chooser).setFiles({ name: `copia${i}.mappeora`, mimeType: 'application/json', buffer });
+      await expect(page.getByRole('status')).toContainText(note);
+    }
+    await expect(page.locator('.map-card')).toHaveCount(2);
+    await expect(page.locator('.map-title', { hasText: '(dalla copia)' })).toHaveCount(1);
+  });
+
   test('«Più tardi» rimanda il promemoria', async ({ page }) => {
     for (const title of ['Uno', 'Due', 'Tre']) await newMap(page, title);
     await page.getByRole('button', { name: 'Mappe' }).click();

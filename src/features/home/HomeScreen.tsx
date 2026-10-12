@@ -149,6 +149,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
 
   const importFile = async () => {
     setImportError(null);
+    setBackupNote(null);
     let text: string | null;
     try {
       text = await pickMapFile();
@@ -164,7 +165,9 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       }
       const { added, already } = await restoreMaps(found);
       setBackupNote(
-        `${added === 1 ? 'Ho ritrovato 1 mappa' : `Ho ritrovato ${added} mappe`}${already ? ` (${already === 1 ? '1 c’era già' : `${already} c’erano già`})` : ''}.`,
+        added === 0
+          ? 'Le mappe di questo file sono già tutte qui.'
+          : `${added === 1 ? 'Ho ritrovato 1 mappa' : `Ho ritrovato ${added} mappe`}${already ? ` (${already === 1 ? '1 c’era già' : `${already} c’erano già`})` : ''}.`,
       );
       refresh();
     } catch (e) {

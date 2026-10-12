@@ -44,7 +44,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
   const run = (print: boolean) => onExport({ kind, paper, pages, simple, print });
 
   return (
-    <Dialog title="Stampa e manda" onClose={onClose} className="export-dialog">
+    <Dialog title="Salva e manda" onClose={onClose} className="export-dialog">
       <div className="export-kinds">
         {KINDS.map((k) => (
           <OptionCard key={k.value} icon={k.icon} name={k.label} description={k.desc} pressed={kind === k.value} onClick={() => setKind(k.value)} />
@@ -89,6 +89,13 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
         </label>
       )}
 
+      <p className="muted export-where">
+        {isNative()
+          ? '«Condividi» la manda in chat, per email o la salva in Drive o nei File.'
+          : '«Salva» la mette nei Download del dispositivo.'}
+        {kind === 'pdf' && !isNative() && !TOUCH && ' «Stampa» la manda alla stampante.'}
+      </p>
+
       {error && (
         <p className="field-error" role="alert">
           Non sono riuscito a preparare il file. Riprova.
@@ -100,7 +107,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
         {kind === 'pdf' && !isNative() && !TOUCH && <BigButton icon="print" label="Stampa" disabled={busy} onClick={() => run(true)} />}
         <BigButton
           icon={isNative() ? 'share' : 'save'}
-          label={busy ? 'Preparo…' : isNative() ? 'Condividi' : 'Scarica'}
+          label={busy ? 'Preparo…' : isNative() ? 'Condividi' : 'Salva'}
           variant="primary"
           disabled={busy}
           onClick={() => run(false)}

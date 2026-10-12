@@ -65,13 +65,16 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
   const awayAtGoogle = useRef(false);
   /** The illustration being downloaded: dropped when the dialog closes. */
   const pending = useRef<AbortController | null>(null);
-  useEffect(
-    () => () => {
+  /** Closed while a photo was being read: it no longer belongs anywhere. */
+  const closed = useRef(false);
+  useEffect(() => {
+    closed.current = false;
+    return () => {
+      closed.current = true;
       pending.current?.abort();
       pending.current = null;
-    },
-    [],
-  );
+    };
+  }, []);
 
   // Illustrations are searched on the device: no delay needed.
   useEffect(() => {
@@ -85,6 +88,8 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
   useEffect(() => void illustrationsFor(SUGGESTED).then(setSuggested), []);
 
   const choose = (image: MapNode['image']) => {
+    // onClose would close whatever is open now, another window.
+    if (closed.current) return;
     pending.current?.abort();
     pending.current = null;
     updateNode(node.id, { image });

@@ -500,6 +500,28 @@ test.describe('Editor: la barra del concetto scelto', () => {
     await expect(page.getByRole('dialog')).toContainText('È l’idea principale della mappa');
     await expect(page.getByRole('dialog').getByRole('button', { name: /Tutto il ramo/ })).toHaveCount(0);
   });
+
+  test('anche il tasto Canc chiede cosa fare dei concetti sotto, come «Elimina»', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'serve una tastiera');
+    await sampleMap(page);
+    await choose(page, 'Evaporazione');
+    await page.keyboard.press('Delete');
+    await expect(page.getByRole('dialog', { name: 'Elimina «Evaporazione»' })).toBeVisible();
+    await expect(nodes(page)).toHaveCount(9);
+    await page.keyboard.press('Escape');
+
+    await choose(page, 'Il ciclo dell’acqua');
+    await page.keyboard.press('Backspace');
+    await expect(page.getByRole('dialog')).toContainText('È l’idea principale della mappa');
+    await expect(nodes(page)).toHaveCount(9);
+    await page.keyboard.press('Escape');
+
+    // Nothing under it: it goes at once.
+    await choose(page, 'Neve');
+    await page.keyboard.press('Delete');
+    await expect(nodes(page)).toHaveCount(8);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
 });
 
 test.describe('Editor: un tocco per immagine e colore, tenere premuto per rinominare', () => {
@@ -602,5 +624,24 @@ test.describe('Editor: barre più leggere', () => {
     await expect(bar).toBeHidden();
     await page.keyboard.press('Escape');
     await expect(bar).toBeVisible();
+  });
+});
+
+test.describe('Tornare alle mappe', () => {
+  test('con un nome ancora aperto non dice che non riesce a salvare, e il nome resta', async ({ page }) => {
+    let asked = 0;
+    page.on('dialog', (d) => {
+      asked++;
+      void d.dismiss();
+    });
+    await newMap(page, 'Le piante');
+    await page.getByRole('button', { name: 'Concetto', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Testo del concetto' }).fill('Radici');
+    await page.locator('.topbar').getByRole('button', { name: 'Mappe' }).click();
+    await expect(page.locator('.map-card')).toHaveCount(1);
+    expect(asked).toBe(0);
+
+    await page.locator('.map-card').first().click();
+    await expect(node(page, 'Radici')).toHaveCount(1);
   });
 });

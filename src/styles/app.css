@@ -11,6 +11,13 @@ body,
   margin: 0;
 }
 
+/* Pulling down past the top must not reload the app (Android's
+   pull-to-refresh): a half-written concept would go with it. */
+html,
+body {
+  overscroll-behavior: none;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -29,6 +36,13 @@ textarea {
   letter-spacing: inherit;
   word-spacing: inherit;
   color: inherit;
+}
+/* Under 16px, the iPhone zooms into a field when it is touched and does
+   not zoom back out: the smallest text sizes stop there in the fields. */
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
 }
 
 :focus-visible {
@@ -481,7 +495,10 @@ textarea {
   cursor: pointer;
 }
 .map-text {
-  display: grid;
+  /* Not a grid: its column would grow to a word longer than the card and
+     widen the page; here the lines get the card's width and the word wraps. */
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 .map-title {
@@ -822,17 +839,24 @@ textarea {
 }
 /* Narrow screens: one row, the map gets the height. «Mappe», «Annulla» and
    «Ripeti» show only their icon (the most familiar ones there are), their
-   word stays in aria-label and title; a long title ends with «…». */
+   word stays for screen readers (hidden as .sr-only, not removed: not every
+   button has an aria-label); a long title ends with «…». */
 @media (max-width: 760px) {
   .topbar .big-button {
     min-width: 44px;
     padding: 2px 8px;
   }
   .topbar .big-button-label {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }
-/* Phones: «Stampa e manda» and «Aspetto» are in «Altro». */
+/* Phones: «Salva e manda» and «Aspetto» are in «Altro». */
 @media (max-width: 560px) {
   .topbar {
     padding-block: max(4px, env(safe-area-inset-top)) 4px;
@@ -1309,6 +1333,8 @@ textarea {
   width: min(calc(520px * var(--text-scale) / 1.15), 100%);
   max-height: 100%;
   overflow-y: auto;
+  /* At the end of its words the scroll stops here, not in the page behind. */
+  overscroll-behavior: contain;
   --card-pad: 24px;
   padding: var(--card-pad);
   border-radius: 20px;
@@ -1471,6 +1497,13 @@ textarea {
   margin: 16px calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));
   padding: 12px var(--card-pad) var(--card-pad);
   background: var(--surface);
+}
+/* A phone on its side: kept at the bottom, the buttons would cover nearly
+   all the window. They come after the words instead. */
+@media (max-height: 480px) {
+  .overlay-card > .dialog-actions {
+    position: static;
+  }
 }
 .overlay-card fieldset {
   border: none;
