@@ -130,6 +130,8 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     } catch {
       setBusy(false);
       setPhotoError('Non riesco a usare questa foto. Prova con un’altra.');
+    } finally {
+      if (photo.webPath.startsWith('blob:')) URL.revokeObjectURL(photo.webPath);
     }
   };
 

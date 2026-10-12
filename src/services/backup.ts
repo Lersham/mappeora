@@ -24,7 +24,8 @@ interface BackupState {
 
 function readState(): BackupState {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? '{}') as BackupState;
+    const s: unknown = JSON.parse(localStorage.getItem(KEY) ?? '{}');
+    return s && typeof s === 'object' ? (s as BackupState) : {};
   } catch {
     return {};
   }

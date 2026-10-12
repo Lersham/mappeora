@@ -113,7 +113,7 @@ test.describe('Lettura, ripasso e voce', () => {
     await expect(page.locator('.concept-node.review-dim')).toHaveCount(0);
     await expect(page.locator('.concept-node.review-heard')).toHaveCount(5);
     const bar = page.getByRole('navigation', { name: 'Ripetimi' });
-    await expect(bar.getByLabel('Concetti spiegati')).toHaveText('5 / 9');
+    await expect(bar.locator('.review-progress')).toHaveText('Concetti spiegati: 5 / 9');
     await expect(page.locator('.present-caption')).toContainText('infine piove');
     // the microphone did not catch it: a tap lights the concept up
     await settled(page);

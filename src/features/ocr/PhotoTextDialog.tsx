@@ -322,7 +322,7 @@ export function PhotoTextDialog({ mapId, onAdd, onClose }: Props) {
                   <span className="muted small">Nessun concetto scelto.</span>
                 ) : (
                   groups.map((g, i) => (
-                    <Fragment key={g.label}>
+                    <Fragment key={g.first}>
                       {i > 0 && groups[i - 1].last + 1 === g.first && (
                         <button
                           type="button"

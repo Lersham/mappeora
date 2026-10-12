@@ -6,7 +6,7 @@ export type VoiceCommand =
   | { type: 'redo' };
 
 /** Shown in the dictation overlay. */
-export const VOICE_COMMAND_HINTS = ['leggi la mappa', 'riordina', 'annulla', 'nuovo concetto …'];
+export const VOICE_COMMAND_HINTS = ['leggi la mappa', 'riordina', 'annulla', 'rifai', 'nuovo concetto …'];
 
 const EXACT: Record<string, Exclude<VoiceCommand['type'], 'add'>> = {
   leggi: 'read',
@@ -29,7 +29,8 @@ const ADD_PREFIX = /^(?:nuovo concetto|aggiungi|scrivi)\s+(.+)$/i;
 export function parseVoiceCommand(transcript: string): VoiceCommand | null {
   const text = transcript.trim().replace(/[.!?,;:]+$/, '').trim();
   if (!text) return null;
-  const exact = EXACT[text.toLowerCase()];
+  const key = text.toLowerCase();
+  const exact = Object.hasOwn(EXACT, key) ? EXACT[key] : undefined;
   if (exact) return { type: exact } as VoiceCommand;
   const prefixed = ADD_PREFIX.exec(text);
   return { type: 'add', label: capitalize(prefixed ? prefixed[1] : text) };

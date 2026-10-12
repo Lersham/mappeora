@@ -22,10 +22,10 @@ export class ErrorBoundary extends Component<Props, { failed: boolean }> {
   render() {
     if (!this.state.failed) return this.props.children;
     return (
-      <main className="home crash" role="alert">
+      <main className="home crash">
         <Mascot pose="ops" className="crash-mascot" />
         <h1 className="home-title">Qualcosa è andato storto</h1>
-        <p>Le mappe salvate sono al sicuro. Puoi tornare all’elenco e riaprirle.</p>
+        <p role="alert">Le mappe salvate sono al sicuro. Puoi tornare all’elenco e riaprirle.</p>
         <div className="crash-actions">
           <button
             type="button"

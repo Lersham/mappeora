@@ -15,7 +15,8 @@ export function ReviewBar({ onRepeat, onOverview, onExit, onFinish }: Props) {
     return (
       <nav className="toolbar review-bar" aria-label="Ripetimi">
         <BigButton icon="map" label="Tutta" onClick={onOverview} />
-        <span className="review-progress" aria-live="polite" aria-label="Concetti spiegati">
+        <span className="review-progress" aria-live="polite">
+          <span className="sr-only">Concetti spiegati: </span>
           {Object.keys(heard).length} / {steps.length}
         </span>
         {done ? (
