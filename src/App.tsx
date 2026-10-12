@@ -3,7 +3,7 @@ import { App as NativeApp } from '@capacitor/app';
 import { HomeScreen } from './features/home/HomeScreen';
 import { MapEditor } from './features/editor/MapEditor';
 import { SettingsPanel } from './features/accessibility/SettingsPanel';
-import { useMapStore, mapHistory } from './store/mapStore';
+import { useMapStore, untracked } from './store/mapStore';
 import { useSettings } from './store/settingsStore';
 import { storage } from './services/storage';
 import { createMap, NEW_MAP_TITLE } from './lib/mapFactory';
@@ -29,21 +29,21 @@ async function embedOldImages(map: ConceptMap) {
   const found = await embedMissingImages(map.nodes, (image) => (image.kind === 'illustrazione' ? illustrationUrl(image.ref) : undefined));
   if (found.size === 0) return;
   // Not an edit by the child: keep it out of the undo history.
-  mapHistory().pause();
-  useMapStore.setState((s) =>
-    s.map?.id !== map.id
-      ? {}
-      : {
-          map: {
-            ...s.map,
-            nodes: s.map.nodes.map((n) => {
-              const f = found.get(n.id);
-              return f && n.image && !n.image.src && n.image.ref === f.ref ? { ...n, image: { ...n.image, src: f.src } } : n;
-            }),
+  untracked(() =>
+    useMapStore.setState((s) =>
+      s.map?.id !== map.id
+        ? {}
+        : {
+            map: {
+              ...s.map,
+              nodes: s.map.nodes.map((n) => {
+                const f = found.get(n.id);
+                return f && n.image && !n.image.src && n.image.ref === f.ref ? { ...n, image: { ...n.image, src: f.src } } : n;
+              }),
+            },
           },
-        },
+    ),
   );
-  mapHistory().resume();
 }
 
 /** Back online: the illustrations that could not be saved in the map yet. */
@@ -176,7 +176,9 @@ export default function App() {
   return (
     <ErrorBoundary
       onReset={async () => {
-        await flushAutosave();
+        // Not saved: restarting keeps the changes (pagehide puts them in the
+        // slot, `recovered` saves them); the list would drop them.
+        if (!(await flushAutosave())) return location.reload();
         showMap(null);
       }}
     >
