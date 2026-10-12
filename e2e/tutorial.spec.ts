@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { test, expect, say, spoken } from './fixtures';
-import { addConcept, mascot, newMap, node, nodes, onScreen, rename, settled, tapLink, toolbar } from './helpers';
+import { addConcept, mascot, newMap, node, nodes, onScreen, rename, settled, tapEmpty, tapLink, toolbar } from './helpers';
 
 /** The concepts not wholly in sight: out of the map's area, or under a bar floating over it. */
 const hidden = (page: Page) =>
@@ -53,7 +53,7 @@ test.describe('Impara facendo', () => {
     await next('Tocca, ritocca, tieni premuto');
 
     // A tap chooses it, another one opens «Immagine e colore».
-    await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
+    await tapEmpty(page);
     await (await onScreen(page, node(page, 'Luce e calore'))).click();
     await (await onScreen(page, node(page, 'Luce e calore'))).click();
     const style = page.getByRole('dialog', { name: 'Immagine e colore' });
@@ -140,7 +140,7 @@ test.describe('Impara facendo', () => {
     };
     /** A concept that is not the one in hand (a tap on that one opens «Immagine e colore»). */
     const choose = async (label: string) => {
-      await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
+      await tapEmpty(page);
       await (await onScreen(page, node(page, label))).click();
     };
     /** The tool asked for stands out where it is: in a bar, or in «Altro» (which stands out too). */

@@ -472,13 +472,40 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     if (page) void setViewport(page);
   };
 
+  /** True while the view is the one `showMap` chose: nothing has moved it since. */
+  const shownWhole = useRef(false);
+  /** How many of the views `showMap` chose are still on their way. */
+  const fitting = useRef(0);
+
   /** After «Riordina», a review: the page view if the map needs it, else all of it. */
   const showMap = (delay: number) =>
     setTimeout(() => {
       const page = pageView();
-      if (page) void setViewport(page, { duration: motion(400) });
-      else void fitView({ padding: fitPadding(0.2), duration: motion(400) });
+      fitting.current++;
+      const shown = page ? setViewport(page, { duration: motion(400) }) : fitView({ padding: fitPadding(0.2), duration: motion(400) });
+      void shown.then(() => {
+        fitting.current--;
+        shownWhole.current = true;
+      });
     }, delay);
+
+  // The map's area gets shorter under a view just chosen (on a phone the
+  // guide below grows by a line, «Ben fatto!»): the concepts at the bottom
+  // went under the tools of the one in hand. The same view, chosen again.
+  useEffect(() => {
+    const flow = document.querySelector('.react-flow');
+    if (!flow) return;
+    let height = flow.getBoundingClientRect().height;
+    const observer = new ResizeObserver(() => {
+      const now = flow.getBoundingClientRect().height;
+      if (Math.abs(now - height) < 1) return;
+      height = now;
+      // Also while the view is still on its way: it was aimed at the old height.
+      if (shownWhole.current || fitting.current > 0) showMap(0);
+    });
+    observer.observe(flow);
+    return () => observer.disconnect();
+  }, []);
 
   // Opening a map: its concepts take their final size bit by bit (pictures
   // load, the sheet makes room for them), and a view worked out at the
@@ -935,6 +962,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   }, [selectedId, editing]);
 
   const [toolbarRef, crowded] = useCrowded();
+  const [topbarRef, topbarCrowded] = useCrowded();
   const phone = useMediaQuery(PHONE);
   // Where they do not all fit (a phone, large text): these go in «Altro» (see .toolbar-more).
   // Where they all fit they are in groups ('group-start'): what goes into the map,
@@ -1015,7 +1043,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       onKeyDownCapture={touch}
       onWheelCapture={touch}
     >
-      <header className="topbar">
+      <header ref={topbarRef} className={cx('topbar', topbarCrowded && 'is-crowded')}>
         <BigButton icon="back" label="Mappe" aria-label="Mappe" title="Mappe" onClick={onBack} />
         {/* The pencil says the title can be changed: there is no hover on a tablet. */}
         <label className="title-field">
@@ -1118,6 +1146,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           nodeDragThreshold={6}
           fitView
           fitViewOptions={{ padding: 0.3, maxZoom: MAX_READ_ZOOM }}
+          onMoveStart={() => void (shownWhole.current = false)}
           minZoom={MIN_ZOOM}
           // The wheel and two fingers on a touchpad scroll the sheet, like a
           // page; Ctrl + wheel, a pinch and the buttons zoom.

@@ -454,7 +454,9 @@ textarea {
 }
 @media (min-width: 640px) {
   .map-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Two columns, or one when the text is so large that a word of the
+       title would not fit in half the list (16rem grows with --text-scale). */
+    grid-template-columns: repeat(auto-fill, minmax(max(calc(50% - 5px), min(16rem, 100%)), 1fr));
   }
   .map-card.is-latest {
     grid-column: 1 / -1;
@@ -502,14 +504,14 @@ textarea {
   min-width: 0;
 }
 .map-title {
-  font-size: min(1.1rem, 6vw);
+  font-size: min(1.1rem, 5.5vw);
   font-weight: 600;
   /* Only a word longer than the whole card is broken. */
   max-width: 100%;
   overflow-wrap: break-word;
 }
 .map-card.is-latest .map-title {
-  font-size: min(1.2rem, 5.6vw);
+  font-size: min(1.2rem, 5.5vw);
 }
 .map-card .icon-button {
   min-width: 48px;
@@ -688,6 +690,7 @@ textarea {
    leaves goes to the map (a tablet held sideways has little of it). */
 .topbar .big-button {
   flex-direction: row;
+  flex-shrink: 0;
   min-height: 44px;
   padding: 2px 12px;
   gap: 6px;
@@ -702,10 +705,13 @@ textarea {
 }
 .topbar .big-button-label {
   font-size: 0.85rem;
+  white-space: nowrap;
 }
+/* The title keeps some room: when the buttons would take it, the bar is
+   crowded (useCrowded) and they show only their icon. */
 .title-field {
   flex: 1;
-  min-width: 0;
+  min-width: min(6em, 25vw);
   display: flex;
   align-items: center;
   cursor: text;
@@ -837,10 +843,25 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Narrow screens: one row, the map gets the height. «Mappe», «Annulla» and
-   «Ripeti» show only their icon (the most familiar ones there are), their
-   word stays for screen readers (hidden as .sr-only, not removed: not every
-   button has an aria-label); a long title ends with «…». */
+/* Narrow screens, or words too big for the bar (large text, OpenDyslexic,
+   wide spacing: measured by useCrowded, not guessed from the width): one
+   row, the map gets the height. The buttons show only their icon (the most
+   familiar ones there are), their word stays for screen readers (hidden as
+   .sr-only, not removed: not every button has an aria-label); a long title
+   ends with «…». */
+.topbar.is-crowded .big-button {
+  min-width: 44px;
+  padding: 2px 8px;
+}
+.topbar.is-crowded .big-button-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 @media (max-width: 760px) {
   .topbar .big-button {
     min-width: 44px;
@@ -1158,15 +1179,22 @@ textarea {
 
 /* ---------- Concept node ---------- */
 
+/* The smallest concept; set on React Flow's box, which the concept fills. */
+.react-flow__node-concept {
+  min-width: 140px;
+}
+
 .concept-node {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  min-width: 140px;
   /* Grows with the text size, so long words still fit on one line. */
   max-width: min(calc(260px * var(--text-scale) / 1.15), 80vw);
+  /* Wins over max-width: on a phone with large text the box gets as wide
+     as its longest word (even past the screen) rather than breaking it. */
+  min-width: min-content;
   padding: 14px 18px;
   --node-border: rgba(0, 0, 0, 0.25);
   border: 3px solid var(--node-border);
@@ -2255,6 +2283,15 @@ textarea {
     flex-direction: row;
     gap: 6px;
     padding: 4px 6px;
+  }
+}
+/* A short phone (an iPhone is 659 px inside Safari): a long step would leave
+   the map a strip that the tools of the concept in hand cover whole. The
+   text scrolls instead, and «Ascolta» reads all of it. */
+@media (max-width: 900px) and (max-height: 720px) {
+  .tutorial-text {
+    max-height: 22vh;
+    overflow-y: auto;
   }
 }
 /* The button the tutorial asks for. */
