@@ -15,6 +15,8 @@ describe('sameWord', () => {
     ['pioggia', 'piove'],
     ['sole', 'suolo'],
     ['mare', 'mammifero'],
+    ['piano', 'pianeta'],
+    ['carta', 'cartello'],
   ])('%s ≠ %s', (a, b) => expect(sameWord(a, b)).toBe(false));
 });
 

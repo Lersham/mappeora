@@ -124,8 +124,8 @@ export class WebSpeechService implements SpeechService {
       utterance.onerror = (e) => {
         stopGuessing();
         // Google's voices speak from the internet: when it is not there,
-        // the browser's own voice says it instead.
-        if (preferred && !preferred.localService && e.error !== 'interrupted' && e.error !== 'canceled' && mine === this.generation) {
+        // the browser's own voice says it instead (chosen or not).
+        if (voice && !voice.localService && e.error !== 'interrupted' && e.error !== 'canceled' && mine === this.generation) {
           utterance.voice = null;
           utterance.onerror = () => resolve();
           synth.speak(utterance);

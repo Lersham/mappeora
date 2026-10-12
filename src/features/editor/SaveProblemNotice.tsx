@@ -5,9 +5,18 @@ import { flushAutosave, reopenStored, saveAsCopy, useSaveStatus } from '../../se
 export function SaveProblemNotice() {
   const problem = useSaveStatus((s) => s.problem);
   const [failed, setFailed] = useState(false);
+  // A second tap while the first is still saving would make two copies.
+  const [busy, setBusy] = useState(false);
   if (!problem) return null;
 
-  const run = (action: () => Promise<boolean>) => async () => setFailed(!(await action()));
+  const run = (action: () => Promise<boolean>) => async () => {
+    setBusy(true);
+    try {
+      setFailed(!(await action()));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="editor-notice save-problem" role="alert">
@@ -18,10 +27,10 @@ export function SaveProblemNotice() {
             {failed && ' Non ci sono riuscito: riprova.'}
           </span>
           <div className="save-problem-actions">
-            <button type="button" className="big-button primary" onClick={run(saveAsCopy)}>
+            <button type="button" className="big-button primary" disabled={busy} onClick={run(saveAsCopy)}>
               <span className="big-button-label">Salva come copia</span>
             </button>
-            <button type="button" className="big-button" onClick={run(reopenStored)}>
+            <button type="button" className="big-button" disabled={busy} onClick={run(reopenStored)}>
               <span className="big-button-label">Apri l’altra versione</span>
             </button>
           </div>
@@ -32,7 +41,7 @@ export function SaveProblemNotice() {
             Non riesco a salvare le ultime modifiche. Per sicurezza puoi anche salvarle in un file con «Salva e manda».
           </span>
           <div className="save-problem-actions">
-            <button type="button" className="big-button primary" onClick={run(flushAutosave)}>
+            <button type="button" className="big-button primary" disabled={busy} onClick={run(flushAutosave)}>
               <span className="big-button-label">Riprova</span>
             </button>
           </div>

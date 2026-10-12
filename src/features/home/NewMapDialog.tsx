@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { MicButton } from '../../components/MicButton';
 import { BigButton } from '../../components/BigButton';
@@ -16,7 +16,11 @@ interface Props {
 export function NewMapDialog({ onCreate, onClose }: Props) {
   const [title, setTitle] = useState('');
   const [template, setTemplate] = useState<MapTemplate>('libera');
-  const { readText } = useReadAloud();
+  const { readText, stop } = useReadAloud();
+  // A second tap on «Crea» while the first is saving would make two maps.
+  const creating = useRef(false);
+  // A card still being read stops with the dialog.
+  useEffect(() => () => void stop(), [stop]);
 
   return (
     <Dialog title="Nuova mappa" onClose={onClose} className="new-map-dialog">
@@ -55,7 +59,16 @@ export function NewMapDialog({ onCreate, onClose }: Props) {
 
       <div className="dialog-actions">
         <BigButton icon="close" label="Annulla" onClick={onClose} />
-        <BigButton icon="check" label="Crea" variant="primary" onClick={() => onCreate(title.trim() || NEW_MAP_TITLE, template)} />
+        <BigButton
+          icon="check"
+          label="Crea"
+          variant="primary"
+          onClick={() => {
+            if (creating.current) return;
+            creating.current = true;
+            onCreate(title.trim() || NEW_MAP_TITLE, template);
+          }}
+        />
       </div>
     </Dialog>
   );
