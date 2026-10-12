@@ -6,7 +6,7 @@ import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { pickMapFile } from '../../services/openFile';
 import { MapFileError, parseAnyMapFile } from '../../lib/mapFile';
-import { backupDue, homeScreenHintNeeded, homeScreenHintSeen, lastBackup, restoreMaps, saveAllMaps, snoozeBackup } from '../../services/backup';
+import { backupDue, homeScreenHintNeeded, homeScreenHintSeen, lastBackup, restoreMaps, saveAllMaps, skippedNote, snoozeBackup } from '../../services/backup';
 import { ExamplesDialog } from './ExamplesDialog';
 import { WelcomeDialog, welcomeNeeded } from './WelcomeDialog';
 import { Icon, type IconName } from '../../components/Icon';
@@ -180,10 +180,10 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     setSaving(true);
     setBackupNote(null);
     try {
-      const n = await saveAllMaps();
+      const { saved: n, skipped } = await saveAllMaps();
       setRemind(false);
       setSavedAt(lastBackup());
-      setBackupNote(`${n === 1 ? 'Ho salvato 1 mappa' : `Ho salvato ${n} mappe`} in un file. Tienilo al sicuro: con «Apri file» le ritrovi tutte.`);
+      setBackupNote(`${n === 1 ? 'Ho salvato 1 mappa' : `Ho salvato ${n} mappe`} in un file. Tienilo al sicuro: con «Apri file» le ritrovi tutte.${skippedNote(skipped)}`);
     } catch (e) {
       if (!(e instanceof Error && /cancel/i.test(e.message))) setListError('Non ce l’ho fatta a salvare le mappe. Riprova.');
     } finally {
