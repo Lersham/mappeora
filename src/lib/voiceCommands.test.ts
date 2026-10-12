@@ -16,6 +16,7 @@ describe('parseVoiceCommand', () => {
   it('treats anything else as a concept', () => {
     expect(parseVoiceCommand('annulla il viaggio')).toEqual({ type: 'add', label: 'Annulla il viaggio' });
     expect(parseVoiceCommand('evaporazione')).toEqual({ type: 'add', label: 'Evaporazione' });
+    expect(parseVoiceCommand('constructor')).toEqual({ type: 'add', label: 'Constructor' });
   });
 
   it('returns null for silence', () => {

@@ -114,7 +114,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
   useEffect(refresh, []);
   useEffect(() => {
     if (!focusId || !maps?.some((m) => m.id === focusId)) return;
-    document.querySelector<HTMLElement>(`[data-map="${focusId}"]`)?.focus();
+    document.querySelector<HTMLElement>(`[data-map="${CSS.escape(focusId)}"]`)?.focus();
     setFocusId(null);
   }, [maps, focusId]);
 

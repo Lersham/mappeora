@@ -46,4 +46,9 @@ describe('flattenPage', () => {
     expect(out[(50 * W + 50) * 4 + 3]).toBe(255);
     expect(out[(50 * W + 50) * 4]).toBe(out[(50 * W + 50) * 4 + 1]);
   });
+
+  it('keeps a blank page white', () => {
+    const blank = flattenPage({ data: new Uint8ClampedArray(W * H * 4).fill(200), width: W, height: H });
+    expect(at(blank, 120, 80)).toBeGreaterThan(220);
+  });
 });

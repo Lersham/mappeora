@@ -72,7 +72,7 @@ export function useModal(onClose: () => void) {
       onClose();
     } else if (e.key === 'Tab' && ref.current) {
       const all = [...ref.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.getClientRects().length > 0);
-      if (all.length === 0) return;
+      if (all.length === 0) return e.preventDefault();
       const [first, last] = [all[0], all[all.length - 1]];
       const at = document.activeElement;
       if (e.shiftKey && (at === first || at === ref.current)) {

@@ -305,20 +305,15 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const write = await lettering([opts.title, pageLabel(0, 2)]);
   // The title stops before the widest date on its right ("pagina 4 di 4").
   const dateRoom = write.width(pageLabel(opts.pages - 1, opts.pages), DATE.weight, DATE.size) + 6;
-  const fitTitle = (doc: Pdf) =>
-    titleLines(opts.title, doc.internal.pageSize.getWidth() - margin * 2 - dateRoom, (t) => write.width(t, TITLE.weight, TITLE.size));
-  // The header grows with the title: the sheet's way round (and so the
-  // title's room) depends on the header, so this may take a second round.
-  let header = 12;
-  let plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks);
-  let doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper, compress: true });
-  let title = fitTitle(doc);
-  for (let round = 0; round < 2 && 12 + (title.length - 1) * TITLE_LINE !== header; round++) {
-    header = 12 + (title.length - 1) * TITLE_LINE;
-    plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks);
-    doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper, compress: true });
-    title = fitTitle(doc);
-  }
+  // The title is broken for the narrow (upright) sheet: it then fits either
+  // way round, and the header it needs is known before choosing the sheet.
+  const upright = new jsPDF({ orientation: 'portrait', unit: 'mm', format: opts.paper });
+  const title = titleLines(opts.title, upright.internal.pageSize.getWidth() - margin * 2 - dateRoom, (t) =>
+    write.width(t, TITLE.weight, TITLE.size),
+  );
+  const header = 12 + (title.length - 1) * TITLE_LINE;
+  const plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks);
+  const doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper, compress: true });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const boxW = pageW - margin * 2;
@@ -372,12 +367,13 @@ function printPdf(pdf: Blob): void {
   frame.onload = () => {
     frame.contentWindow?.focus();
     frame.contentWindow?.print();
-    // Keep the frame alive while the dialog is open; clean up much later.
-    setTimeout(() => {
-      frame.remove();
-      URL.revokeObjectURL(url);
-    }, 60_000);
   };
+  // Keep the frame alive while the dialog is open; clean up much later,
+  // even if the PDF never loads.
+  setTimeout(() => {
+    frame.remove();
+    URL.revokeObjectURL(url);
+  }, 60_000);
   document.body.appendChild(frame);
 }
 

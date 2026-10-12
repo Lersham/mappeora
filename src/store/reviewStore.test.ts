@@ -66,6 +66,7 @@ describe('review mode', () => {
     expect(ripetimiSummary(useReview.getState())).toMatch(/^Hai spiegato 1 concetto su 3\. Ti mancano: .+, .+\.$/);
     useReview.getState().hear(['a', 'c']);
     expect(ripetimiSummary(useReview.getState())).toBe('Perfetto! Hai spiegato tutti i concetti: 3 su 3.');
+    expect(ripetimiSummary({ steps: [], heard: {} })).not.toMatch(/Perfetto/);
   });
 
   it('shows every node normally when not reviewing', () => {

@@ -33,7 +33,16 @@ export function useCrowded(): [(el: HTMLElement | null) => void, boolean] {
     const observer = new ResizeObserver(check);
     observer.observe(bar);
     for (const button of bar.children) observer.observe(button);
-    return () => observer.disconnect();
+    // Buttons that come and go (review, a selection) change the width too.
+    const added = new MutationObserver(() => {
+      for (const button of bar.children) observer.observe(button);
+      check();
+    });
+    added.observe(bar, { childList: true });
+    return () => {
+      observer.disconnect();
+      added.disconnect();
+    };
   }, [bar, crowded, look]);
 
   return [setBar, crowded];

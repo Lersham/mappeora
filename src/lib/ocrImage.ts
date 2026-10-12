@@ -38,7 +38,8 @@ export function flattenPage({ data, width, height }: Pixels): Uint8ClampedArray<
   for (let i = 0; i < n; i++) if (near[i] < 0.6) rel[i] = 1;
 
   // Stretch so that the darkest ink is black: faded print gets readable.
-  const ink = quantile(rel, 0.005);
+  // A blank page has no ink: it stays white instead of turning black.
+  const ink = Math.min(quantile(rel, 0.005), 0.95);
   const span = Math.max(1 - ink, 0.05);
   const out = new Uint8ClampedArray(n * 4);
   for (let i = 0; i < n; i++) {
