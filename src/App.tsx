@@ -16,6 +16,8 @@ import { flushAutosave, recovered, showMap, useSaveStatus } from './services/aut
 import { reloadIfSafe } from './services/pwaUpdate';
 import { isNative } from './services/platform';
 import { backIsHandled, handleBack, installWebBack } from './lib/backButton';
+import { BigButton } from './components/BigButton';
+import { Dialog } from './components/Dialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SpeechProblemNotice } from './components/SpeechProblemNotice';
 import { illustrationUrl } from './services/illustrations';
@@ -81,6 +83,8 @@ export default function App() {
   const [startDialog, setStartDialog] = useState<'photo' | undefined>();
   // «Impara facendo» guides the child through the new map.
   const [tutorial, setTutorial] = useState(false);
+  // Set when the last changes could not be saved: leaving then needs the child's say.
+  const [leaveProblem, setLeaveProblem] = useState<string | null>(null);
   const { stop } = useReadAloud();
 
   const open = async (id: string) => {
@@ -130,7 +134,9 @@ export default function App() {
         useSaveStatus.getState().problem === 'conflict'
           ? 'Questa mappa è stata cambiata in un’altra finestra e le tue ultime modifiche non sono salvate.'
           : 'Non riesco a salvare le ultime modifiche.';
-      if (!window.confirm(`${why} Vuoi tornare alle mappe lo stesso? Le ultime modifiche andranno perse.`)) return;
+      // Asked in the app's own dialog (the browser's «OK / Annulla» is hard to read and may be blocked).
+      setLeaveProblem(why);
+      return;
     }
     showMap(null);
   };
@@ -187,6 +193,23 @@ export default function App() {
         />
       )}
       {newMapOpen && <NewMapDialog onCreate={create} onClose={() => setNewMapOpen(false)} />}
+      {leaveProblem !== null && (
+        <Dialog title="Tornare alle mappe?" onClose={() => setLeaveProblem(null)}>
+          <p>{leaveProblem} Vuoi tornare alle mappe lo stesso? Le ultime modifiche andranno perse.</p>
+          <div className="dialog-actions">
+            <BigButton icon="close" label="Resta qui" variant="primary" onClick={() => setLeaveProblem(null)} />
+            <BigButton
+              icon="map"
+              label="Torna alle mappe"
+              variant="danger"
+              onClick={() => {
+                setLeaveProblem(null);
+                showMap(null);
+              }}
+            />
+          </div>
+        </Dialog>
+      )}
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
       <SpeechProblemNotice />
     </ErrorBoundary>

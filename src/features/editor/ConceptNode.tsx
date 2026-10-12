@@ -43,7 +43,8 @@ export type ConceptFlowNode = Node<ConceptNodeData, 'concept'>;
 
 /** Splits the label so the word being spoken can be highlighted ("karaoke"). */
 function HighlightedLabel({ id, label }: { id: string; label: string }) {
-  const word = useReading((s) => (s.nodeId === id ? s.word : null));
+  // Renamed while being read: the spoken range belongs to the old text, so no highlight.
+  const word = useReading((s) => (s.nodeId === id && s.label === label ? s.word : null));
   const offset = useReading((s) => (s.nodeId === id ? s.offset : 0));
   if (!word || word.start < offset) return <>{label}</>;
   const start = word.start - offset;

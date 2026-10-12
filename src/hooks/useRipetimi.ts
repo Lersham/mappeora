@@ -29,7 +29,11 @@ export function useRipetimi(on: boolean) {
     };
     void (async () => {
       // The microphone would hear the app reading aloud.
-      await stopAllSpeech();
+      try {
+        await stopAllSpeech();
+      } catch {
+        // Stopping the reading failed: listen anyway.
+      }
       while (!stopped) {
         try {
           heard(await speech().listen({ onPartial: heard }));

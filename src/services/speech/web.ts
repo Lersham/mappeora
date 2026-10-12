@@ -23,21 +23,43 @@ function recognitionCtor(): RecognitionCtor | undefined {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition;
 }
 
-/** A browser with no voices at all is only waited for once. */
+/** A browser with no voices at all is waited for once; late voices reset this (see watchVoices). */
 let waitedForVoices = false;
+const voiceListeners = new Set<() => void>();
+let watchingVoices = false;
 
-/** Voices load asynchronously in Chrome: wait for `voiceschanged` once. */
+/** One permanent `voiceschanged` listener: voices can also arrive long after the first wait. */
+function watchVoices() {
+  if (watchingVoices) return;
+  watchingVoices = true;
+  window.speechSynthesis.addEventListener('voiceschanged', () => {
+    waitedForVoices = false;
+    voiceListeners.forEach((cb) => cb());
+  });
+}
+
+/** Calls back when the browser's voices change (e.g. they finish loading). Returns the unsubscribe. */
+export function onVoicesChanged(cb: () => void): () => void {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return () => undefined;
+  watchVoices();
+  voiceListeners.add(cb);
+  return () => void voiceListeners.delete(cb);
+}
+
+/** Voices load asynchronously in Chrome: wait for `voiceschanged`, up to a timeout. */
 function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   const synth = window.speechSynthesis;
+  watchVoices();
   const voices = synth.getVoices();
   if (voices.length > 0 || waitedForVoices) return Promise.resolve(voices);
   return new Promise((resolve) => {
-    const done = () => {
-      waitedForVoices = true;
-      resolve(synth.getVoices());
-    };
+    const done = () => resolve(synth.getVoices());
     synth.addEventListener('voiceschanged', done, { once: true });
-    setTimeout(done, 1500);
+    setTimeout(() => {
+      // Only here: if the voices came, they are there; if not, don't wait again on every call.
+      waitedForVoices = true;
+      done();
+    }, 1500);
   });
 }
 

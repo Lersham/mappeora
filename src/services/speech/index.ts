@@ -1,6 +1,7 @@
 import { isNative } from '../platform';
 import type { SpeechService } from './types';
 import { WebSpeechService } from './web';
+export { onVoicesChanged } from './web';
 import { NativeSpeechService } from './native';
 
 export type { SpeechService, Voice, SpeakOptions, ListenOptions } from './types';

@@ -107,6 +107,38 @@ test.describe('Schermata iniziale', () => {
     await expect(page.locator('.map-title')).toHaveText(['Le piante (qui) (copia)', 'Le piante (altra finestra)']);
   });
 
+  test('uscendo con modifiche non salvate chiede nel dialogo dell’app, non con quello del browser', async ({ page, context }) => {
+    let native = 0;
+    page.on('dialog', (d) => {
+      native++;
+      void d.dismiss();
+    });
+    await newMap(page, 'Le piante');
+    await page.getByRole('button', { name: 'Mappe' }).click();
+    await page.locator('.map-open', { hasText: 'Le piante' }).click();
+    // Changed in another window: the changes made here cannot be saved.
+    const other = await context.newPage();
+    await other.goto('/');
+    await other.locator('.map-open', { hasText: 'Le piante' }).click();
+    await other.locator('.title-input').fill('Le piante (altra finestra)');
+    await other.getByRole('button', { name: 'Mappe' }).click();
+    await expect(other.locator('.map-title')).toHaveText(['Le piante (altra finestra)']);
+    await page.locator('.title-input').fill('Le piante (qui)');
+    await expect(page.getByRole('alert').filter({ hasText: 'cambiata in un’altra finestra' })).toBeVisible();
+
+    const leave = page.getByRole('dialog', { name: 'Tornare alle mappe?' });
+    await page.locator('.topbar').getByRole('button', { name: 'Mappe' }).click();
+    await expect(leave).toContainText('non sono salvate');
+    await leave.getByRole('button', { name: 'Resta qui' }).click();
+    await expect(leave).toBeHidden();
+    await expect(page.locator('.title-input')).toHaveValue('Le piante (qui)');
+
+    await page.locator('.topbar').getByRole('button', { name: 'Mappe' }).click();
+    await leave.getByRole('button', { name: 'Torna alle mappe' }).click();
+    await expect(page.locator('.map-title')).toHaveText(['Le piante (altra finestra)']);
+    expect(native).toBe(0);
+  });
+
   test('cancella una mappa senza chiedere; «Annulla», al suo posto, la rimette', async ({ page }) => {
     await newMap(page, 'Prima');
     await newMap(page, 'Da cancellare');

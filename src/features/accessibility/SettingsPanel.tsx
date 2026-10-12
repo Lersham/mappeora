@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSettings, type FontChoice, type ThemeChoice } from '../../store/settingsStore';
-import { preferredVoice, speech, type Voice } from '../../services/speech';
+import { onVoicesChanged, preferredVoice, speech, type Voice } from '../../services/speech';
 import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { Dialog } from '../../components/Dialog';
@@ -34,7 +34,10 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
   const automatic = preferredVoice(voices, undefined, navigator.onLine);
 
   useEffect(() => {
-    void speech().getVoices().then(setVoices, () => setVoices([]));
+    const load = () => void speech().getVoices().then(setVoices, () => setVoices([]));
+    load();
+    // Voices that arrive after the panel opened (Chrome loads them late).
+    return onVoicesChanged(load);
   }, []);
 
   return (
