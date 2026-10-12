@@ -174,19 +174,11 @@ export function PhotoTextDialog({ mapId, onAdd, onClose }: Props) {
       }
       drag.current = null;
     };
-    // A finger that starts on a word highlights in every direction, down to
-    // the next line too: the browser must not take the gesture to scroll.
-    // Started on the margin or between words, it scrolls the text.
-    const hold = (e: TouchEvent) => {
-      if (drag.current && e.cancelable) e.preventDefault();
-    };
     window.addEventListener('pointerup', end);
     window.addEventListener('pointercancel', end);
-    window.addEventListener('touchmove', hold, { passive: false });
     return () => {
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', end);
-      window.removeEventListener('touchmove', hold);
     };
   }, []);
 

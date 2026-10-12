@@ -71,8 +71,9 @@ test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', as
   const word = (w: string) => dialog.getByRole('button', { name: w, exact: true }).first();
   const [a, b] = [(await word('hanno').boundingBox())!, (await word('robuste').boundingBox())!];
   expect(b.y).toBeGreaterThan(a.y); // the stroke goes down to the next line
-  // A real phone decides at the first touch whether to scroll: the word must refuse it.
-  expect(await word('hanno').evaluate((el) => getComputedStyle(el).touchAction)).toBe('none');
+  // A real phone decides at the first touch whether to scroll: up and down
+  // scrolls even from a word, a stroke that starts sideways highlights.
+  expect(await word('hanno').evaluate((el) => getComputedStyle(el).touchAction)).toBe('pan-y');
   await highlight(page, word('hanno'), word('robuste'));
   await expect(dialog.locator('.concept-preview .chip')).toHaveText(['Hanno radici robuste']);
 
@@ -87,6 +88,19 @@ test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', as
   for (let i = 1; i <= 8; i++) await touch('touchMove', mid - i * 15);
   await touch('touchEnd', mid - 120);
   await expect.poll(() => text.evaluate((e) => e.scrollTop)).toBeGreaterThan(0);
+  await expect(dialog.locator('.concept-preview .chip')).toHaveText(['Hanno radici robuste']);
+
+  // a finger that goes down from a word scrolls back up: the words cover almost all the text
+  const from = await text.evaluate((e) => {
+    const r = e.getBoundingClientRect();
+    const word = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 3)?.closest<HTMLElement>('[data-word]')!.getBoundingClientRect();
+    return { x: word!.x + word!.width / 2, y: word!.y + word!.height / 2 };
+  });
+  const scrolled = await text.evaluate((e) => e.scrollTop);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
+  for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from.x, y: from.y + i * 15 }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect.poll(() => text.evaluate((e) => e.scrollTop)).toBeLessThan(scrolled);
   await expect(dialog.locator('.concept-preview .chip')).toHaveText(['Hanno radici robuste']);
 });
 

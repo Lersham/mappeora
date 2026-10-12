@@ -256,9 +256,11 @@ export async function highlight(page: Page, from: Locator, to: Locator) {
     cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
   await touch('touchStart', start.x, start.y);
   // A real finger wobbles down a little before it goes where it is going:
-  // that must not turn the stroke into a scroll.
+  // that must not turn the stroke into a scroll. Then sideways along the
+  // line, as with a highlighter, and down to the next line if it goes there.
   await touch('touchMove', start.x + 2, start.y + 5);
-  for (let i = 1; i <= 8; i++) await touch('touchMove', start.x + 2 + ((end.x - start.x - 2) * i) / 8, start.y + 5 + ((end.y - start.y - 5) * i) / 8);
+  for (let i = 1; i <= 8; i++) await touch('touchMove', start.x + 2 + ((end.x - start.x - 2) * i) / 8, start.y + 5);
+  for (let i = 1; i <= 4; i++) await touch('touchMove', end.x, start.y + 5 + ((end.y - start.y - 5) * i) / 4);
   await touch('touchEnd', end.x, end.y);
   await cdp.detach();
 }

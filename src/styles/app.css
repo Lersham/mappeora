@@ -2028,12 +2028,12 @@ textarea {
   resize: vertical;
 }
 .ocr-word {
-  /* A finger that starts on a word highlights, in any direction: the phone
-     decides at the first touch whether a gesture scrolls, so the word itself
-     must say no (touch-action works on inline-block, not on inline). From the
-     spaces and the margins the text still scrolls. */
+  /* Up and down the text scrolls, even from a word: the words cover almost
+     all of it. A stroke that starts sideways highlights, and can then go on
+     to the next line: the phone decides at the first touch whether a gesture
+     scrolls (touch-action works on inline-block, not on inline). */
   display: inline-block;
-  touch-action: none;
+  touch-action: pan-y;
   padding: 2px 1px;
   margin: 0;
   border: none;
