@@ -33,6 +33,8 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 860 }, permissions: ['clipboard-read', 'clipboard-write'] },
     },
     { name: 'telefono', use: { ...devices['Pixel 7'] } },
+    // Safari's engine (WebKit) on a tablet: what the iPad runs.
+    { name: 'safari', use: { ...devices['iPad Pro 11'] } },
   ],
   webServer: {
     command: 'npm run build && npx vite preview --port 4173 --strictPort',

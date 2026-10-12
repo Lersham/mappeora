@@ -17,7 +17,8 @@ const hidden = (page: Page) =>
   });
 
 test.describe('Impara facendo', () => {
-  test('dalla home costruisce una mappa vera, un passo alla volta', async ({ page }) => {
+  test('dalla home costruisce una mappa vera, un passo alla volta', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', 'Playwright WebKit su Windows dice 0 touch point: la pressione lunga non parte');
     await page.goto('/');
     await page.getByRole('button', { name: 'Impara facendo' }).click();
     const coach = page.getByRole('region', { name: 'Tutorial' });
@@ -127,7 +128,8 @@ test.describe('Impara facendo', () => {
     await expect(page.locator('.tutorial-target')).toHaveCount(0);
   });
 
-  test('poi ogni altro pulsante, detto e indicato: anche quando è dentro «Altro»', async ({ page }) => {
+  test('poi ogni altro pulsante, detto e indicato: anche quando è dentro «Altro»', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', 'Playwright WebKit su Windows dice 0 touch point: la pressione lunga non parte');
     await page.goto('/');
     await page.getByRole('button', { name: 'Impara facendo' }).click();
     const coach = page.getByRole('region', { name: 'Tutorial' });

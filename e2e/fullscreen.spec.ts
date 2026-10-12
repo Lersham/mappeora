@@ -4,6 +4,8 @@ import { newMap, sampleMap, toolbar } from './helpers';
 const inFullscreen = (page: import('@playwright/test').Page) => page.evaluate(() => !!document.fullscreenElement);
 
 test.describe('Schermo intero', () => {
+  test.skip(({ browserName }) => browserName === 'webkit', 'Playwright WebKit su Windows non ha lo schermo intero');
+
   test('dall’elenco si entra e si esce con lo stesso pulsante, che dice cosa farà', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Schermo intero', exact: true }).click();

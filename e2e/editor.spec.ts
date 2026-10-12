@@ -350,8 +350,9 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
 });
 
 test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
-  test('sul foglio il dito su un concetto muove la mappa, quello scelto si trascina; «Sposta» libera i concetti', async ({ page, isMobile }) => {
+  test('sul foglio il dito su un concetto muove la mappa, quello scelto si trascina; «Sposta» libera i concetti', async ({ page, isMobile, browserName }) => {
     test.skip(!isMobile, 'vale per i touch screen');
+    test.skip(browserName === 'webkit', 'il dito passa da CDP, che WebKit non ha');
     await sampleMap(page);
     await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
     // No lock to find: on the A4 sheet the concepts stay where the sheet puts them.

@@ -34,7 +34,7 @@ jobs:
       - name: Test unitari
         run: npm test
       - name: Browser per i test E2E
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
       - name: Test E2E (computer e telefono)
         run: npm run test:e2e
       - name: Rapporto dei test E2E

@@ -188,7 +188,7 @@ export const test = base.extend<{ consoleErrors: string[] }>({
       page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
       page.on('console', (m) => {
         // Requests we abort on purpose (e.g. the OCR engine) are not app bugs.
-        if (m.type() === 'error' && !/Failed to load resource|net::ERR_/.test(m.text())) errors.push(m.text());
+        if (m.type() === 'error' && !/Failed to load resource|net::ERR_|Load failed/.test(m.text())) errors.push(m.text());
       });
       await use(errors);
       expect(errors, 'errori JavaScript o in console').toEqual([]);

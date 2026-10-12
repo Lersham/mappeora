@@ -934,6 +934,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   }, [selectedId, editing]);
 
   const [toolbarRef, crowded] = useCrowded();
+  const [topbarRef, topbarCrowded] = useCrowded();
   const phone = useMediaQuery(PHONE);
   // Where they do not all fit (a phone, large text): these go in «Altro» (see .toolbar-more).
   // Where they all fit they are in groups ('group-start'): what goes into the map,
@@ -1013,7 +1014,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       onKeyDownCapture={touch}
       onWheelCapture={touch}
     >
-      <header className="topbar">
+      <header ref={topbarRef} className={cx('topbar', topbarCrowded && 'is-crowded')}>
         <BigButton icon="back" label="Mappe" aria-label="Mappe" title="Mappe" onClick={onBack} />
         {/* The pencil says the title can be changed: there is no hover on a tablet. */}
         <label className="title-field">
