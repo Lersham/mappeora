@@ -10,7 +10,7 @@ import { useReading } from '../store/readingStore';
 let turn = 0;
 
 export function takeSpeechTurn(): number {
-  useReading.getState().set({ active: false, nodeId: null, word: null });
+  useReading.getState().set({ active: false, nodeId: null, label: null, word: null });
   return ++turn;
 }
 

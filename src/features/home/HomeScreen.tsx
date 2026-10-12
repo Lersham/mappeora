@@ -6,7 +6,7 @@ import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { pickMapFile } from '../../services/openFile';
 import { MapFileError, parseAnyMapFile } from '../../lib/mapFile';
-import { backupDue, homeScreenHintNeeded, homeScreenHintSeen, lastBackup, restoreMaps, saveAllMaps, snoozeBackup } from '../../services/backup';
+import { backupDue, homeScreenHintNeeded, homeScreenHintSeen, lastBackup, restoreMaps, saveAllMaps, skippedNote, snoozeBackup } from '../../services/backup';
 import { ExamplesDialog } from './ExamplesDialog';
 import { WelcomeDialog, welcomeNeeded } from './WelcomeDialog';
 import { Icon, type IconName } from '../../components/Icon';
@@ -15,6 +15,8 @@ import { titleMatches } from '../../lib/searchText';
 import { forgetBookPage } from '../../lib/bookPage';
 import { MicButton } from '../../components/MicButton';
 import { Mascot } from '../../components/Mascot';
+import { FullscreenButton } from '../../components/FullscreenButton';
+import { useUpdateReady } from '../../services/pwaUpdate';
 
 /** One of the ways to start, with a line that says what it does. The line is the
  *  button's description (aria-describedby), not its name: the name stays the single word. */
@@ -83,6 +85,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(welcomeNeeded);
   const { readText } = useReadAloud();
+  const updateWaiting = useUpdateReady((s) => s.ready);
 
   const [listError, setListError] = useState<string | null>(null);
   /** What «Salva tutte le mappe» or a safety copy just did. */
@@ -123,7 +126,8 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
   const remove = async (m: MapSummary, index: number) => {
     let map: ConceptMap | undefined;
     try {
-      map = await storage().get(m.id);
+      // A damaged map can still be deleted: it just has no «Annulla».
+      map = await storage().get(m.id).catch(() => undefined);
       await storage().remove(m.id);
       forgetBookPage(m.id);
     } catch {
@@ -179,10 +183,10 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     setSaving(true);
     setBackupNote(null);
     try {
-      const n = await saveAllMaps();
+      const { saved: n, skipped } = await saveAllMaps();
       setRemind(false);
       setSavedAt(lastBackup());
-      setBackupNote(`${n === 1 ? 'Ho salvato 1 mappa' : `Ho salvato ${n} mappe`} in un file. Tienilo al sicuro: con «Apri file» le ritrovi tutte.`);
+      setBackupNote(`${n === 1 ? 'Ho salvato 1 mappa' : `Ho salvato ${n} mappe`} in un file. Tienilo al sicuro: con «Apri file» le ritrovi tutte.${skippedNote(skipped)}`);
     } catch (e) {
       if (!(e instanceof Error && /cancel/i.test(e.message))) setListError('Non ce l’ho fatta a salvare le mappe. Riprova.');
     } finally {
@@ -242,6 +246,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         <div className="home-header-tools">
           <BigButton icon="help" label="Come funziona" onClick={() => setWelcomeOpen(true)} />
           <BigButton icon="palette" label="Aspetto" onClick={onOpenSettings} />
+          <FullscreenButton />
         </div>
       </header>
       <h1 className="home-title">Le mie mappe</h1>
@@ -269,6 +274,14 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         </p>
       )}
 
+      {updateWaiting && (
+        <section className="home-notice" aria-label="Nuova versione">
+          <p role="status">
+            <strong>È uscita una nuova versione di MappAmi.</strong>
+          </p>
+          <BigButton icon="check" label="Aggiorna" variant="primary" onClick={() => window.location.reload()} />
+        </section>
+      )}
       {homeHint && (
         <section className="home-notice" aria-label="Consiglio per iPhone e iPad">
           <p>

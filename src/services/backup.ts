@@ -39,13 +39,22 @@ function writeState(patch: Partial<BackupState>) {
 }
 
 /** Every map of the device in one file: downloaded on the web, «Condividi» in the app. */
-export async function saveAllMaps(): Promise<number> {
+export async function saveAllMaps(): Promise<{ saved: number; skipped: number }> {
   const list = await storage().list();
-  const maps = (await Promise.all(list.map((m) => storage().get(m.id)))).filter((m): m is ConceptMap => !!m);
+  // A damaged map must not stop the copy of the others, but the child is told.
+  const maps = (await Promise.all(list.map((m) => storage().get(m.id).catch(() => undefined)))).filter((m): m is ConceptMap => !!m);
   const date = new Date().toISOString().slice(0, 10);
   await shareFile(textToDataUrl(serializeArchive(maps), 'application/json'), `mappami-tutte-le-mappe-${date}${MAP_FILE_EXTENSION}`, 'Le mie mappe');
   writeState({ savedAt: Date.now(), snoozedUntil: undefined });
-  return maps.length;
+  return { saved: maps.length, skipped: list.length - maps.length };
+}
+
+/** What to add to the note when damaged maps were left out of the copy. */
+export function skippedNote(skipped: number): string {
+  if (skipped <= 0) return '';
+  return skipped === 1
+    ? ' 1 mappa non si riesce più a leggere ed è rimasta fuori dalla copia.'
+    : ` ${skipped} mappe non si riescono più a leggere e sono rimaste fuori dalla copia.`;
 }
 
 /**

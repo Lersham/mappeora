@@ -387,6 +387,8 @@ export async function saveMapFile(map: ConceptMap): Promise<void> {
   await shareFile(dataUrl, `${slug(map.title) || 'mappa'}${MAP_FILE_EXTENSION}`, map.title);
 }
 
+const SHARED_DIR = 'condivisi';
+
 /** Web: downloads the file. Android/iOS: opens the native share sheet. */
 export async function shareFile(dataUrl: string, fileName: string, title: string): Promise<void> {
   if (!isNative()) {
@@ -399,10 +401,13 @@ export async function shareFile(dataUrl: string, fileName: string, title: string
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
     return;
   }
+  // Shared files get their own cache folder, emptied before each share: only the last one stays on the phone.
+  await Filesystem.rmdir({ path: SHARED_DIR, directory: Directory.Cache, recursive: true }).catch(() => undefined);
   const { uri } = await Filesystem.writeFile({
-    path: fileName,
+    path: `${SHARED_DIR}/${fileName}`,
     data: dataUrl.slice(dataUrl.indexOf(',') + 1),
     directory: Directory.Cache,
+    recursive: true,
   });
   await Share.share({ title, url: uri, dialogTitle: 'Condividi la mappa' });
 }

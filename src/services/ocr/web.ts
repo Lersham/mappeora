@@ -6,6 +6,15 @@ import type { PickedPhoto } from '../photo';
 import { OcrDownloadError, PhotoDecodeError, type OcrService } from './types';
 
 /**
+ * Where the engine is downloaded from: the same addresses tesseract.js 7.0.0 uses
+ * by default, written out so the CSP in vercel.json (script-src) can name them.
+ * Updating tesseract.js (package.json is pinned) means updating both.
+ * corePath is a folder: the worker picks the variant (SIMD, LSTM…) inside it.
+ */
+const TESSERACT_WORKER = 'https://cdn.jsdelivr.net/npm/tesseract.js@v7.0.0/dist/worker.min.js';
+const TESSERACT_CORE = 'https://cdn.jsdelivr.net/npm/tesseract.js-core@v7.0.0';
+
+/**
  * Silence that means the download is stuck: the engine reports progress only
  * between its steps (engine, then the Italian model), so this is generous.
  */
@@ -66,6 +75,9 @@ export class WebOcr implements OcrService {
       import('tesseract.js')
         .then(({ createWorker }) =>
           createWorker('ita', undefined, {
+            // Pinned to the installed version: the CSP in vercel.json lets scripts load only from these two paths.
+            workerPath: TESSERACT_WORKER,
+            corePath: TESSERACT_CORE,
             logger: (m) => {
               if (!ready) alive();
               // Downloading the model counts as the first 30%, reading the rest.

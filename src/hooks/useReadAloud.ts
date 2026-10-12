@@ -21,7 +21,7 @@ export function useReadAloud() {
       for (const step of steps) {
         if (!ownsSpeech(myTurn)) return;
         const label = useMapStore.getState().map?.nodes.find((n) => n.id === step.nodeId)?.label ?? '';
-        reading.set({ nodeId: step.nodeId, word: null, offset: step.text.length - label.length });
+        reading.set({ nodeId: step.nodeId, label, word: null, offset: step.text.length - label.length });
         await speech().speak(step.text, {
           rate: speechRate,
           voiceId,
@@ -31,7 +31,7 @@ export function useReadAloud() {
     } catch (e) {
       if (ownsSpeech(myTurn)) reportSpeakError(e);
     } finally {
-      if (ownsSpeech(myTurn)) reading.set({ active: false, nodeId: null, word: null });
+      if (ownsSpeech(myTurn)) reading.set({ active: false, nodeId: null, label: null, word: null });
     }
   }, []);
 

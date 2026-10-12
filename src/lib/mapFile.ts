@@ -146,6 +146,23 @@ export function parseAnyMapFile(text: string): { archive: boolean; maps: Concept
   return { archive: true, maps };
 }
 
+/**
+ * A map read back from the device's own storage (SQLite text or an IndexedDB
+ * object): same sanitising as a file, but it keeps id and dates. A damaged
+ * record fails here, not later in the editor.
+ */
+export const sanitizeStoredMap = (stored: unknown): ConceptMap => readMap(stored, { keepId: true });
+
+export function parseStoredMap(text: string): ConceptMap {
+  let stored: unknown;
+  try {
+    stored = JSON.parse(text);
+  } catch {
+    throw new MapFileError('La mappa salvata sul dispositivo è rovinata.');
+  }
+  return sanitizeStoredMap(stored);
+}
+
 function readJson(text: string): Record<string, unknown> {
   let data: unknown;
   try {
