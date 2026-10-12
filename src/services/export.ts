@@ -92,8 +92,20 @@ function labelRects(flow: HTMLElement, viewport: HTMLElement): Rect[] {
     }));
 }
 
-/** Renders the whole map (not just the visible area) to a PNG. */
-async function renderMap(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
+let rendering: Promise<unknown> = Promise.resolve();
+
+/**
+ * Renders the whole map (not just the visible area) to a PNG. One at a time:
+ * a cancelled export finishing late must not take the export classes off the
+ * next one while it is being copied.
+ */
+function renderMap(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
+  const run = rendering.then(() => renderOnce(nodes, background, simple));
+  rendering = run.catch(() => {});
+  return run;
+}
+
+async function renderOnce(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
   const flow = document.querySelector<HTMLElement>('.react-flow');
   const el = flow?.querySelector<HTMLElement>('.react-flow__viewport');
   if (!flow || !el) throw new Error('viewport-not-found');

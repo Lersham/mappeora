@@ -48,6 +48,10 @@ function load(): Promise<Entry[]> {
       phrases: [fold(i.n), ...i.k.map(fold)],
       stemmedName: stemPhrase(fold(i.n)),
     }));
+  }).catch(() => {
+    // Chunk gone after a new version went online: no results now, a new try next time.
+    index = undefined;
+    return [];
   });
   return index;
 }

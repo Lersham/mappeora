@@ -26,7 +26,9 @@ export async function toDataUrl(url: string, signal?: AbortSignal): Promise<stri
     if (!res.ok) return undefined;
     const bytes = new Uint8Array(await res.arrayBuffer());
     const header = (res.headers.get('content-type') ?? '').split(';')[0].trim();
-    const type = header.startsWith('image/') ? header : (sniffImage(bytes) ?? (header || 'image/png'));
+    // A page instead of a picture (the school wifi's login) is not saved as one.
+    const type = header.startsWith('image/') ? header : (sniffImage(bytes) ?? (header ? undefined : 'image/png'));
+    if (!type) return undefined;
     let binary = '';
     for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
     return `data:${type};base64,${btoa(binary)}`;

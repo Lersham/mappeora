@@ -123,10 +123,11 @@ export function PhotoTextDialog({ mapId, onAdd, onClose }: Props) {
       setStep({
         kind: 'error',
         message:
-          e instanceof OcrDownloadError || !navigator.onLine
-            ? 'La prima volta serve internet per scaricare il lettore di testo. Controlla la connessione: a volte la rete della scuola blocca il download.'
-            : e instanceof PhotoDecodeError
-              ? 'Questa foto non si apre. Prova con un’altra foto, o con una foto JPG o PNG.'
+          // A broken photo is broken offline too: it comes first.
+          e instanceof PhotoDecodeError
+            ? 'Questa foto non si apre. Prova con un’altra foto, o con una foto JPG o PNG.'
+            : e instanceof OcrDownloadError || !navigator.onLine
+              ? 'La prima volta serve internet per scaricare il lettore di testo. Controlla la connessione: a volte la rete della scuola blocca il download.'
               : 'Non sono riuscito a leggere la foto. Riprova!',
         // Shown small, so an adult can report what went wrong.
         detail: errorDetail(e),

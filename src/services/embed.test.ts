@@ -25,6 +25,11 @@ describe('embed', () => {
     expect(await toDataUrl('https://x/y', stop.signal)).toBeUndefined();
   });
 
+  it('does not save a web page as a picture', async () => {
+    vi.stubGlobal('fetch', async () => new Response('<html>Accedi al wifi</html>', { headers: { 'content-type': 'text/html' } }));
+    expect(await toDataUrl('https://x/y.png')).toBeUndefined();
+  });
+
   it('embeds only web pictures that are not saved yet', async () => {
     const urls: string[] = [];
     vi.stubGlobal('fetch', async (url: string) => {

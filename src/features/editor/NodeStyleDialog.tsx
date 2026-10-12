@@ -12,7 +12,7 @@ import {
   type Illustration,
 } from '../../services/illustrations';
 import { toDataUrl } from '../../services/embed';
-import { COLOR_NAMES, NODE_COLORS } from '../../lib/palette';
+import { COLOR_NAMES, DEFAULT_COLOR, NODE_COLORS } from '../../lib/palette';
 import { useMapStore } from '../../store/mapStore';
 import { photoToDataUrl, pickPhoto, type PhotoSource } from '../../services/photo';
 import { PasteError, fromPasteEvent, openGoogleImages, pastedToDataUrl, readClipboardImage } from '../../services/webImage';
@@ -185,6 +185,8 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     window.addEventListener('focus', onBack);
     document.addEventListener('visibilitychange', onBack);
     return () => {
+      // Another tab: a later return to the app is not a return from Google.
+      awayAtGoogle.current = false;
       window.clearTimeout(retry);
       window.removeEventListener('focus', onBack);
       document.removeEventListener('visibilitychange', onBack);
@@ -226,7 +228,7 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
       <fieldset>
         <legend>Colore</legend>
         <div className="choice-row">
-          {[...NODE_COLORS, '#ffffff'].map((c) => (
+          {[...NODE_COLORS, DEFAULT_COLOR].map((c) => (
             <button
               key={c}
               type="button"

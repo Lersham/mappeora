@@ -120,6 +120,8 @@ function WidthGrip({ id, label }: { id: string; label: string }) {
     drag.current = null;
     endStep();
   };
+  // Gone mid-drag (the concept deleted, the map closed): the undo history must not stay paused.
+  useEffect(() => () => end(), []);
   return (
     <button
       type="button"
