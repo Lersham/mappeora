@@ -16,7 +16,8 @@ test.describe('Schermo intero', () => {
     await expect(page.getByRole('button', { name: 'Schermo intero', exact: true })).toBeVisible();
   });
 
-  test('senza schermo intero nel browser il pulsante non c’è', async ({ page }) => {
+  test('senza schermo intero nel browser il pulsante non c’è', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', 'su iPhone e iPad il pulsante c’è sempre: spiega la schermata Home (test sotto)');
     await page.addInitScript(() => {
       for (const k of ['fullscreenEnabled', 'webkitFullscreenEnabled']) Object.defineProperty(document, k, { value: false });
     });
@@ -60,5 +61,29 @@ test.describe('Schermo intero', () => {
     expect(await inFullscreen(page)).toBe(true);
     await toolbar(page, 'Esci da schermo intero');
     await expect.poll(() => inFullscreen(page)).toBe(false);
+  });
+});
+
+test.describe('Schermo intero su iPhone e iPad', () => {
+  test.use({ userAgent: 'Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' });
+
+  test('il pulsante spiega la schermata Home: quello di Safari si chiude con uno swipe, anche spostando la mappa', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Schermo intero', exact: true }).click();
+    const hint = page.getByRole('dialog', { name: 'Schermo intero' });
+    await expect(hint).toContainText('Aggiungi alla schermata Home');
+    await hint.getByRole('button', { name: 'Ho capito' }).click();
+    await expect(hint).toHaveCount(0);
+    expect(await inFullscreen(page)).toBe(false);
+
+    // The same in the editor; the Interrogazione no longer goes to Safari's on its own.
+    await sampleMap(page);
+    await toolbar(page, 'Schermo intero');
+    await expect(hint).toContainText('Aggiungi alla schermata Home');
+    await hint.getByRole('button', { name: 'Ho capito' }).click();
+    await toolbar(page, 'Ripassa');
+    await page.getByRole('button', { name: /^Interrogazione/ }).click();
+    await expect(page.locator('.present-caption')).toBeVisible();
+    expect(await inFullscreen(page)).toBe(false);
   });
 });
