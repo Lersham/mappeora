@@ -18,18 +18,22 @@ export function TreeEdge({ id, label, labelBgPadding, labelBgBorderRadius, inter
   const bracket = p.sourcePosition === Position.Left && p.targetPosition === Position.Left;
   const [path, labelX, labelY] = bracket ? getSmoothStepPath({ ...p, offset: 24, borderRadius: 12 }) : getBezierPath(p);
   const look = useSettings((s) => `${s.font}|${s.uppercase}|${s.textScale}|${s.wideSpacing}`);
-  const [fontsReady, setFontsReady] = useState(false);
+  // Every font that finishes loading (OpenDyslexic chosen later, too) means a new measure.
+  const [fontsLoaded, setFontsLoaded] = useState(0);
   useEffect(() => {
-    let live = true;
-    void document.fonts?.ready.then(() => live && setFontsReady(true));
-    return () => void (live = false);
+    const fonts = document.fonts;
+    if (!fonts) return;
+    const bump = () => setFontsLoaded((n) => n + 1);
+    void fonts.ready.then(bump);
+    fonts.addEventListener('loadingdone', bump);
+    return () => fonts.removeEventListener('loadingdone', bump);
   }, []);
   return (
     <>
       <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} interactionWidth={interactionWidth} />
       {label && (
         <EdgeText
-          key={`${look}|${fontsReady}`}
+          key={`${look}|${fontsLoaded}`}
           x={labelX}
           y={labelY}
           label={label}

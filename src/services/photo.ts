@@ -76,6 +76,8 @@ export async function photoToDataUrl(webPath: string, maxSide = NODE_PHOTO_SIZE)
     el.onerror = () => reject(new Error('photo-load'));
     el.src = webPath;
   });
+  // An SVG without a size would become an empty picture.
+  if (!img.naturalWidth || !img.naturalHeight) throw new Error('photo-load');
   const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(img.naturalWidth * scale);
