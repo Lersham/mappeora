@@ -241,14 +241,21 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
         const h = hold.current;
         if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > HOLD_SLOP) cancelHold();
       }}
-      onPointerUp={() => {
+      onPointerUp={(e) => {
         const ready = hold.current?.ready;
         cancelHold();
         if (!ready) return;
         swallow.current = true;
-        useMapStore.getState().select(id);
-        setDraft(data.label);
-        setEditing(true);
+        const open = () => {
+          useMapStore.getState().select(id);
+          setDraft(data.label);
+          setEditing(true);
+        };
+        // With a mouse, Safari drops the mouseup of a label replaced during
+        // pointerup, and the map's drag then eats the next click: open after it.
+        // A finger opens now, or the keyboard would not come up.
+        if (e.pointerType === 'mouse') window.setTimeout(open);
+        else open();
       }}
       onPointerCancel={cancelHold}
       onPointerLeave={cancelHold}
