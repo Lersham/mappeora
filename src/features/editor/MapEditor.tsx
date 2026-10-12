@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentProps } from 'react';
+import { canFullscreen, enterFullscreen, exitFullscreen, fullscreenProps, isFullscreen, useFullscreen } from '../../lib/fullscreen';
+import { FullscreenButton } from '../../components/FullscreenButton';
 import {
   Background,
   type EdgeTypes,
@@ -746,7 +748,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     setDialog(null);
     actions.select(null);
     // Full screen helps on the class whiteboard; not every WebView allows it.
-    if (mode === 'interrogazione') document.documentElement.requestFullscreen?.().catch(() => {});
+    // Only if the child is not already in full screen: then they keep it when leaving.
+    if (mode === 'interrogazione' && canFullscreen() && !isFullscreen()) {
+      enteredFullscreen.current = true;
+      void enterFullscreen();
+    }
     const steps = readingOrder(visiblePart(map), { depthFirst: sheetTemplate });
     if (mode !== 'ripetimi') return review.start(steps, mode);
     // The child names the concepts, not the whole propositions.
@@ -758,10 +764,18 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     showMap(50);
   };
 
+  /** True if the review itself put the page in full screen, so only then it takes it out. */
+  const enteredFullscreen = useRef(false);
+  const leaveReviewFullscreen = () => {
+    if (!enteredFullscreen.current) return;
+    enteredFullscreen.current = false;
+    if (isFullscreen()) void exitFullscreen();
+  };
+
   const exitReview = () => {
     void reader.stop();
     review.exit();
-    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    leaveReviewFullscreen();
     showMap(50);
   };
 
@@ -815,7 +829,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   useEffect(
     () => () => {
       useReview.getState().exit();
-      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+      leaveReviewFullscreen();
       endStep();
       window.clearTimeout(closer.current);
       window.clearTimeout(noticeTimer.current);
@@ -950,6 +964,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       disabled: arranging,
     },
   ];
+  const inFullscreen = useFullscreen();
   // The map as a whole: in the top bar (on a phone, in «Altro»).
   const mapTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
     { key: 'save', icon: 'share', label: 'Salva e manda', onClick: () => setDialog({ kind: 'export' }) },
@@ -962,11 +977,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         onOpenSettings();
       },
     },
+    ...(canFullscreen() ? [{ key: 'fullscreen', ...fullscreenProps(inFullscreen) }] : []),
   ];
   // The tool the tutorial asks for may be in «Altro»: then «Altro» stands out too.
   const inMore =
-    (crowded && moreTools.some((t) => TOOL_TARGETS[t.key] === tutorialTarget)) ||
-    (phone && mapTools.some((t) => TOOL_TARGETS[t.key] === tutorialTarget));
+    tutorialTarget !== undefined &&
+    ((crowded && moreTools.some((t) => TOOL_TARGETS[t.key] === tutorialTarget)) || (phone && mapTools.some((t) => TOOL_TARGETS[t.key] === tutorialTarget)));
 
   /**
    * «Solo la mappa»: every bar goes away, for studying the map or showing it
@@ -1034,7 +1050,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             ))}
           </>
         ) : (
-          <BigButton icon="close" label="Esci" aria-label="Esci" title="Esci" onClick={exitReview} />
+          <>
+            {/* On a phone the bar is tight: there the way out is the system's (back gesture) or «Altro» in the editor. */}
+            <FullscreenButton className="topbar-map" />
+            <BigButton icon="close" label="Esci" aria-label="Esci" title="Esci" onClick={exitReview} />
+          </>
         )}
       </header>
 

@@ -15,6 +15,7 @@ import { titleMatches } from '../../lib/searchText';
 import { forgetBookPage } from '../../lib/bookPage';
 import { MicButton } from '../../components/MicButton';
 import { Mascot } from '../../components/Mascot';
+import { FullscreenButton } from '../../components/FullscreenButton';
 import { useUpdateReady } from '../../services/pwaUpdate';
 
 /** One of the ways to start, with a line that says what it does. The line is the
@@ -245,6 +246,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         <div className="home-header-tools">
           <BigButton icon="help" label="Come funziona" onClick={() => setWelcomeOpen(true)} />
           <BigButton icon="palette" label="Aspetto" onClick={onOpenSettings} />
+          <FullscreenButton />
         </div>
       </header>
       <h1 className="home-title">Le mie mappe</h1>
