@@ -376,16 +376,20 @@ function printPdf(pdf: Blob): void {
   const frame = document.createElement('iframe');
   frame.className = 'print-frame';
   frame.src = url;
+  // Keep the frame alive while the dialog is open; clean up much later,
+  // even if the PDF never loads. The minute restarts once it has loaded:
+  // a slow PDF must not eat the time spent in the print dialog.
+  const cleanup = () => {
+    frame.remove();
+    URL.revokeObjectURL(url);
+  };
+  let timer = setTimeout(cleanup, 60_000);
   frame.onload = () => {
+    clearTimeout(timer);
+    timer = setTimeout(cleanup, 60_000);
     frame.contentWindow?.focus();
     frame.contentWindow?.print();
   };
-  // Keep the frame alive while the dialog is open; clean up much later,
-  // even if the PDF never loads.
-  setTimeout(() => {
-    frame.remove();
-    URL.revokeObjectURL(url);
-  }, 60_000);
   document.body.appendChild(frame);
 }
 
