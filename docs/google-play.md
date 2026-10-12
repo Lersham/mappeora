@@ -39,6 +39,7 @@ La stessa pagina è dentro l'app: schermata iniziale → «🔒 Privacy».
 | Dati tecnici di ML Kit | **Raccolti, non condivisi**: «Informazioni e prestazioni dell'app → Diagnostica» e «Dispositivo o altri ID» | Scopo: funzionalità dell'app. Non collegati all'identità, cifrati in transito, obbligatori (non si possono spegnere). Mai la foto né il testo letto. |
 | Dettatura | Nessun dato raccolto dall'app | MappAmi usa il riconoscimento vocale di sistema di Android (`SpeechRecognizer`) e preferisce quello senza internet. Quando non c'è, è il servizio di sistema (di solito Google) a ricevere l'audio, non MappAmi. Se Google in revisione chiede diversamente, dichiarare «Audio → Registrazioni vocali», *non conservato, trattato in modo temporaneo, obbligatorio solo per la dettatura*. |
 | Illustrazioni da jsDelivr | Nessun dato raccolto | È il download di un'immagine pubblica: non contiene dati dell'utente. Lo stesso vale per il programma di lettura Tesseract, che l'app scarica da jsDelivr solo se ML Kit non funziona sul telefono. |
+| Copia di sicurezza di Android | Nessun dato raccolto dall'app | `allowBackup` è attivo di proposito: Android può copiare mappe e impostazioni sul Google Drive personale dell'utente, così si ritrovano su un telefono nuovo. Non passano da noi, e lo dice anche [privacy.html](../public/privacy.html). |
 | Dati cifrati in transito | Sì | Tutte le connessioni sono HTTPS. |
 | Si possono cancellare i dati? | Sì | Si cancella la mappa nell'app, oppure si disinstalla l'app. |
 

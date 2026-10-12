@@ -18,7 +18,7 @@ Un'unica base di codice (React + TypeScript) viene pubblicata come:
   npm run setup:android  # una volta per macchina/sessione: SDK in /opt/android-sdk (~650 MB)
   npm run android:apk    # → android/app/build/outputs/apk/debug/app-debug.apk
   ```
-  Oppure, senza installare nulla: su GitHub, scheda **Actions** → ultima esecuzione di **Controlli** → *Artifacts* → `mappeora-android-…` (vedi [Controlli automatici](#controlli-automatici-github-actions)).
+  Oppure, senza installare nulla: su GitHub, scheda **Actions** → ultima esecuzione di **Controlli** → *Artifacts* → `mappami-android-…` (vedi [Controlli automatici](#controlli-automatici-github-actions)).
 - **iOS**: serve un Mac con Xcode (`npm run ios`).
 
 ## Fase 1: MVP
@@ -127,6 +127,8 @@ Restano col vecchio nome solo cose che l'utente non vede e che, cambiate, farebb
 - chiavi di salvataggio (`mappeora-settings`, `mappeora-welcome`…) e nome del database (`mappeora` in IndexedDB e SQLite): cambiarle **cancellerebbe le mappe** già salvate;
 - il formato dentro il file (`"format": "mappeora"`): non si vede, e cambiarlo renderebbe i file nuovi illeggibili per chi non ha ancora aggiornato l'app;
 - il plugin `MappeoraOcr` e i secret `MAPPEORA_*` di GitHub.
+
+Il nome del pacchetto npm (`package.json`) e quello dell'artifact della CI (`mappami-android-…`) sono invece già **mappami**: non toccano nessun dato salvato.
 
 Cambiati invece prima della pubblicazione, quando non c'erano ancora utenti da perdere: l'identificativo dell'app è **`it.mappami.app`** (Android e iOS; dopo l'uscita su Google Play non si potrebbe più cambiare) e l'indirizzo web è **mapp-ami.vercel.app** (`mappami.vercel.app` era già preso). Le mappe salvate nel browser sul vecchio indirizzo non passano al nuovo: il browser le tiene separate per indirizzo.
 

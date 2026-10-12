@@ -1,5 +1,5 @@
 {
-  "name": "mappeora",
+  "name": "mappami",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -13,7 +13,7 @@
     "cap:sync": "npm run build && cap sync",
     "android": "npm run cap:sync && cap open android",
     "ios": "npm run cap:sync && cap open ios",
-    "android:apk": "npm run cap:sync && cd android && ANDROID_HOME=${ANDROID_HOME:-/opt/android-sdk} ./gradlew assembleDebug",
+    "android:apk": "npm run cap:sync && node scripts/android-apk.mjs",
     "setup:android": "bash scripts/setup-android-sdk.sh",
     "setup:webapp-testing": "pip install playwright==1.56.0",
     "test:e2e": "playwright test",
@@ -42,7 +42,7 @@
     "lucide-react": "^1.48.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "tesseract.js": "^7.0.0",
+    "tesseract.js": "7.0.0",
     "zundo": "^2.3.0",
     "zustand": "^5.0.15"
   },
