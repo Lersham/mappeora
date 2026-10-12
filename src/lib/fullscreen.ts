@@ -58,5 +58,6 @@ export function useFullscreen(): boolean {
 export const fullscreenProps = (on: boolean) => ({
   icon: on ? ('fullscreen-exit' as const) : ('fullscreen' as const),
   label: on ? 'Esci da schermo intero' : 'Schermo intero',
+  title: on ? 'Esci da schermo intero' : 'Schermo intero',
   onClick: () => void toggleFullscreen(),
 });

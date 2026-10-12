@@ -2147,8 +2147,10 @@ textarea {
   margin: 16px 0 0;
   color: var(--border);
 }
-/* Read by screen readers, not shown. */
-.sr-only {
+/* Read by screen readers, not shown. In the top bar «Schermo intero» is only
+   its icon: with big text its word pushed «Mappe» off the screen. */
+.sr-only,
+.topbar .icon-only .big-button-label {
   position: absolute;
   width: 1px;
   height: 1px;

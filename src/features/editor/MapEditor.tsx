@@ -1046,13 +1046,13 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             />
             <BigButton icon="redo" label="Ripeti" aria-label="Ripeti" title="Ripeti" disabled={!canRedo} onClick={() => mapHistory().redo()} />
             {mapTools.map(({ key, ...t }) => (
-              <BigButton key={key} {...t} className={cx('topbar-map', key === 'save' && 'group-start', target(TOOL_TARGETS[key]))} />
+              <BigButton key={key} {...t} className={cx('topbar-map', key === 'save' && 'group-start', key === 'fullscreen' && 'icon-only', target(TOOL_TARGETS[key]))} />
             ))}
           </>
         ) : (
           <>
             {/* On a phone the bar is tight: there the way out is the system's (back gesture) or «Altro» in the editor. */}
-            <FullscreenButton className="topbar-map" />
+            <FullscreenButton className="topbar-map icon-only" />
             <BigButton icon="close" label="Esci" aria-label="Esci" title="Esci" onClick={exitReview} />
           </>
         )}
