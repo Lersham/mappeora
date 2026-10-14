@@ -199,7 +199,8 @@ export const useMapStore = create<MapState>()(
         const gone = new Set(ids);
         set((s) => ({
           ...edit(s, (map) =>
-            map.nodes.some((n) => gone.has(n.id))
+            // The last concept stays: a map without any does not open again.
+            map.nodes.some((n) => gone.has(n.id)) && !map.nodes.every((n) => gone.has(n.id))
               ? {
                   nodes: map.nodes.filter((n) => !gone.has(n.id)),
                   edges: map.edges.filter((e) => !gone.has(e.source) && !gone.has(e.target)),
@@ -213,7 +214,7 @@ export const useMapStore = create<MapState>()(
       removeLiftingChildren: (id) => {
         const map = get().map;
         const next = map && removeLiftingChildren(map, id);
-        if (!next) return false;
+        if (!next || next.nodes.length === 0) return false;
         set((s) => ({ ...edit(s, () => next), selectedId: s.selectedId === id ? null : s.selectedId }));
         return true;
       },
@@ -222,6 +223,7 @@ export const useMapStore = create<MapState>()(
         const map = get().map;
         if (!map) return;
         const next = removeBranch(map, id);
+        if (next.nodes.length === 0) return;
         set((s) => ({ ...edit(s, () => next), selectedId: next.nodes.some((n) => n.id === s.selectedId) ? s.selectedId : null }));
       },
 

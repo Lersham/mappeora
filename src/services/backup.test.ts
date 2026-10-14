@@ -1,13 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
-import { backupDue, saveAllMaps, skippedNote } from './backup';
+import type { ConceptMap } from '../types/map';
+import { backupDue, restoreMaps, saveAllMaps, skippedNote } from './backup';
 
 const shared = vi.fn(async () => {});
 vi.mock('./export', () => ({ shareFile: (...args: unknown[]) => (shared as (...a: unknown[]) => unknown)(...args) }));
+const saved = new Map<string, ConceptMap>();
 vi.mock('./storage', () => ({
   storage: () => ({
+    save: async (map: ConceptMap) => void saved.set(map.id, map),
     list: async () => ['ok', 'rotta', 'ok2'].map((id) => ({ id, title: id, updatedAt: 1 })),
     get: async (id: string) => {
       if (id === 'rotta') throw new Error('damaged');
+      if (!['ok', 'ok2'].includes(id)) return saved.get(id);
       return { id, title: id, nodes: [], edges: [], createdAt: 1, updatedAt: 1 };
     },
   }),
@@ -52,5 +56,18 @@ describe('saveAllMaps', () => {
   it('saves the readable maps and counts the damaged one it left out', async () => {
     expect(await saveAllMaps()).toEqual({ saved: 2, skipped: 1 });
     expect(shared).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('restoreMaps', () => {
+  const copy = (id: string): ConceptMap => ({ id, title: id, nodes: [], edges: [], createdAt: 1, updatedAt: 5, template: 'libera' });
+
+  it('goes on past a map on the device that cannot be read, keeping it as it is', async () => {
+    saved.clear();
+    expect(await restoreMaps([copy('uno'), copy('rotta'), copy('tre')])).toEqual({ added: 3, already: 0 });
+    expect([...saved.keys()].sort()).toEqual(['rotta-copia-5', 'tre', 'uno']);
+    expect(saved.has('rotta')).toBe(false);
+    // the same copy opened twice does not bring it back twice
+    expect(await restoreMaps([copy('rotta')])).toEqual({ added: 0, already: 1 });
   });
 });
