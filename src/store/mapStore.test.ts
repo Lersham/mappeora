@@ -68,6 +68,16 @@ describe('mapStore', () => {
     expect(state().selectedId).toBeNull();
   });
 
+  it('never removes the last concept: a map with none does not open again', () => {
+    const root = state().map!.nodes[0];
+    state().removeNodes([root.id]);
+    expect(state().map!.nodes).toHaveLength(1);
+    expect(state().removeLiftingChildren(root.id)).toBe(false);
+    state().removeBranch(root.id);
+    expect(state().map!.nodes).toHaveLength(1);
+    expect(mapHistory().pastStates).toHaveLength(0);
+  });
+
   it('collapsing moves the selection off hidden concepts; adding a child reopens', () => {
     const root = state().map!.nodes[0];
     const child = state().addChild(root.id, 'Idrogeno');
