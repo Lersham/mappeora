@@ -179,6 +179,8 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       refresh();
     } catch (e) {
       setImportError(e instanceof MapFileError ? e.message : 'Non riesco ad aprire questo file.');
+      // Maps put back before the error are already on the device.
+      refresh();
     }
   };
 
