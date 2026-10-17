@@ -406,9 +406,9 @@ test.describe('Editor: la barra del concetto scelto', () => {
   };
   const link = (page: Page, from: string, to: string) => page.getByRole('group', { name: new RegExp(`^Collegamento da «${from}» a «${to}»`) });
 
-  test('«Nome» riapre il nome da riscrivere', async ({ page }) => {
+  test('«Scrivi» riapre il concetto da riscrivere', async ({ page }) => {
     await sampleMap(page);
-    await (await choose(page, 'Vapore')).getByRole('button', { name: 'Nome', exact: true }).click();
+    await (await choose(page, 'Vapore')).getByRole('button', { name: 'Scrivi', exact: true }).click();
     const input = page.getByRole('textbox', { name: 'Testo del concetto' });
     await expect(input).toBeFocused();
     await input.fill('Vapore acqueo');

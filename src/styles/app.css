@@ -972,9 +972,6 @@ textarea {
   font-weight: 700;
   cursor: pointer;
 }
-.is-picking .react-flow__node {
-  cursor: crosshair;
-}
 .is-picking .react-flow__node:hover .concept-node {
   outline: 3px dashed var(--primary);
   outline-offset: 3px;
@@ -1050,6 +1047,34 @@ textarea {
   --xy-controls-button-color: var(--text);
   --xy-edge-label-background-color: var(--surface);
   --xy-edge-label-color: var(--text);
+}
+/* The mouse pointer on the map: big and blue with a white edge, easy to
+   find on every background. An arrow on the empty map, a hand on what can
+   be touched (concepts, lines, buttons). 32 px is the most every browser shows. */
+.react-flow__pane,
+.react-flow__pane.draggable,
+.react-flow__pane.dragging,
+.react-flow__pane.selection {
+  cursor: url('../assets/cursori/freccia.svg') 3 2, default;
+}
+.react-flow__node,
+.react-flow__node.selectable,
+.react-flow__node.draggable,
+.react-flow__node.draggable.dragging,
+.react-flow__edge.selectable,
+.react-flow__controls-button,
+.react-flow .concept-speak,
+.react-flow .concept-toggle,
+.react-flow .ladder-label,
+.react-flow .link-add,
+.is-picking .react-flow__node {
+  cursor: url('../assets/cursori/mano.svg') 13 2, pointer;
+}
+.react-flow .ladder-label:disabled {
+  cursor: url('../assets/cursori/freccia.svg') 3 2, default;
+}
+.react-flow .concept-input {
+  cursor: text;
 }
 .react-flow__edge-text {
   font-family: var(--font-body);
@@ -1895,6 +1920,26 @@ textarea {
 .exporting .concept-node.is-selected {
   border-color: var(--node-border);
   box-shadow: none;
+}
+
+/* ---------- Export: PDF on white paper ---------- */
+
+/* Paper is white, whatever the background on screen: the light theme's
+   ink, so a map made with «Scuro» does not print grey lines on white. */
+.export-paper {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --text: #1f2430;
+  --muted: #5b6270;
+  --border: #d9d1bd;
+  --primary: #2b54b0;
+  --edge: #556070;
+  --branch-0: #3b6ea5;
+  --branch-1: #a85a12;
+  --branch-2: #7a4fa3;
+  --branch-3: #2c7a4b;
+  --branch-4: #b03a5b;
+  --branch-5: #0f767c;
 }
 
 /* ---------- Export: "versione per la verifica" ---------- */

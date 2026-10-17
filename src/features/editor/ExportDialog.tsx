@@ -74,6 +74,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
               ))}
             </div>
             <p className="muted">Fogli verticali. Con più fogli le scritte sono più grandi: si uniscono con lo scotch, uno sotto l’altro o uno accanto all’altro.</p>
+            <p className="muted">Il foglio è sempre bianco, qualunque sfondo usi nell’app.</p>
           </fieldset>
         </>
       )}
@@ -84,7 +85,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
           <span>
             <strong>Versione per la verifica</strong>
             <br />
-            <span className="muted">Sfondo bianco e niente colori: le immagini restano, in grigio.</span>
+            <span className="muted">{kind === 'pdf' ? 'Niente colori' : 'Sfondo bianco e niente colori'}: le immagini restano, in grigio.</span>
           </span>
         </label>
       )}

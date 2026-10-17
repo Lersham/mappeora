@@ -21,6 +21,7 @@ const PADDING = 32;
 export type ExportFormat = 'png' | 'pdf';
 
 export interface ExportOptions {
+  /** A PDF is always on white paper; an image has the background of the app. */
   format: ExportFormat;
   paper: Paper;
   /** Splitting a big map over more sheets keeps its text readable. */
@@ -95,17 +96,24 @@ function labelRects(flow: HTMLElement, viewport: HTMLElement): Rect[] {
 let rendering: Promise<unknown> = Promise.resolve();
 
 /**
+ * How the map looks in the file: as on screen (the image for a chat),
+ * on white paper with the light theme's colours (every PDF, whatever the
+ * background in the app), or the "versione per la verifica".
+ */
+type Look = 'screen' | 'paper' | 'simple';
+
+/**
  * Renders the whole map (not just the visible area) to a PNG. One at a time:
  * a cancelled export finishing late must not take the export classes off the
  * next one while it is being copied.
  */
-function renderMap(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
-  const run = rendering.then(() => renderOnce(nodes, background, simple));
+function renderMap(nodes: Node[], background: string, look: Look): Promise<RenderedMap> {
+  const run = rendering.then(() => renderOnce(nodes, background, look));
   rendering = run.catch(() => {});
   return run;
 }
 
-async function renderOnce(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
+async function renderOnce(nodes: Node[], background: string, look: Look): Promise<RenderedMap> {
   const flow = document.querySelector<HTMLElement>('.react-flow');
   const el = flow?.querySelector<HTMLElement>('.react-flow__viewport');
   if (!flow || !el) throw new Error('viewport-not-found');
@@ -122,11 +130,12 @@ async function renderOnce(nodes: Node[], background: string, simple: boolean): P
     x: (width - bounds.width) / 2 - bounds.x,
     y: (height - bounds.height) / 2 - bounds.y,
   };
-  flow.classList.toggle('export-simple', simple);
+  flow.classList.toggle('export-paper', look !== 'screen');
+  flow.classList.toggle('export-simple', look === 'simple');
   flow.classList.add('exporting');
   try {
     const dataUrl = await toPng(el, {
-      backgroundColor: simple ? '#ffffff' : background,
+      backgroundColor: look === 'screen' ? background : '#ffffff',
       width,
       height,
       pixelRatio: 2,
@@ -147,7 +156,7 @@ async function renderOnce(nodes: Node[], background: string, simple: boolean): P
     );
     return { dataUrl, width, height, breaks };
   } finally {
-    flow.classList.remove('export-simple', 'exporting');
+    flow.classList.remove('export-paper', 'export-simple', 'exporting');
   }
 }
 
@@ -360,7 +369,7 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
 }
 
 export async function exportMap(nodes: Node[], background: string, opts: ExportOptions): Promise<void> {
-  const img = await renderMap(nodes, background, opts.simple);
+  const img = await renderMap(nodes, background, opts.simple ? 'simple' : opts.format === 'pdf' ? 'paper' : 'screen');
   if (opts.cancelled?.()) return;
   const base = `${slug(opts.title) || 'mappa'}${opts.simple ? '-verifica' : ''}`;
   if (opts.format === 'png') return shareFile(img.dataUrl, `${base}.png`, opts.title);

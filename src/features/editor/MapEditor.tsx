@@ -1148,7 +1148,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         {editing && selectedNode && !picking && (
           // Everything about the concept in hand, in one place.
           <div className="selection-bar" role="toolbar" aria-label="Concetto scelto">
-            <BigButton icon="edit" label="Nome" onClick={() => useMapStore.getState().startEditing(selectedNode.id)} />
+            <BigButton icon="edit" label="Scrivi" onClick={() => useMapStore.getState().startEditing(selectedNode.id)} />
             <BigButton icon="image" label="Immagine" className={target('immagine')} onClick={() => setDialog({ kind: 'style' })} />
             <BigButton icon="branch" label="Cambia ramo" className={target('cambia-ramo')} onClick={() => setPicking({ from: selectedNode.id })} />
             <BigButton icon="trash" label="Elimina" variant="danger" className={target('elimina')} onClick={() => deleteConcept(selectedNode.id)} />
@@ -1339,7 +1339,7 @@ function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
           />
         </>
       ) : (
-        <p>È l’idea principale della mappa: finché ha concetti sotto non si può eliminare. Puoi cambiarle nome con «Nome».</p>
+        <p>È l’idea principale della mappa: finché ha concetti sotto non si può eliminare. Puoi riscriverla con «Scrivi».</p>
       )}
       <div className="dialog-actions">
         <BigButton icon="close" label="Annulla" onClick={onClose} />

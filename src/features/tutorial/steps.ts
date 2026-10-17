@@ -109,12 +109,12 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Dagli un nome',
-    text: 'Il riquadro nuovo è già pronto: scrivi un’idea che c’entra, per esempio «Luce e calore», e premi Invio. Per cambiarlo dopo: tieni premuto il riquadro, o toccalo e premi «Nome».',
+    text: 'Il riquadro nuovo è già pronto: scrivi un’idea che c’entra, per esempio «Luce e calore», e premi Invio. Per cambiarlo dopo: tieni premuto il riquadro, o toccalo e premi «Scrivi».',
     done: (now) => now.map.nodes.length > 1 && !now.map.nodes.some((n) => n.label === NEW_CONCEPT_LABEL),
   },
   {
     title: 'Tocca, ritocca, tieni premuto',
-    text: 'Su un riquadro funzionano tre gesti. Un tocco lo sceglie: in basso compare la sua barra, con Nome, Immagine, Cambia ramo ed Elimina. Un altro tocco sullo stesso riquadro, anche dopo un po’, apre «Immagine e colore». Tenerlo premuto e poi alzare il dito serve a cambiarne il nome. Prova: tocca «Luce e calore» e poi toccalo ancora.',
+    text: 'Su un riquadro funzionano tre gesti. Un tocco lo sceglie: in basso compare la sua barra, con Scrivi, Immagine, Cambia ramo ed Elimina. Un altro tocco sullo stesso riquadro, anche dopo un po’, apre «Immagine e colore». Tenerlo premuto e poi alzare il dito serve a cambiarne il nome. Prova: tocca «Luce e calore» e poi toccalo ancora.',
     done: opened('style'),
   },
   {
