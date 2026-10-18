@@ -6,6 +6,14 @@
     <link rel="icon" type="image/png" href="icon-192.png" />
     <title>Privacy – MappAmi</title>
     <meta name="description" content="Informativa sulla privacy di MappAmi: le mappe restano sul tuo dispositivo, niente account, pubblicità o statistiche." />
+    <link rel="canonical" href="https://mapp-ami.vercel.app/privacy.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MappAmi" />
+    <meta property="og:locale" content="it_IT" />
+    <meta property="og:title" content="Privacy – MappAmi" />
+    <meta property="og:description" content="Informativa sulla privacy di MappAmi: le mappe restano sul tuo dispositivo, niente account, pubblicità o statistiche." />
+    <meta property="og:url" content="https://mapp-ami.vercel.app/privacy.html" />
+    <script src="static-settings.js" defer></script>
     <style>
       :root {
         --bg: #fdf8ec;
@@ -13,15 +21,18 @@
         --text: #1f2a36;
         --muted: #4b5866;
         --accent: #2b54b0;
+        --accent-text: #ffffff;
         --line: #e4dccb;
       }
+      /* Without a look saved in the app, the page follows the system's dark mode. */
       @media (prefers-color-scheme: dark) {
-        :root:not([data-theme='light']) {
+        :root:not([data-theme]) {
           --bg: #1b2129;
           --card: #252d37;
           --text: #eef1f4;
           --muted: #b9c2cc;
           --accent: #8db8e8;
+          --accent-text: #10161f;
           --line: #3a4553;
         }
       }
@@ -32,8 +43,12 @@
         margin: 0;
         background: var(--bg);
         color: var(--text);
-        font: 1.125rem/1.65 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-        letter-spacing: 0.01em;
+        font-family: var(--font-body, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+        font-size: 1.125rem;
+        line-height: var(--line-height, 1.65);
+        letter-spacing: var(--letter-spacing, 0.01em);
+        word-spacing: var(--word-spacing, normal);
+        overflow-wrap: break-word;
       }
       main {
         max-width: 44rem;
@@ -58,6 +73,12 @@
       }
       a {
         color: var(--accent);
+      }
+      footer {
+        margin-top: 2.5rem;
+        padding-top: 1rem;
+        border-top: 2px solid var(--line);
+        color: var(--muted);
       }
       .back {
         display: inline-block;
@@ -94,7 +115,7 @@
       <a class="back" href="./">← Torna a MappAmi</a>
 
       <h1>Privacy</h1>
-      <p class="updated">Ultimo aggiornamento: 4 ottobre 2026</p>
+      <p class="updated">Ultimo aggiornamento: 18 ottobre 2026</p>
 
       <section class="short" aria-labelledby="in-breve">
         <h2 id="in-breve">In breve</h2>
@@ -133,6 +154,14 @@
           Se esporti o condividi una mappa (PDF, immagine, file .mappami), il file va dove scegli tu: in una cartella, in una chat, per email.
         </li>
         <li>
+          Se qualcosa va storto, MappAmi tiene sul dispositivo una breve nota tecnica (mai il contenuto delle mappe). Non la manda a nessuno: puoi
+          copiarla tu, se vuoi, per chi ti aiuta.
+        </li>
+        <li>
+          Le pagine informative (questa, i crediti e la presentazione di MappAmi) leggono dal dispositivo il carattere, i colori e la grandezza del
+          testo che hai scelto, solo per mostrarsi come ti piace. Non li mandano a nessuno.
+        </li>
+        <li>
           Su Android, se nel telefono è attivo il backup di Google, il sistema può copiare i dati dell’app nell’account Google del telefono, per
           ritrovarli su un nuovo dispositivo. Questo backup lo gestisce Google e si può spegnere nelle impostazioni del telefono.
         </li>
@@ -156,6 +185,8 @@
           <strong>Cerca su Google Immagini.</strong> Apre il sito di Google nel browser, con il filtro SafeSearch attivo. Lì vale
           <a href="https://policies.google.com/privacy?hl=it" rel="noopener">l’informativa di Google</a>. Per i più piccoli consigliamo di usarlo
           insieme a un adulto.
+          Quando torni da Google Immagini, MappAmi controlla se hai copiato un’immagine, per metterla nel concetto (il browser può chiederti il
+          permesso). Se invece hai copiato un testo, lo guarda solo per capire se è un’immagine: non lo salva e non lo manda a nessuno.
         </li>
         <li>
           <strong>Incolla immagine.</strong> Se incolli l’indirizzo di un’immagine, l’app la scarica da quel sito e la salva dentro la mappa.
@@ -174,9 +205,18 @@
 
       <h2>Il sito mapp-ami.vercel.app</h2>
       <p>
-        La versione web è ospitata da Vercel. Come ogni servizio che pubblica siti, Vercel registra per poco tempo dati tecnici delle visite
-        (indirizzo IP, tipo di browser, pagina richiesta) per far funzionare il sito e proteggerlo da abusi. Non li usiamo per altro. Dopo la prima
-        visita l’app funziona anche senza internet.
+        La versione web è ospitata da Vercel. Come ogni servizio che pubblica siti, Vercel registra dati tecnici delle visite (indirizzo IP, tipo
+        di browser, pagina richiesta). Lo fa per far funzionare il sito e proteggerlo da abusi: la legge lo chiama «legittimo interesse». Anche
+        jsDelivr, che distribuisce le illustrazioni e il programma che legge le foto, ha registri simili, per gli stessi motivi. Vercel e jsDelivr
+        li tengono per poco tempo, secondo le loro regole. Noi non li usiamo per altro. Dopo la prima visita l’app funziona anche senza internet.
+      </p>
+
+      <h2>Servizi di aziende fuori dall’Europa</h2>
+      <p>
+        Google e Vercel sono aziende con sede negli Stati Uniti, e anche jsDelivr usa computer in tutto il mondo, Stati Uniti compresi. Quando
+        dati tecnici (come l’indirizzo IP) escono dall’Unione europea, il passaggio si basa, a seconda del servizio, sull’accordo tra Unione europea
+        e Stati Uniti sulla protezione dei dati (<em>Data Privacy Framework</em>) oppure sulle clausole contrattuali standard approvate dalla
+        Commissione europea.
       </p>
 
       <h2>Permessi dell’app Android</h2>
@@ -204,6 +244,10 @@
       <p>Se questa informativa cambia, aggiorniamo la data in alto. Se un giorno l’app dovesse raccogliere dati, lo diremo prima, qui e nell’app.</p>
 
       <p><a class="back" href="./">← Torna a MappAmi</a></p>
+
+      <footer>
+        <p><a href="mappe-concettuali-dsa.html">Che cos’è MappAmi</a> · <a href="crediti.html">Crediti e licenze</a></p>
+      </footer>
     </main>
   </body>
 </html>

@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
+    <title>Mappe concettuali per DSA e dislessia | MappAmi</title>
+    <meta
+      name="description"
+      content="Mappe concettuali che si ascoltano, per bambini con DSA e per tutti: lettura ad alta voce, dettatura, caratteri per la dislessia. Gratis, senza account."
+    />
+    <link rel="canonical" href="https://mapp-ami.vercel.app/mappe-concettuali-dsa.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MappAmi" />
+    <meta property="og:locale" content="it_IT" />
+    <meta property="og:title" content="Mappe concettuali per DSA e dislessia | MappAmi" />
+    <meta
+      property="og:description"
+      content="Mappe concettuali che si ascoltano, per bambini con DSA e per tutti: lettura ad alta voce, dettatura, caratteri per la dislessia. Gratis, senza account."
+    />
+    <meta property="og:url" content="https://mapp-ami.vercel.app/mappe-concettuali-dsa.html" />
+    <meta property="og:image" content="https://mapp-ami.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="La mascotte di MappAmi con la sua mappa concettuale e la scritta «Mappe concettuali che si ascoltano»." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <!-- Data, not code: the page's CSP (script-src 'self') does not apply to it. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "MappAmi",
+        "url": "https://mapp-ami.vercel.app/",
+        "description": "App gratuita per costruire mappe concettuali e ascoltarle: lettura ad alta voce con la parola evidenziata, dettatura, caratteri per la dislessia. Per bambini con DSA e per tutti gli studenti.",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web, Android",
+        "inLanguage": "it",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "accessibilityFeature": ["displayTransformability", "synchronizedAudioText"],
+        "audience": { "@type": "EducationalAudience", "educationalRole": "student" }
+      }
+    </script>
+    <script src="static-settings.js" defer></script>
+    <style>
+      :root {
+        --bg: #fdf8ec;
+        --card: #ffffff;
+        --text: #1f2a36;
+        --muted: #4b5866;
+        --accent: #2b54b0;
+        --accent-text: #ffffff;
+        --line: #e4dccb;
+      }
+      /* Without a look saved in the app, the page follows the system's dark mode. */
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme]) {
+          --bg: #1b2129;
+          --card: #252d37;
+          --text: #eef1f4;
+          --muted: #b9c2cc;
+          --accent: #8db8e8;
+          --accent-text: #10161f;
+          --line: #3a4553;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+        font-size: 1.125rem;
+        line-height: var(--line-height, 1.65);
+        letter-spacing: var(--letter-spacing, 0.01em);
+        word-spacing: var(--word-spacing, normal);
+        /* Big text in a wide font (OpenDyslexic, capitals) must not push the page sideways. */
+        overflow-wrap: break-word;
+        overflow-wrap: anywhere;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 1.5rem 16px 4rem;
+      }
+      h1 {
+        font-size: 2rem;
+        line-height: 1.2;
+        margin: 1rem 0 0.75rem;
+      }
+      h2 {
+        font-size: 1.35rem;
+        margin: 2.5rem 0 0.5rem;
+      }
+      h3 {
+        font-size: 1.1rem;
+        margin: 1.5rem 0 0.25rem;
+      }
+      p,
+      li {
+        max-width: 65ch;
+      }
+      li + li {
+        margin-top: 0.5rem;
+      }
+      a {
+        color: var(--accent);
+      }
+      a:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+      }
+      .back {
+        display: inline-block;
+        padding: 0.6rem 1rem;
+        border-radius: 0.75rem;
+        background: var(--card);
+        border: 2px solid var(--line);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .hero {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1.25rem;
+        margin-top: 0.5rem;
+      }
+      .hero img {
+        flex: none;
+        width: 6rem;
+        height: 6rem;
+        border-radius: 22%;
+      }
+      .hero > div {
+        flex: 1 1 18rem;
+        min-width: 0;
+      }
+      .lead {
+        font-size: 1.2rem;
+      }
+      .cta {
+        display: inline-block;
+        min-height: 3.5rem;
+        padding: 0.9rem 2rem;
+        border-radius: 1rem;
+        background: var(--accent);
+        color: var(--accent-text);
+        font-size: 1.35rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .cta:focus-visible {
+        outline-color: var(--text);
+      }
+      .note {
+        color: var(--muted);
+        margin-top: 0.5rem;
+      }
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+        gap: 0.75rem;
+        padding: 0;
+        list-style: none;
+      }
+      .features li {
+        min-width: 0;
+        max-width: none;
+        margin: 0;
+        padding: 0.75rem 1.1rem 0.9rem;
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 1rem;
+      }
+      .features strong {
+        display: block;
+      }
+      .features p {
+        margin: 0.25rem 0 0;
+      }
+      .short {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 1rem;
+        padding: 0.5rem 1.25rem 1rem;
+      }
+      .short ul {
+        padding-left: 1.25rem;
+      }
+      footer {
+        margin-top: 3rem;
+        padding-top: 1rem;
+        border-top: 2px solid var(--line);
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <img src="icon-192.png" width="96" height="96" alt="" />
+        <div>
+          <h1>Mappe concettuali per bambini con DSA e per tutti gli studenti</h1>
+          <p class="lead">
+            MappAmi è un’app per costruire mappe concettuali e ascoltarle. Legge ad alta voce, si può dettare e ha i caratteri pensati per chi fa
+            fatica a leggere. Niente account, niente pubblicità.
+          </p>
+          <p><a class="cta" href="/">Apri MappAmi</a></p>
+          <p class="note">Si apre nel browser, senza installare niente.</p>
+        </div>
+      </header>
+
+      <h2>Che cos’è una mappa concettuale</h2>
+      <p>
+        È uno schema per studiare: le idee stanno dentro dei riquadri, i concetti, e le frecce, con una parola sopra, dicono come sono legate fra loro.
+        Si capisce a colpo d’occhio, senza leggere pagine di testo. In MappAmi la mappa la costruisce il bambino: i concetti li sceglie e li scrive
+        (o li detta) lui.
+      </p>
+
+      <h2>Che cosa fa MappAmi</h2>
+      <ul class="features">
+        <li>
+          <strong>Si ascolta</strong>
+          <p>Legge un concetto o tutta la mappa ad alta voce, e la parola che sta leggendo si illumina.</p>
+        </li>
+        <li>
+          <strong>Si può dettare</strong>
+          <p>Si parla e nasce un nuovo concetto. Con la voce si danno anche dei comandi: «leggi la mappa», «riordina», «annulla».</p>
+        </li>
+        <li>
+          <strong>Caratteri per leggere meglio</strong>
+          <p>Lexend, Atkinson Hyperlegible e OpenDyslexic, testo più grande, spaziatura ampia e stampatello maiuscolo.</p>
+        </li>
+        <li>
+          <strong>Sfondi che riposano gli occhi</strong>
+          <p>Crema, bianco, azzurro o scuro, da scegliere come si sta meglio.</p>
+        </li>
+        <li>
+          <strong>«Dal libro»</strong>
+          <p>
+            Si fotografa una pagina e il testo viene letto sul dispositivo: la foto non esce dal telefono. Poi si toccano le parole importanti, o ci si
+            passa sopra il dito come con un evidenziatore, e diventano concetti.
+          </p>
+        </li>
+        <li>
+          <strong>Modelli pronti</strong>
+          <p>Libera, 5 W, Causa ed effetto, Linea del tempo e Confronto. Più una mappa di esempio, «La Rivoluzione francese», da aprire e modificare.</p>
+        </li>
+        <li>
+          <strong>Ripasso</strong>
+          <p>«Indovina» nasconde un concetto e poi lo scopre; «Un passo alla volta» li mostra uno per volta.</p>
+        </li>
+        <li>
+          <strong>«Interrogazione» per la LIM</strong>
+          <p>
+            La mappa a schermo intero, un concetto alla volta in evidenza. Si va avanti con le frecce, la barra spaziatrice o il telecomando delle
+            presentazioni.
+          </p>
+        </li>
+        <li>
+          <strong>Stampa e verifica</strong>
+          <p>PDF o immagine, in A4 o A3, su 1, 2 o 4 fogli. C’è anche la versione per la verifica, in bianco e nero.</p>
+        </li>
+        <li>
+          <strong>File .mappami da condividere</strong>
+          <p>Una mappa si salva in un file che si può mandare per chat o email e aprire su un altro dispositivo.</p>
+        </li>
+        <li>
+          <strong>Anche senza internet</strong>
+          <p>Dopo la prima visita funziona anche offline. Solo alcune cose, come cercare nuove illustrazioni, hanno bisogno di internet.</p>
+        </li>
+        <li>
+          <strong>Web e Android</strong>
+          <p>Dal browser su computer, Chromebook e tablet, e si può aggiungere alla schermata Home. L’app per Android non è ancora su Google Play.</p>
+        </li>
+      </ul>
+
+      <h2>Per genitori e insegnanti</h2>
+      <p>
+        MappAmi è uno strumento compensativo: aiuta a leggere, a scrivere e a mettere in ordine le idee con la voce, caratteri adatti e immagini.
+        Non è una cura né una terapia e non sostituisce il lavoro di insegnanti, logopedisti e famiglia. Quali strumenti si possono usare in classe e
+        alle verifiche lo decide la scuola, nel piano didattico personalizzato (PDP): conviene parlarne con gli insegnanti.
+      </p>
+      <ul>
+        <li>
+          <strong>Per chi studia.</strong> Si parte da un modello o da una foto della pagina del libro. Ogni scelta, dal carattere ai colori, è
+          dell’alunno, e MappAmi la ricorda su quel dispositivo.
+        </li>
+        <li>
+          <strong>Per chi insegna.</strong> La stessa mappa si mostra alla LIM con «Interrogazione», si stampa per la verifica e si condivide con un
+          file .mappami: chi la apre la vede con il carattere e i colori che ha scelto lui.
+        </li>
+      </ul>
+
+      <h2>Privacy</h2>
+      <section class="short" aria-label="La privacy in breve">
+        <ul>
+          <li>Non serve un account e non chiediamo nome, email o età.</li>
+          <li>Non c’è pubblicità e non ci sono statistiche che seguono quello che fai.</li>
+          <li>Le mappe restano sul dispositivo: noi non le vediamo.</li>
+        </ul>
+      </section>
+      <p>Alcune funzioni usano servizi esterni, come le illustrazioni o la dettatura del browser: le trovi spiegate nella <a href="privacy.html">pagina Privacy</a>.</p>
+
+      <h2>Domande frequenti</h2>
+
+      <h3>È gratuita?</h3>
+      <p>Sì: niente pubblicità e nessun account. Non ci sono acquisti dentro l’app.</p>
+
+      <h3>Serve internet?</h3>
+      <p>
+        La prima volta sì, per aprire il sito. Poi le mappe, il salvataggio e la lettura con le voci del dispositivo funzionano anche senza internet.
+        Internet serve invece per cercare nuove illustrazioni e, la prima volta, per scaricare il programma che legge il testo delle foto («Dal libro»).
+      </p>
+
+      <h3>Dove restano le mappe?</h3>
+      <p>
+        Sul tuo dispositivo, nella memoria del browser: non le mandiamo a nessuno. Se cancelli i dati del sito dal browser, le mappe vanno via. Per
+        questo c’è «Salva tutte le mappe», che fa un file di copia da tenere al sicuro.
+      </p>
+
+      <h3>Funziona con la LIM?</h3>
+      <p>
+        Sì. Si apre MappAmi nel browser del computer della LIM e si usa «Interrogazione»: la mappa a schermo intero, un concetto alla volta, con le
+        frecce o con il telecomando delle presentazioni.
+      </p>
+
+      <h3>Funziona su iPhone e iPad?</h3>
+      <p>
+        Dal browser sì: si apre MappAmi con Safari e si aggiunge alla schermata Home. L’app per iPhone e iPad non c’è ancora. Su questi dispositivi
+        conviene fare ogni tanto una copia con «Salva tutte le mappe»: Safari può cancellare i dati di un sito che non si apre per una settimana.
+      </p>
+
+      <h3>Funziona su Android?</h3>
+      <p>Con il browser Chrome sì, e si può aggiungere alla schermata Home. L’app per Android non è ancora su Google Play.</p>
+
+      <h3>Con quali browser si può dettare?</h3>
+      <p>Con Chrome, Edge e Safari. Firefox non permette la dettatura: il resto di MappAmi funziona.</p>
+
+      <p style="margin-top: 2.5rem"><a class="cta" href="/">Apri MappAmi</a></p>
+
+      <footer>
+        <nav aria-label="Altre pagine">
+          <a href="privacy.html">Privacy</a> · <a href="crediti.html">Crediti e licenze</a> · <a href="/">Apri MappAmi</a>
+        </nav>
+      </footer>
+    </main>
+  </body>
+</html>
