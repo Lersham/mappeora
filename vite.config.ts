@@ -10,10 +10,14 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.png', 'apple-touch-icon.png'],
       manifest: {
+        id: '/',
         name: 'MappAmi – mappe concettuali',
         short_name: 'MappAmi',
         description: 'Mappe concettuali semplici, con voce, per bambini con DSA e studenti.',
         lang: 'it',
+        dir: 'ltr',
+        categories: ['education', 'productivity'],
+        prefer_related_applications: false,
         theme_color: '#fffdf7',
         background_color: '#fdf8ec',
         display: 'standalone',
@@ -25,6 +29,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,woff2,webp}'],
+        // The static pages (privacy, crediti, presentazione) are precached and served
+        // as themselves; these files must never get the app shell as a navigation
+        // fallback (robots.txt and sitemap.xml are not precached at all).
+        navigateFallbackDenylist: [/^\/robots\.txt$/, /^\/sitemap\.xml$/, /^\/og-image\.png$/, /^\/(?:mappe-concettuali-dsa|privacy|crediti)\.html$/],
         runtimeCaching: [
           {
             // OCR engine and Italian model (Tesseract.js), downloaded on first use.
