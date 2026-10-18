@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
@@ -85,6 +85,19 @@ export function WelcomeDialog({ onClose, onExamples, onTryBook }: Props) {
     setIndex(to);
   };
 
+  // The button that had the focus can disappear («Indietro» on the first
+  // page) and the focus would fall to the page: it goes to the main button,
+  // which is always there. Opening the dialog is left to the dialog itself.
+  const actions = useRef<HTMLDivElement>(null);
+  const shown = useRef(index);
+  useLayoutEffect(() => {
+    if (shown.current === index) return;
+    shown.current = index;
+    const at = document.activeElement;
+    if (at && at !== document.body && actions.current?.closest('[role="dialog"]')?.contains(at)) return;
+    actions.current?.querySelector<HTMLElement>('.big-button.primary')?.focus({ preventScroll: true });
+  }, [index]);
+
   return (
     <Dialog title="Come funziona" onClose={() => close()} className="welcome">
       <div className="welcome-page" aria-live="polite">
@@ -108,17 +121,18 @@ export function WelcomeDialog({ onClose, onExamples, onTryBook }: Props) {
           </span>
         ))}
       </p>
-      <div className="dialog-actions">
-        {!last && <BigButton icon="skip" label="Salta" onClick={() => close()} />}
-        {index > 0 && <BigButton icon="back" label="Indietro" onClick={() => go(index - 1)} />}
-        {last ? (
-          <>
-            <BigButton icon="book" label="Guarda un esempio" onClick={() => close(onExamples)} />
-            <BigButton icon="check" label="Inizia" variant="primary" onClick={() => close()} />
-          </>
-        ) : (
-          <BigButton icon="forward" label="Avanti" variant="primary" onClick={() => go(index + 1)} />
-        )}
+      <div className="dialog-actions" ref={actions}>
+        {!last && <BigButton key="skip" icon="skip" label="Salta" onClick={() => close()} />}
+        {index > 0 && <BigButton key="back" icon="back" label="Indietro" onClick={() => go(index - 1)} />}
+        {last && <BigButton key="examples" icon="book" label="Guarda un esempio" onClick={() => close(onExamples)} />}
+        {/* One button for «Avanti» and «Inizia»: the focus stays on it from page to page. */}
+        <BigButton
+          key="next"
+          icon={last ? 'check' : 'forward'}
+          label={last ? 'Inizia' : 'Avanti'}
+          variant="primary"
+          onClick={() => (last ? close() : go(index + 1))}
+        />
       </div>
     </Dialog>
   );
