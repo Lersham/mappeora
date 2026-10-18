@@ -276,6 +276,9 @@ In `.claude/skills/` ci sono skill installate con `npx skills add … -a claude-
 | `webapp-testing` | anthropics/skills | Test dell'app nel browser con Playwright (Python) |
 | `playwright-best-practices` | currents-dev/playwright-best-practices-skill | Come scrivere e mantenere la suite `e2e/`: struttura, attese, test instabili, accessibilità, mock |
 | `playwright-cli` | microsoft/playwright-cli | Comandare il browser da terminale per prove veloci a mano (richiede `npm i -g @playwright/cli`) |
+| `shipping-and-launch`, `security-and-hardening` | addyosmani/agent-skills | Lista di controllo prima di andare in produzione, piano di ritorno indietro, intestazioni di sicurezza, dipendenze, dati dei minori |
+| `seo`, `performance`, `core-web-vitals`, `best-practices`, `web-quality-audit` | addyosmani/web-quality-skills | Come si trova l'app sui motori di ricerca, velocità di caricamento (LCP, INP, CLS), buone pratiche web; stessa fonte di `accessibility` |
+| `aso`, `competitor-profiling` | coreyhaines31/marketingskills | Scheda di Google Play (titolo, descrizione, parole chiave, screenshot) e confronto con le altre app di mappe concettuali |
 
 `webapp-testing` usa Playwright per Python, che nelle sessioni cloud va reinstallato: `npm run setup:webapp-testing` (Playwright 1.56, compatibile con il Chromium preinstallato).
 
