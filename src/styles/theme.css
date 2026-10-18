@@ -155,3 +155,30 @@
     border-color: CanvasText;
   }
 }
+
+/*
+ * A message with its 🔊 (SpokenError). Beside a field and its microphone it
+ * goes on a line of its own: on a narrow screen it would squeeze the field.
+ */
+.search-row {
+  flex-wrap: wrap;
+}
+.spoken-error-line {
+  flex: 1 0 100%;
+}
+.spoken-error-line p {
+  margin: 0;
+}
+.save-problem > .listenable {
+  flex: 1;
+}
+.save-problem-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+/* The text of a button stays centred: «.save-problem span» was meant for the message only. */
+.save-problem .big-button-label {
+  flex: none;
+}

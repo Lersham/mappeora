@@ -3,6 +3,7 @@ import { Dialog } from '../../components/Dialog';
 import { MicButton } from '../../components/MicButton';
 import { BigButton } from '../../components/BigButton';
 import { Listenable } from '../../components/OptionCard';
+import { SpokenError } from '../../components/SpokenError';
 import {
   ILLUSTRATIONS_CREDIT,
   illustrationThumbUrl,
@@ -317,9 +318,9 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
             />
           </div>
           {pasteHint && (
-            <p className="muted small" role="status">
+            <SpokenError className="muted small" role="status">
               Hai copiato un’immagine? Premi «Incolla immagine».
-            </p>
+            </SpokenError>
           )}
           <Listenable text={GOOGLE_STEPS.join(' ')} label="Ascolta come fare">
             <ol className="photo-web-steps muted small">
@@ -346,11 +347,7 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
               }}
             />
           )}
-          {photoError && (
-            <p className="field-error" role="alert">
-              {photoError}
-            </p>
-          )}
+          {photoError && <SpokenError>{photoError}</SpokenError>}
           <p className="credit">Le immagini trovate su Google appartengono ai loro autori: usale solo per studiare.</p>
         </>
       )}
