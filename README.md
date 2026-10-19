@@ -261,7 +261,7 @@ Come funzionano:
 - **Rapporto:** `npm run test:e2e:report` apre il rapporto HTML, con screenshot e tracce dei test falliti.
 - **Browser:** Playwright è fissato alla versione 1.56.1, la stessa del Chromium preinstallato nelle sessioni cloud. Su un altro computer, la prima volta: `npx playwright install chromium`.
 
-**Intestazioni di produzione:** i test sopra girano su `vite preview`, che non manda nessuna Content-Security-Policy. `npm run test:csp` (`playwright.csp.config.ts`, `e2e-csp/csp.spec.ts`) costruisce l'app e la serve da `dist/` con `scripts/serve-dist.mjs`, che applica le intestazioni di `vercel.json` (porta 4190, o `CSP_PORT`); cammina dall'elenco al PDF, all'immagine, alle illustrazioni, al service worker e a «Come installare», e fallisce a ogni violazione. La CI non lo lancia ancora: la riga da aggiungere a `ci.yml` è in `docs/rilascio.md`.
+**Intestazioni di produzione:** i test sopra girano su `vite preview`, che non manda nessuna Content-Security-Policy. `npm run test:csp` (`playwright.csp.config.ts`, `e2e-csp/csp.spec.ts`) costruisce l'app e la serve da `dist/` con `scripts/serve-dist.mjs`, che applica le intestazioni di `vercel.json` (porta 4190, o `CSP_PORT`); cammina dall'elenco al PDF, all'immagine, alle illustrazioni, al service worker e a «Come installare», e fallisce a ogni violazione. La CI lo lancia a ogni push, dopo i test E2E.
 
 ### App Android
 
