@@ -226,13 +226,13 @@ npm run screenshots  # rifà le schermate per «Installa» (public/screenshots/)
 npm run og-image     # rifà l'immagine di anteprima per i link condivisi
 ```
 
-Prima di ogni push: `npm run typecheck && npm test && npm run test:e2e -- --project=desktop --project=telefono`. Dopo il push GitHub Actions rifà gli stessi controlli (vedi sotto).
+Prima di ogni push: `npm run typecheck && npm test && npm run test:e2e -- --project=desktop --project=telefono`. Dopo il push GitHub Actions rifà gli stessi controlli, più `npm run test:csp` (vedi sotto).
 
 ### Controlli automatici (GitHub Actions)
 
 `.github/workflows/ci.yml` (**Controlli**, nella scheda Actions) parte a ogni push e a ogni pull request:
 
-1. **Test**: controllo dei tipi, test unitari, test E2E su computer e telefono. Se un test E2E fallisce, il rapporto con screenshot e tracce si scarica dagli *Artifacts* (`rapporto-e2e`).
+1. **Test**: controllo dei tipi, test unitari, test E2E su computer e telefono, poi `npm run test:csp` (intestazioni di produzione). Se un test E2E o il test CSP fallisce, il rapporto con screenshot e tracce si scarica dagli *Artifacts* (`rapporto-e2e`).
 2. **Android** (solo sui push, e solo se i test passano): costruisce l'app.
    - Con le chiavi di firma nei secret del repository produce la **versione firmata**: `app-release.aab` per Google Play e `app-release.apk` da installare.
    - Senza chiavi produce l'APK di debug, come `npm run android:apk`.
