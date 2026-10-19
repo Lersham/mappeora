@@ -20,9 +20,14 @@
   --primary-text: #ffffff;
   --danger: #b3412f;
   --success: #2e7d32;
-  --focus: #e07a00;
+  /* The focus ring is 3:1 or more on every paper (WCAG 1.4.11): the bright
+     orange is only for the dark theme. */
+  --focus: #b35400;
   --highlight: #ffe066;
   --edge: #556070;
+  /* The frame of a field, 3:1 on the paper it sits on (WCAG 1.4.11): the
+     hairline --border is only for decoration. */
+  --field-border: #857f6c;
   /* Quiet fill of the buttons that are not the main one, and their hover:
      a shade of the paper, not of the ink, so it follows every theme. */
   --tint: color-mix(in srgb, var(--border) 38%, var(--surface));
@@ -89,6 +94,8 @@
   --danger: #ef8f7d;
   --success: #7bc47f;
   --edge: #aab2bf;
+  --focus: #e07a00;
+  --field-border: #828b9c;
   --branch-0: #7fb0e6;
   --branch-1: #f0a35c;
   --branch-2: #c5a3e8;
@@ -96,4 +103,82 @@
   --branch-4: #f08fa8;
   --branch-5: #6fd0d6;
   color-scheme: dark;
+}
+
+/*
+ * The frame of a field must be seen by everyone (WCAG 1.4.11, 3:1). This file
+ * loads before app.css: ":root" gives these rules the extra weight to win.
+ */
+:root .text-field,
+:root .setting select,
+:root .ocr-text,
+:root .ocr-editor,
+:root .paste-box,
+:root .title-input:hover,
+:root .title-input:focus {
+  border-color: var(--field-border);
+}
+
+/*
+ * Windows High Contrast replaces colours, tints and shadows with the system's,
+ * so a choice that is picked looked just like the others. It keeps a thick
+ * frame in the system's "selected" colour. Where the same element takes the
+ * focus ring (an outline too) only the border says it is picked.
+ */
+@media (forced-colors: active) {
+  :root .choice[aria-pressed='true'],
+  :root .choice[aria-selected='true'],
+  :root .color-swatch[aria-pressed='true'],
+  :root .template-card.is-selected,
+  :root .option-card.is-selected,
+  :root .concept-node.is-selected {
+    border-color: Highlight;
+  }
+  :root .choice[aria-pressed='true']:not(:focus-visible),
+  :root .choice[aria-selected='true']:not(:focus-visible),
+  :root .color-swatch[aria-pressed='true']:not(:focus-visible),
+  :root .template-card.is-selected,
+  :root .option-card.is-selected,
+  :root .react-flow__node:not(:focus-visible) > .concept-node.is-selected:not(.is-armed),
+  :root .ocr-word.is-selected:not(:focus-visible) {
+    outline: 3px solid Highlight;
+    outline-offset: 0;
+  }
+  /* Words have no border: a thick line under them says they are picked. */
+  :root .ocr-word.is-selected {
+    text-decoration: underline 3px;
+    text-decoration-color: Highlight;
+  }
+  /* The colour is the whole point of a swatch: it must not become the button face. */
+  :root .color-swatch {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+}
+
+/*
+ * A message with its 🔊 (SpokenError). Beside a field and its microphone it
+ * goes on a line of its own: on a narrow screen it would squeeze the field.
+ */
+.search-row {
+  flex-wrap: wrap;
+}
+.spoken-error-line {
+  flex: 1 0 100%;
+}
+.spoken-error-line p {
+  margin: 0;
+}
+.save-problem > .listenable {
+  flex: 1;
+}
+.save-problem-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+/* The text of a button stays centred: «.save-problem span» was meant for the message only. */
+.save-problem .big-button-label {
+  flex: none;
 }

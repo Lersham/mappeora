@@ -2,6 +2,7 @@ import { DICTATION_ERRORS, type DictationError } from '../hooks/useDictation';
 import { VOICE_COMMAND_HINTS } from '../lib/voiceCommands';
 import { useModal } from './Dialog';
 import { Icon } from './Icon';
+import { SpokenError } from './SpokenError';
 
 interface Props {
   listening: boolean;
@@ -42,9 +43,7 @@ function DictationCard({ listening, partial, error, onStop, onClose }: Props) {
           </>
         ) : (
           <>
-            <p className="dictation-hint" role="alert">
-              {error && DICTATION_ERRORS[error]}
-            </p>
+            {error && <SpokenError className="dictation-hint">{DICTATION_ERRORS[error]}</SpokenError>}
             <button type="button" className="big-button" onClick={onClose} autoFocus>
               <span className="big-button-label">Ok</span>
             </button>

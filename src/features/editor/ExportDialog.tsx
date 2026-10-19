@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
 import { OptionCard } from '../../components/OptionCard';
+import { SpokenError } from '../../components/SpokenError';
 import { isNative } from '../../services/platform';
 import { TOUCH } from '../../lib/touch';
 import type { PageCount, Paper } from '../../lib/pagePlan';
@@ -96,11 +97,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
         {kind === 'pdf' && !isNative() && !TOUCH && ' «Stampa» la manda alla stampante.'}
       </p>
 
-      {error && (
-        <p className="field-error" role="alert">
-          Non sono riuscito a preparare il file. Riprova.
-        </p>
-      )}
+      {error && <SpokenError>Non sono riuscito a preparare il file. Riprova.</SpokenError>}
 
       <div className="dialog-actions">
         <BigButton icon="close" label="Annulla" onClick={onClose} />
