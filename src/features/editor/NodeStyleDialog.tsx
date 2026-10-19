@@ -11,7 +11,7 @@ import {
   searchIllustrations,
   type Illustration,
 } from '../../services/illustrations';
-import { toDataUrl } from '../../services/embed';
+import { toIllustrationDataUrl } from '../../services/embed';
 import { COLOR_NAMES, DEFAULT_COLOR, NODE_COLORS } from '../../lib/palette';
 import { useMapStore } from '../../store/mapStore';
 import { photoToDataUrl, pickPhoto, type PhotoSource } from '../../services/photo';
@@ -104,7 +104,7 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     const download = new AbortController();
     pending.current = download;
     setBusy(true);
-    const src = await toDataUrl(illustrationUrl(i.path), download.signal);
+    const src = await toIllustrationDataUrl(illustrationUrl(i.path), download.signal);
     // Closed, or «Togli immagine», while waiting: nothing more to do.
     if (pending.current !== download) return;
     choose(src ? { kind: 'illustrazione', ref: i.path, src } : { kind: 'emoji', ref: i.glyph });
