@@ -169,8 +169,8 @@ test.describe('Mappe grandi', () => {
 });
 
 test.describe('Illustrazioni più leggere', () => {
-  test('un’illustrazione di 256 px si salva a 192 px in WebP, con la trasparenza, e resta nitida', async ({ page, context, browserName }) => {
-    test.skip(browserName === 'webkit', 'Safari non scrive WebP: salva un PNG a 192 px (provato dai test unitari)');
+  test('un’illustrazione di 256 px si salva a 224 px in WebP, con la trasparenza, e resta nitida', async ({ page, context, browserName }) => {
+    test.skip(browserName === 'webkit', 'Safari non scrive WebP: salva un PNG a 224 px (provato dai test unitari)');
     // The real thing: a 256 px picture with a transparent corner, as Fluent Emoji are.
     const png = await page.evaluate(async () => {
       const c = document.createElement('canvas');
@@ -214,16 +214,16 @@ test.describe('Illustrazioni più leggere', () => {
         bytes: (img.getAttribute('src') ?? '').length * 0.75,
       };
     });
-    expect([saved.width, saved.height]).toEqual([192, 192]);
-    // An export doubles the pixels (pixelRatio 2): the picture must have at least twice those it is shown at.
-    expect(saved.width).toBeGreaterThanOrEqual(saved.shownAt * 2);
+    expect([saved.width, saved.height]).toEqual([224, 224]);
+    // Sharp on a phone with three pixels per CSS pixel (and in an export at pixelRatio 2).
+    expect(saved.width).toBeGreaterThanOrEqual(saved.shownAt * 3);
     expect(saved.corner).toBe(0);
     expect(saved.centre).toBe(255);
     expect(saved.bytes).toBeLessThan((png.length * 0.75) / 2);
   });
 
   test('un’illustrazione già piccola si salva com’è', async ({ page }) => {
-    // The 1 px picture the other tests get is not larger than 192 px.
+    // The 1 px picture the other tests get is not larger than 224 px.
     await page.goto('/');
     await page.getByRole('button', { name: 'Nuova mappa' }).click();
     await page.getByPlaceholder("es. Il ciclo dell'acqua").fill('Il vulcano');

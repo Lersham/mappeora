@@ -85,11 +85,11 @@ describe('embed', () => {
       return { canvas, decode, close };
     }
 
-    it('draws a 256 px picture at 192 px and saves it as WebP', async () => {
+    it('draws a 256 px picture at 224 px and saves it as WebP', async () => {
       const { canvas, decode, close } = fakeBrowser([256, 256]);
       expect(await shrinkImage(big)).toBe(tiny);
-      expect([canvas.width, canvas.height]).toEqual([192, 192]);
-      expect(canvas.context.drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 192, 192);
+      expect([canvas.width, canvas.height]).toEqual([224, 224]);
+      expect(canvas.context.drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 224, 224);
       expect(canvas.asked).toEqual([['image/webp', 0.85]]);
       // The bytes handed to the decoder are the picture's own, with its type.
       const blob = decode.mock.calls[0][0];
@@ -101,19 +101,19 @@ describe('embed', () => {
     it('keeps the proportions', async () => {
       const { canvas } = fakeBrowser([300, 150]);
       await shrinkImage(big);
-      expect([canvas.width, canvas.height]).toEqual([192, 96]);
+      expect([canvas.width, canvas.height]).toEqual([224, 112]);
     });
 
-    it('where the browser cannot write WebP (Safari), saves a 192 px PNG instead', async () => {
+    it('where the browser cannot write WebP (Safari), saves a 224 px PNG instead', async () => {
       const png = 'data:image/png;base64,iVBORw0KGgo=';
       const { canvas } = fakeBrowser([256, 256], { 'image/png': png });
       expect(await shrinkImage(big)).toBe(png);
       expect(canvas.asked.map(([type]) => type)).toEqual(['image/webp', 'image/png']);
-      expect([canvas.width, canvas.height]).toEqual([192, 192]);
+      expect([canvas.width, canvas.height]).toEqual([224, 224]);
     });
 
     it('leaves a picture alone that is not larger than that', async () => {
-      const { canvas } = fakeBrowser([192, 160]);
+      const { canvas } = fakeBrowser([224, 160]);
       expect(await shrinkImage(big)).toBe(big);
       expect(canvas.asked).toEqual([]);
     });
@@ -159,7 +159,8 @@ describe('embed', () => {
       expect(decode).not.toHaveBeenCalled();
       expect(await toDataUrl('https://x/y.png', undefined, { shrinkTo: ILLUSTRATION_PX })).toBe(tiny);
       expect(await toIllustrationDataUrl('https://x/y.png')).toBe(tiny);
-      expect(ILLUSTRATION_PX).toBe(192);
+      // 72 CSS px at three pixels per CSS px, with a little to spare.
+      expect(ILLUSTRATION_PX).toBeGreaterThanOrEqual(72 * 3);
     });
 
     it('still gives up quietly offline', async () => {

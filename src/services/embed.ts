@@ -11,11 +11,12 @@ function sniffImage(b: Uint8Array): string | undefined {
 }
 
 /**
- * Longest side (px) of an illustration saved in a map. It is shown at 72 px,
- * so even an export at twice the pixels (144) is sharp; the downloaded 256 px
- * picture only made every map, copy and file about ten times heavier.
+ * Longest side (px) of an illustration saved in a map. It is shown at 72 CSS
+ * px: a phone with three pixels per CSS pixel needs 216 of them, and an
+ * export at twice the pixels only 144. The downloaded 256 px picture made
+ * every map, copy and file several times heavier for no visible gain.
  */
-export const ILLUSTRATION_PX = 192;
+export const ILLUSTRATION_PX = 224;
 
 const SHRINKABLE = /^data:image\/(?:png|jpeg|webp);base64,/;
 
