@@ -379,7 +379,13 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
     }
 
     // The concept in hand, and only it, goes where the finger takes it: before «Calore del sole», in its row.
-    await (await onScreen(page, node(page, 'Vapore'))).click();
+    const zoom = () => page.locator('.react-flow__viewport').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).a);
+    const tap = await onScreen(page, node(page, 'Vapore'));
+    const far = await zoom();
+    await tap.click();
+    // The map is seen from afar, so a tap brings the branch close, after a short wait: the view
+    // has not moved yet when it looks settled. Let it glide in before measuring (and before the finger goes down).
+    await expect.poll(zoom).toBeGreaterThan(far * 1.5);
     await settled(page);
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(1);
     const [vapore, calore] = [(await node(page, 'Vapore').boundingBox())!, (await node(page, 'Calore del sole').boundingBox())!];
