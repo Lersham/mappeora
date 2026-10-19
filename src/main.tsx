@@ -12,9 +12,19 @@ import '@xyflow/react/dist/style.css';
 import './styles/theme.css';
 import './styles/app.css';
 import App from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { isNative } from './services/platform';
 import { updateReady } from './services/pwaUpdate';
 import { flushAutosave } from './services/autosave';
+import { logError } from './services/errorLog';
+
+// What breaks is kept on this device only (see services/errorLog.ts): the child can copy it for whoever helps.
+window.addEventListener('error', (e) => {
+  // The browser's own note about a layout that took two frames: nothing broke.
+  if (/^ResizeObserver loop/.test(e.message)) return;
+  logError(e.error ?? e.message, 'window');
+});
+window.addEventListener('unhandledrejection', (e) => logError(e.reason, 'promise'));
 
 // The native apps bundle their assets: the service worker is only for web/PWA.
 if (!isNative()) {
@@ -53,6 +63,20 @@ window.addEventListener('vite:preloadError', () => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {/* Outside the one in App: a crash in App's own hooks must not leave a blank page. */}
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );
+
+// It booted: the next failure of a part loaded later may recover again (an
+// installed app stays open for days). Not at once, so a failure that comes
+// with every start cannot reload in a loop.
+setTimeout(() => {
+  try {
+    sessionStorage.removeItem('mappeora-reloaded');
+  } catch {
+    // Blocked: nothing was set either.
+  }
+}, 10_000);
