@@ -70,10 +70,11 @@ textarea {
   touch-action: manipulation;
   transition: background-color 0.12s;
 }
-.big-button:hover:not(:disabled) {
+.big-button:hover:not(:disabled, [aria-disabled='true']) {
   background: var(--tint-strong);
 }
-.big-button:disabled {
+.big-button:disabled,
+.big-button[aria-disabled='true'] {
   opacity: 0.4;
   cursor: default;
 }
@@ -81,7 +82,7 @@ textarea {
   background: var(--primary);
   color: var(--primary-text);
 }
-.big-button.primary:hover:not(:disabled) {
+.big-button.primary:hover:not(:disabled, [aria-disabled='true']) {
   background: color-mix(in srgb, var(--primary) 85%, #000);
 }
 .big-button.danger {
@@ -1842,8 +1843,28 @@ textarea {
   font-weight: 600;
   font-size: min(1.1rem, 4.5vw);
 }
+/* The yellow alone is 1.2:1 on the light papers (WCAG 1.4.11), and in the
+   Indovina summary the ring is the only cue for the concepts past «e altri N»:
+   the outer line is --primary, 3:1 or more on every paper. Not --focus: the
+   keyboard ring is that colour, and a concept in focus would look unringed. */
 .concept-node.review-current {
-  box-shadow: 0 0 0 6px var(--highlight);
+  box-shadow: 0 0 0 4px var(--highlight), 0 0 0 8px var(--primary);
+}
+/* The keyboard ring goes past the ring (8px, then a gap), not over it. */
+.react-flow__node:focus-visible > .concept-node.review-current {
+  outline-offset: 11px;
+}
+/* Forced colours drop shadows, and one outline is all a concept has: the ring
+   is a frame of its own, so the keyboard ring keeps the outline. */
+@media (forced-colors: active) {
+  .concept-node.review-current::before {
+    content: '';
+    position: absolute;
+    inset: -9px;
+    border: 4px solid Highlight;
+    border-radius: inherit;
+    pointer-events: none;
+  }
 }
 .concept-node.review-dim {
   opacity: 0.4;

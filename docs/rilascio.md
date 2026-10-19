@@ -41,7 +41,7 @@ for p in manifest.webmanifest installa.html privacy.html crediti.html; do curl -
 ```
 
 - La `Content-Security-Policy` è uguale a quella di `vercel.json` (`default-src 'self'; script-src 'self' …`), insieme alle altre quattro intestazioni.
-- **`Cache-Control` su `/assets/…`**: i file hanno l'impronta nel nome, quindi può essere lungo (`public, max-age=31536000, immutable`). Oggi `vercel.json` non ha una regola per `/assets/`: se non c'è, vale quella di Vercel (`public, max-age=0, must-revalidate`): funziona, ma riscarica a ogni visita. Va bene in tutti e due i casi.
+- **`Cache-Control` su `/assets/…`**: i file hanno l'impronta nel nome, quindi può essere lungo. `vercel.json` imposta `public, max-age=31536000, immutable` su `/assets/(.*)`: il curl sul file deve mostrare esattamente questo valore; se mostra `max-age=0` la regola non è stata applicata.
 - **`Cache-Control` su `/sw.js` e su `/` (index.html) non deve mai essere lungo né `immutable`**: se il service worker restasse in cache, nessuno vedrebbe più gli aggiornamenti. Deve essere `max-age=0` o `must-revalidate`.
 - Le quattro pagine rispondono 200.
 
@@ -64,8 +64,8 @@ for p in manifest.webmanifest installa.html privacy.html crediti.html; do curl -
 **Cosa vedono le persone** (dal codice: `vite.config.ts` con `registerType: 'autoUpdate'`, `src/main.tsx`, `src/services/pwaUpdate.ts`):
 
 - Il service worker nuovo si installa e prende il posto del vecchio da solo (`skipWaiting` e `clientsClaim`). Il browser lo cerca quando si apre l'app, ogni ora e a ogni ritorno nell'app (`registration.update()` in `main.tsx`); scatta a **qualsiasi differenza** nel file `sw.js`, quindi una versione vecchia rimessa da un rollback arriva come un aggiornamento qualsiasi.
-- Il codice **non ricarica mai la pagina da solo mentre si lavora**: segna «pronta» una nuova versione (`updateReady`). Nell'elenco compare «È uscita una nuova versione di MappAmi» con «Aggiorna»; se la pagina esce dallo schermo mentre si è nell'elenco, senza finestre aperte, si ricarica in silenzio (`reloadIfSafe`). Dentro una mappa non succede niente finché non si torna all'elenco.
-- Se una parte caricata più tardi (Riordina, PDF…) appartiene alla versione sostituita e non esiste più, `vite:preloadError` salva la mappa e ricarica **una volta sola** (`main.tsx`).
+- Il codice **non ricarica la pagina da solo mentre si lavora**, salvo il caso della parte mancante qui sotto: segna «pronta» una nuova versione (`updateReady`). Nell'elenco compare «È uscita una nuova versione di MappAmi» con «Aggiorna»; se la pagina esce dallo schermo mentre si è nell'elenco, senza finestre aperte, si ricarica in silenzio (`reloadIfSafe`). Dentro una mappa non succede niente finché non si torna all'elenco.
+- Se una parte caricata più tardi (Riordina, PDF…) appartiene alla versione sostituita e non esiste più, `vite:preloadError` salva la mappa e ricarica la pagina, al massimo una volta al minuto (`sessionStorage`, chiave `mappeora-reloaded`), solo se il bambino ha chiesto proprio quella parte e c'è la rete (`main.tsx`, `src/services/preloadError.ts`). Un'app lasciata aperta per giorni può quindi ricaricarsi, al massimo una volta dopo ogni nuova versione uscita (la mappa è già salvata).
 - Chi non apre l'app non cambia versione; chi è senza internet aggiorna alla prima visita con la rete.
 - Quindi dopo un rollback i bambini tornano alla versione buona entro un'ora di uso o al prossimo ritorno nell'app, e l'avviso dice «nuova versione» anche se è quella vecchia. I dati non si toccano: un rollback cambia solo il codice.
 
@@ -82,7 +82,7 @@ Il browser tiene le mappe (IndexedDB) **per indirizzo**: quelle fatte su `mapp-a
 Perciò: **decidere il dominio prima di promuovere il sito** (condivisione, QR, newsletter, Search Console), non dopo.
 
 - Se si vuole un dominio proprio, comprarlo e collegarlo a Vercel (Settings → Domains) **ora**, scegliere *un solo* indirizzo come principale e usare solo quello ovunque.
-- Dove compare l'indirizzo e va cambiato con il dominio: `public/privacy.html`, `public/installa.html` (canonical), `e2e/installa.spec.ts`, le pagine di presentazione, `sitemap.xml` e `robots.txt`, `README.md`, `docs/google-play.md`, la proprietà in Google Search Console.
+- Dove compare l'indirizzo e va cambiato con il dominio: cercarli tutti con `grep -rn mapp-ami.vercel.app --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.git .` e cambiarli tutti. Sono, tra gli altri: `index.html` (canonical, `og:url`, `og:image`), le pagine `public/*.html` (in `installa.html` anche il testo visibile, non solo il canonical; `privacy.html` e `crediti.html` compresi), `public/sitemap.xml` e `public/robots.txt`, `src/lib/staticPages.test.ts`, `e2e/installa.spec.ts`, `e2e/web-presence.spec.ts`, `README.md`, `docs/*.md` e la proprietà in Google Search Console. In `src/components/ErrorBoundary.test.tsx` l'indirizzo è solo dentro un messaggio d'errore di prova: non serve cambiarlo. Dopo, `npm test` e `npm run test:e2e -- --project=desktop --project=telefono` devono passare: controllano l'indirizzo nei tag `canonical`, `og:url` e `og:image`, nella sitemap e in `robots.txt`, ma non il testo visibile di `installa.html` e `privacy.html`.
 - Se l'indirizzo cambia lo stesso: avvisare le famiglie *prima*, con «Salva tutte le mappe» e «Apri file», e lasciare il vecchio indirizzo online con un avviso.
 
 ## Impostazioni da fare una volta

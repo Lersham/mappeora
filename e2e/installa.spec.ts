@@ -48,6 +48,8 @@ test.describe('Come installare MappAmi (public/installa.html)', () => {
     await expect(page.locator('#computer')).toContainText('«Installa MappAmi»');
     await expect(page.locator('#lim')).toContainText('«Solo la mappa»');
     await expect(page.locator('#lim')).toContainText('«Interrogazione»');
+    // The way to a file to take home, with the names and the order of the real buttons: «Salva e manda» (top bar), «File modificabile», «Salva».
+    await expect(page.locator('#lim')).toContainText(/«Salva e manda»[^«]*«File modificabile»[^«]*«Salva»/);
   });
 
   test('non chiede niente fuori dal sito: nessuna richiesta esterna', async ({ page }) => {

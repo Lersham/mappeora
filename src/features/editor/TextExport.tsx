@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BigButton } from '../../components/BigButton';
 import { Icon } from '../../components/Icon';
+import { SpokenError } from '../../components/SpokenError';
 import { useReadLongText } from '../../hooks/useReadLongText';
 import { collapseInfo } from '../../lib/collapse';
 import { hasCrossLinks, mapToText, speakable, type TextStyle } from '../../lib/mapText';
@@ -13,7 +14,7 @@ const STYLES: { value: TextStyle; label: string; hint: string }[] = [
   { value: 'frasi', label: 'Frasi', hint: 'Con le parole di collegamento: «L’acqua è formata da idrogeno».' },
 ];
 
-/** What the buttons just did, told under the text (a failure is an alert, the rest a polite status). */
+/** What the buttons just did, told under the text (a failure is an alert with a 🔊, the rest a polite status). */
 interface Notice {
   text: string;
   failed?: boolean;
@@ -62,10 +63,11 @@ export function TextExport({ onClose }: { onClose(): void }) {
   const copy = async () => {
     if (await copyText(text)) return setNotice({ text: 'Copiato!' });
     selectAll();
-    setNotice({ text: 'Non sono riuscito a copiare. Ho evidenziato il testo: copialo tu.' });
+    setNotice({ text: 'Non sono riuscito a copiare. Ho evidenziato il testo: copialo tu.', failed: true });
   };
 
   const save = async () => {
+    if (saving) return; // the button stays focusable meanwhile (see below), so a second press must do nothing
     setSaving(true);
     setNotice(null);
     try {
@@ -112,11 +114,7 @@ export function TextExport({ onClose }: { onClose(): void }) {
         <p className="text-status" role="status">
           {notice && !notice.failed ? notice.text : ''}
         </p>
-        {notice?.failed && (
-          <p className="field-error" role="alert">
-            {notice.text}
-          </p>
-        )}
+        {notice?.failed && <SpokenError>{notice.text}</SpokenError>}
       </div>
 
       {closedParts && <p className="muted">Le parti chiuse della mappa qui non ci sono. Aprile, se le vuoi nel testo.</p>}
@@ -134,7 +132,8 @@ export function TextExport({ onClose }: { onClose(): void }) {
           icon={isNative() ? 'share' : 'save'}
           label={saving ? 'Preparo…' : isNative() ? 'Condividi' : 'Salva .txt'}
           variant="primary"
-          disabled={saving}
+          // Not `disabled`: the button has the focus, and a disabled one drops it (the next Tab would start from the top of the dialog).
+          aria-disabled={saving || undefined}
           onClick={() => void save()}
         />
       </div>

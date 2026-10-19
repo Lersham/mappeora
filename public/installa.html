@@ -123,6 +123,8 @@
         border: 2px solid var(--line);
         font-weight: 600;
         text-decoration: none;
+        /* «Chromebook» in capitals, at the biggest text, is wider than a 320 px phone: it breaks rather than scroll sideways. */
+        overflow-wrap: anywhere;
       }
       section {
         margin-top: 2rem;
@@ -185,15 +187,12 @@
       .small {
         color: var(--muted);
       }
-      /* An address must not break at its hyphen. */
+      /* An address stays whole: if it does not fit on the line it moves to the next one, without a break at its hyphen.
+         Only when it is wider than the column itself (big text on a small phone) does it break, rather than scroll sideways. */
       .url {
-        white-space: nowrap;
-      }
-      @media (max-width: 300px) {
-        .url {
-          white-space: normal;
-          overflow-wrap: anywhere;
-        }
+        display: inline-block;
+        max-width: 100%;
+        overflow-wrap: anywhere;
       }
       footer {
         margin-top: 2.5rem;
@@ -360,8 +359,8 @@
           <li>L’app legge solo se premi <strong>«Leggi»</strong>: a parlare è lo studente.</li>
         </ol>
         <p class="small">
-          La LIM di solito la usano tante classi: le mappe restano nel browser di quella lavagna. Alla fine premi «Salva», poi «File
-          modificabile», e porta il file con te.
+          La LIM di solito la usano tante classi: le mappe restano nel browser di quella lavagna. Alla fine premi «Salva e manda», scegli
+          «File modificabile» e poi «Salva»: porta il file con te.
         </p>
       </section>
 

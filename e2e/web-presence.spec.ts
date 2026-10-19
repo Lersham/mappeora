@@ -161,6 +161,26 @@ test.describe('Pagina di presentazione', () => {
     }
   });
 
+  test('«Come installare» non scorre di lato, nemmeno su un telefono stretto col testo più grande', async ({ page }) => {
+    // 320 px is the width WCAG 1.4.10 asks for; the slider of the app stops at 180%. The address «mapp-ami.vercel.app» is the widest word.
+    for (const width of [320, 360, 390]) {
+      await page.setViewportSize({ width, height: 700 });
+      await page.goto('/installa.html');
+      for (const textScale of [1.15, 1.5, 1.8]) {
+        for (const uppercase of [false, true]) {
+          const state = { theme: 'crema', font: 'opendyslexic', textScale, uppercase, wideSpacing: true };
+          await page.evaluate((value) => localStorage.setItem('mappeora-settings', JSON.stringify({ state: value, version: 1 })), state);
+          await page.reload();
+          const where = `${width} px, testo ${Math.round(textScale * 100)}%${uppercase ? ', maiuscolo' : ''}`;
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${where}: scorrimento di lato`).toBe(true);
+          // Nothing sticks out of its card either: before, the address went past the edge of the steps without yet scrolling the page.
+          const outside = await page.evaluate(() => [...document.querySelectorAll('section')].filter((s) => s.scrollWidth > s.clientWidth).map((s) => s.id));
+          expect(outside, `${where}: sezioni con qualcosa fuori dal riquadro`).toEqual([]);
+        }
+      }
+    }
+  });
+
   test('la privacy resta com’è, senza errori, anche con un aspetto scelto nell’app', async ({ page }) => {
     await seed(page, SCURO);
     await page.goto('/privacy.html');

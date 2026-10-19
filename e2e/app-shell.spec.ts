@@ -46,6 +46,33 @@ test.describe('Aspetto: Ripristina si può annullare', () => {
     await expect(html).toHaveAttribute('data-theme', 'scuro');
   });
 
+  test('premendo «Ripristina» due volte, «Annulla» rimette comunque quello di prima', async ({ page }) => {
+    const panel = await settings(page);
+    const voiceSelect = panel.locator('select');
+    const html = page.locator('html');
+    await panel.getByRole('button', { name: 'Atkinson' }).click();
+    await panel.getByRole('button', { name: 'Scuro' }).click();
+    await panel.getByLabel('TUTTO IN STAMPATELLO MAIUSCOLO').check();
+    await voiceSelect.selectOption({ label: 'Italiano (test)' });
+    const voice = await voiceSelect.inputValue();
+    expect(voice).not.toBe('');
+
+    // A double tap, then a press that changes no setting, then a third tap.
+    await panel.getByRole('button', { name: 'Ripristina' }).click();
+    await panel.getByRole('button', { name: 'Ripristina' }).click();
+    await expect(html).toHaveAttribute('data-font', 'lexend');
+    await panel.getByRole('button', { name: 'Prova la voce' }).click();
+    await panel.getByRole('button', { name: 'Ripristina' }).click();
+    const note = panel.getByRole('status').filter({ hasText: 'Ho rimesso le impostazioni di partenza.' });
+    await expect(note).toBeVisible();
+
+    await note.getByRole('button', { name: 'Annulla' }).click();
+    await expect(html).toHaveAttribute('data-font', 'atkinson');
+    await expect(html).toHaveAttribute('data-theme', 'scuro');
+    await expect(html).toHaveAttribute('data-uppercase', 'true');
+    await expect(voiceSelect).toHaveValue(voice);
+  });
+
   test('con la voce predefinita, «Annulla» la lascia predefinita', async ({ page }) => {
     const panel = await settings(page);
     const voiceSelect = panel.locator('select');

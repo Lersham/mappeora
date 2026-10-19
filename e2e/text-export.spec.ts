@@ -43,6 +43,14 @@ async function expectSeen(message: Locator) {
     .toBe(true);
 }
 
+/** A failure message has its 🔊 beside it, outside the alert, and reads the message only when asked. */
+async function expectListenable(page: Page, dialog: Locator, alert: Locator, message: string) {
+  await expect(alert.getByRole('button')).toHaveCount(0);
+  expect(await spoken(page), 'niente si legge da solo').toEqual([]);
+  await dialog.locator('.listenable').filter({ has: page.getByRole('alert') }).getByRole('button', { name: 'Ascolta', exact: true }).click();
+  await expect.poll(() => spoken(page)).toEqual([message]);
+}
+
 /** «Salva e manda» → «Testo». */
 async function openText(page: Page) {
   await toolbar(page, 'Salva e manda');
@@ -118,10 +126,15 @@ test.describe('Dalla mappa al testo', () => {
     const dialog = await openText(page);
     const preview = dialog.getByRole('textbox', { name: 'Testo della mappa' });
     await dialog.getByRole('button', { name: 'Copia', exact: true }).click();
-    await expect(dialog.getByRole('status')).toHaveText('Non sono riuscito a copiare. Ho evidenziato il testo: copialo tu.');
-    await expectSeen(dialog.getByRole('status'));
+    // A failure the child must act on is an alert with a 🔊, like the other failures of «Salva e manda»; «Copiato!» stays the polite status
+    const alert = dialog.getByRole('alert');
+    const message = 'Non sono riuscito a copiare. Ho evidenziato il testo: copialo tu.';
+    await expect(alert).toHaveText(message);
+    await expect(dialog.getByRole('status')).toHaveText('');
+    await expectSeen(alert);
     await expect(preview).toBeFocused();
     expect(await preview.evaluate((el: HTMLTextAreaElement) => el.value.slice(el.selectionStart, el.selectionEnd) === el.value && el.value.length > 0)).toBe(true);
+    await expectListenable(page, dialog, alert, message);
   });
 
   test('«Salva .txt» scarica il testo in un file col nome della mappa', async ({ page }, info) => {
@@ -161,6 +174,40 @@ test.describe('Dalla mappa al testo', () => {
     await expect(alert).toHaveText('Non sono riuscito a salvare il testo. Riprova.');
     await expectSeen(alert);
     await expect(dialog.getByRole('status')).toHaveText('');
+    await expectListenable(page, dialog, alert, 'Non sono riuscito a salvare il testo. Riprova.');
+  });
+
+  test('mentre prepara il file «Salva .txt» tiene il fuoco (con la tastiera non si riparte da capo) e non parte due volte', async ({ page }) => {
+    // Hold the file back: the button stays in its «Preparo…» state as long as the test wants
+    await page.addInitScript(() => {
+      const w = window as unknown as { __hold?: Promise<void>; __release?(): void };
+      const real = window.fetch.bind(window);
+      window.fetch = (input, init) => (String(input).startsWith('data:') && w.__hold ? w.__hold.then(() => real(input, init)) : real(input, init));
+    });
+    await sampleMap(page);
+    const dialog = await openText(page);
+    const save = dialog.getByRole('button', { name: 'Salva .txt', exact: true });
+    await page.evaluate(() => {
+      const w = window as unknown as { __hold?: Promise<void>; __release?(): void };
+      w.__hold = new Promise<void>((resolve) => (w.__release = resolve));
+    });
+    let downloads = 0;
+    page.on('download', () => downloads++);
+    await save.focus();
+    await page.keyboard.press('Enter');
+    const busy = dialog.getByRole('button', { name: 'Preparo…' });
+    await expect(busy).toHaveAttribute('aria-disabled', 'true');
+    // A disabled button would lose the focus a moment later (the browser moves it to the page): let that moment pass
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 100)))));
+    await expect(busy).not.toHaveAttribute('disabled');
+    await expect(busy).toBeFocused();
+    await page.keyboard.press('Enter'); // a second press while it works does nothing
+    await page.evaluate(() => (window as unknown as { __release(): void }).__release());
+    await expect(dialog.getByRole('status')).toHaveText('Salvato nei Download.');
+    await expect(save).toBeFocused();
+    await expect(save).not.toHaveAttribute('aria-disabled');
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 100))));
+    expect(downloads).toBe(1);
   });
 
   test('i collegamenti fuori dall’albero (anche un giro che torna indietro) ci sono in «Frasi», non vanno persi', async ({ page }) => {

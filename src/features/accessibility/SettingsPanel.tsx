@@ -52,6 +52,8 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
   useEffect(() => note.current?.scrollIntoView?.({ block: 'nearest' }), [before]);
 
   const reset = () => {
+    // Already at the defaults (a second tap): keep the first snapshot, or «Annulla» would bring back the defaults.
+    if (atDefaults) return;
     // Only the values, not the functions of the store.
     const { font, textScale, uppercase, wideSpacing, theme, speechRate, voiceId, highlightWords } = s;
     setBefore({ font, textScale, uppercase, wideSpacing, theme, speechRate, voiceId, highlightWords });
