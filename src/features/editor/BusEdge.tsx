@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { BaseEdge, type Edge, type EdgeProps } from '@xyflow/react';
 import { EdgeLabel } from './EdgeLabel';
 import { LADDER, labelScale } from '../../lib/ladder';
@@ -5,6 +6,7 @@ import { useSettings } from '../../store/settingsStore';
 import { roundedPath } from '../../lib/sheetLayout';
 import { LinkAdd } from './LinkAdd';
 import { branchClass } from './branchColor';
+import { sameEdgeProps } from './edgeMemo';
 
 export type BusEdgeData = { points: { x: number; y: number }[]; own?: number; branch?: number; column?: boolean; onEdit?: () => void; near?: boolean };
 export type BusFlowEdge = Edge<BusEdgeData, 'bus'>;
@@ -16,7 +18,7 @@ export type BusFlowEdge = Edge<BusEdgeData, 'bus'>;
  * the top of the column runs behind the ones in between). Linking words
  * sit just above the concept.
  */
-export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, interactionWidth }: EdgeProps<BusFlowEdge>) {
+function BusEdgeView({ id, sourceX, sourceY, targetX, targetY, label, data, interactionWidth }: EdgeProps<BusFlowEdge>) {
   const scale = labelScale(useSettings((s) => s.textScale));
   // The first and last bends follow the real connection points, which can
   // be a few pixels off the planned ones while concepts are being measured.
@@ -61,3 +63,5 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
     </>
   );
 }
+
+export const BusEdge = memo(BusEdgeView, sameEdgeProps);
