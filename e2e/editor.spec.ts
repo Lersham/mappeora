@@ -455,6 +455,9 @@ test.describe('Editor: la barra del concetto scelto', () => {
   test('la maniglia ↔ allarga o stringe un concetto; «Annulla» e «Automatica» lo rimettono com’era', async ({ page }) => {
     await sampleMap(page);
     await choose(page, 'Evaporazione');
+    // A map seen from afar (the phone) brings the branch closer a moment after the tap: let the
+    // glide start, so that the grip is measured where it stops and not under a view still moving.
+    await page.waitForTimeout(400);
     const concept = node(page, 'Evaporazione');
     const width = () => concept.evaluate((el) => (el as HTMLElement).offsetWidth); // not on screen: the map may be zoomed
     const before = await width();
