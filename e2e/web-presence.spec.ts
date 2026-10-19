@@ -10,7 +10,7 @@ import { test, expect } from './fixtures';
  */
 
 // privacy.html is the owner's text and is left as it was: it does not follow the child's look.
-const THEMED_PAGES = ['/mappe-concettuali-dsa.html', '/crediti.html'];
+const THEMED_PAGES = ['/mappe-concettuali-dsa.html', '/crediti.html', '/installa.html'];
 const STATIC_PAGES = [...THEMED_PAGES, '/privacy.html'];
 const DARK_BG = 'rgb(29, 33, 41)'; // --bg of «scuro» in theme.css
 const CREAM_BG = 'rgb(253, 248, 236)';

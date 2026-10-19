@@ -9,9 +9,9 @@ import vercelJson from '../../vercel.json?raw';
 /** Every static page in public/: the ones search engines and share previews see. */
 const pages = import.meta.glob<string>('../../public/*.html', { query: '?raw', import: 'default', eager: true });
 const SITE = 'https://mapp-ami.vercel.app';
-// Presentazione and crediti carry the share-preview tags, the child's look and the footer.
+// Presentazione, crediti and installa carry the share-preview tags, the child's look and the footer.
 // privacy.html is the owner's text and is left as it was: it only gets the basic checks.
-const PAGES_WITH_META = ['mappe-concettuali-dsa.html', 'crediti.html'];
+const PAGES_WITH_META = ['mappe-concettuali-dsa.html', 'crediti.html', 'installa.html'];
 const STATIC_PAGES = [...PAGES_WITH_META, 'privacy.html'];
 
 const parse = (html: string) => new DOMParser().parseFromString(html, 'text/html');
@@ -181,7 +181,7 @@ describe('index.html', () => {
     expect(root.querySelector('img, svg, script')).toBeNull();
     const noscript = indexHtml.match(/<noscript>\s*<div[\s\S]*?<\/noscript>/)?.[0] ?? '';
     expect(noscript).toContain('MappAmi ha bisogno di JavaScript per funzionare. Attivalo nel browser e riprova.');
-    for (const href of ['/mappe-concettuali-dsa.html', '/privacy.html', '/crediti.html']) expect(noscript).toContain(`href="${href}"`);
+    for (const href of ['/mappe-concettuali-dsa.html', '/installa.html', '/privacy.html', '/crediti.html']) expect(noscript).toContain(`href="${href}"`);
   });
 });
 

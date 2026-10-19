@@ -4,12 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" type="image/png" href="icon-192.png" />
-    <link rel="canonical" href="https://mapp-ami.vercel.app/installa.html" />
     <title>Come installare MappAmi su iPad, Android e computer</title>
-    <meta
-      name="description"
-      content="Come mettere MappAmi sull’iPad, sul tablet Android, sul Chromebook e sul computer: pochi passi, senza negozio di app e senza account."
-    />
+    <meta name="description" content="Come mettere MappAmi sull’iPad, sul tablet Android, sul Chromebook e sul computer: pochi passi, senza negozio di app e senza account." />
+    <link rel="canonical" href="https://mapp-ami.vercel.app/installa.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MappAmi" />
+    <meta property="og:locale" content="it_IT" />
+    <meta property="og:title" content="Come installare MappAmi su iPad, Android e computer" />
+    <meta property="og:description" content="Come mettere MappAmi sull’iPad, sul tablet Android, sul Chromebook e sul computer: pochi passi, senza negozio di app e senza account." />
+    <meta property="og:url" content="https://mapp-ami.vercel.app/installa.html" />
+    <script src="static-settings.js"></script>
     <style>
       :root {
         --bg: #fdf8ec;
@@ -20,8 +24,9 @@
         --accent-text: #ffffff;
         --line: #e4dccb;
       }
+      /* Without a look saved in the app, the page follows the system's dark mode. */
       @media (prefers-color-scheme: dark) {
-        :root:not([data-theme='light']) {
+        :root:not([data-theme]) {
           --bg: #1b2129;
           --card: #252d37;
           --text: #eef1f4;
@@ -46,8 +51,12 @@
         margin: 0;
         background: var(--bg);
         color: var(--text);
-        font: 1.125rem/1.65 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-        letter-spacing: 0.01em;
+        font-family: var(--font-body, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+        font-size: 1.125rem;
+        line-height: var(--line-height, 1.65);
+        letter-spacing: var(--letter-spacing, 0.01em);
+        word-spacing: var(--word-spacing, normal);
+        overflow-wrap: break-word;
       }
       main {
         max-width: 44rem;
@@ -358,6 +367,7 @@
 
       <footer>
         <a href="/">Apri MappAmi</a>
+        <a href="mappe-concettuali-dsa.html">Che cos’è MappAmi</a>
         <a href="privacy.html">Privacy</a>
         <a href="crediti.html">Crediti</a>
       </footer>
