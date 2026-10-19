@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useSettings, type FontChoice, type ThemeChoice } from '../../store/settingsStore';
+import { useEffect, useRef, useState } from 'react';
+import { DEFAULT_SETTINGS, useSettings, type FontChoice, type Settings, type ThemeChoice } from '../../store/settingsStore';
 import { onVoicesChanged, preferredVoice, speech, type Voice } from '../../services/speech';
 import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { Dialog } from '../../components/Dialog';
+import { CopyDetails } from '../../components/CopyDetails';
 
 const FONTS: { value: FontChoice; label: string }[] = [
   { value: 'lexend', label: 'Lexend' },
@@ -30,6 +31,9 @@ function rateName(rate: number): string {
 export function SettingsPanel({ onClose }: { onClose(): void }) {
   const s = useSettings();
   const [voices, setVoices] = useState<Voice[]>([]);
+  /** The profile as it was before «Ripristina»: «Annulla» puts it back. It goes when the panel closes. */
+  const [before, setBefore] = useState<Settings | null>(null);
+  const note = useRef<HTMLParagraphElement>(null);
   const { readText } = useReadAloud();
   const automatic = preferredVoice(voices, undefined, navigator.onLine);
 
@@ -39,6 +43,26 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
     // Voices that arrive after the panel opened (Chrome loads them late).
     return onVoicesChanged(load);
   }, []);
+
+  // Another change after the reset: «Annulla» would also take that one back.
+  const atDefaults = (Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]).every((k) => s[k] === DEFAULT_SETTINGS[k]);
+  useEffect(() => {
+    if (before && !atDefaults) setBefore(null);
+  }, [before, atDefaults]);
+  useEffect(() => note.current?.scrollIntoView?.({ block: 'nearest' }), [before]);
+
+  const reset = () => {
+    // Only the values, not the functions of the store.
+    const { font, textScale, uppercase, wideSpacing, theme, speechRate, voiceId, highlightWords } = s;
+    setBefore({ font, textScale, uppercase, wideSpacing, theme, speechRate, voiceId, highlightWords });
+    s.reset();
+  };
+
+  const undoReset = () => {
+    if (before) s.update(before);
+    setBefore(null);
+    document.getElementById('settings-reset')?.focus();
+  };
 
   return (
     <Dialog title="Aspetto e voce" onClose={onClose} className="settings">
@@ -146,9 +170,23 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
           label="Prova la voce"
           onClick={() => void readText(SAMPLE)}
         />
-        <BigButton icon="reset" label="Ripristina" onClick={s.reset} />
+        <BigButton id="settings-reset" icon="reset" label="Ripristina" onClick={reset} />
         <BigButton icon="check" label="Chiudi" variant="primary" onClick={onClose} />
       </div>
+      {/* Always in the page: a live region must be there before it speaks. */}
+      <div role="status">
+        {before && (
+          <p ref={note}>
+            Ho rimesso le impostazioni di partenza.{' '}
+            <button type="button" className="link-button" onClick={undoReset}>
+              Annulla
+            </button>
+          </p>
+        )}
+      </div>
+
+      <p className="muted small">Versione {__APP_VERSION__}</p>
+      <CopyDetails />
     </Dialog>
   );
 }

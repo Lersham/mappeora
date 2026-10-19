@@ -2,8 +2,7 @@ import type { ConceptMap } from '../../types/map';
 import { NEW_CONCEPT_LABEL } from '../../lib/mapFactory';
 import { spanningTree } from '../../lib/tree';
 
-/** The title of the map the tutorial makes. */
-export const TUTORIAL_TITLE = 'La mia prima mappa';
+export { TUTORIAL_TITLE } from '../../lib/mapFactory';
 
 /** The button a step asks for: it is highlighted (and «Altro» too, when it is in there). */
 export type TutorialTarget =

@@ -157,8 +157,11 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     let text: string | null;
     try {
       text = await pickMapFile();
-    } catch {
-      return setImportError('Non riesco a leggere questo file. Se è su Drive o in una chat, scaricalo prima sul dispositivo.');
+    } catch (e) {
+      // A file that is too big says so; any other failure is most likely a cloud file not downloaded yet.
+      return setImportError(
+        e instanceof MapFileError ? e.message : 'Non riesco a leggere questo file. Se è su Drive o in una chat, scaricalo prima sul dispositivo.',
+      );
     }
     if (text === null) return;
     try {
@@ -205,6 +208,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
   const found = searching ? all.filter((m) => titleMatches(m.title, query)) : all;
   const shown = long && !searching && !allShown ? found.slice(0, RECENT) : found;
   const hasList = all.length > 0 || !!removed;
+  const loaded = maps !== null || listError !== null;
   const cards = shown.map((m, i) => (
     <li key={m.id} className={`map-card${i === 0 && !searching ? ' is-latest' : ''}`}>
       <button type="button" className="map-open" data-map={m.id} onClick={() => onOpen(m.id)}>
@@ -380,15 +384,20 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         />
       )}
 
-      <h2 className="section-title" id="start-title">
-        Altri modi per iniziare
-      </h2>
-      <div className="start-grid" role="group" aria-labelledby="start-title">
-        <StartTile icon="camera" tone={0} label="Dal libro" hint="Fotografa una pagina: il testo diventa mappa" onClick={onStartFromBook} />
-        <StartTile icon="graduation" tone={3} label="Impara facendo" hint="Costruisci la tua prima mappa, passo passo" onClick={onStartTutorial} />
-        <StartTile icon="book" tone={2} label="Esempi" hint="Mappe già pronte da guardare e provare" onClick={() => setExamplesOpen(true)} />
-        <StartTile icon="folder" tone={1} label="Apri file" hint="Riprendi una mappa o una copia di sicurezza" onClick={() => void importFile()} />
-      </div>
+      {/* After the list is known: it comes in above these, and they would jump down. */}
+      {loaded && (
+        <>
+          <h2 className="section-title" id="start-title">
+            Altri modi per iniziare
+          </h2>
+          <div className="start-grid" role="group" aria-labelledby="start-title">
+            <StartTile icon="camera" tone={0} label="Dal libro" hint="Fotografa una pagina: il testo diventa mappa" onClick={onStartFromBook} />
+            <StartTile icon="graduation" tone={3} label="Impara facendo" hint="Costruisci la tua prima mappa, passo passo" onClick={onStartTutorial} />
+            <StartTile icon="book" tone={2} label="Esempi" hint="Mappe già pronte da guardare e provare" onClick={() => setExamplesOpen(true)} />
+            <StartTile icon="folder" tone={1} label="Apri file" hint="Riprendi una mappa o una copia di sicurezza" onClick={() => void importFile()} />
+          </div>
+        </>
+      )}
 
       {maps && maps.length > 0 && !remind && (
         <section className="backup-card" aria-label="Copia di sicurezza">
