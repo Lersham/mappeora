@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { BigButton } from './BigButton';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
@@ -25,6 +26,12 @@ export function FullscreenHint({ onClose }: { onClose(): void }) {
         Su iPhone e iPad MappAmi va a tutto schermo dalla schermata Home: tocca Condividi <Icon name="share" className="inline-icon" /> e poi
         «Aggiungi alla schermata Home». Poi aprila dalla sua icona: niente barre di Safari, anche quando sposti la mappa col dito.
       </p>
+      {/* The steps on a page of their own; a new tab, so the open map and this dialog stay as they are. */}
+      <p>
+        <a href="/installa.html#ipad" target="_blank" rel="noopener" style={{ display: 'inline-block', padding: '10px 0', color: 'var(--primary)' }}>
+          Guarda come si fa
+        </a>
+      </p>
       <div className="dialog-actions">
         <BigButton icon="check" label="Ho capito" variant="primary" onClick={onClose} />
       </div>
@@ -42,7 +49,8 @@ export function FullscreenButton({ className }: { className?: string }) {
   return (
     <>
       <BigButton {...homeFullscreenProps(() => setHint(true))} className={className} />
-      {hint && <FullscreenHint onClose={() => setHint(false)} />}
+      {/* In the body, not here: the home header slides in with a transform, which would make it the frame of the window (a 60 px strip). */}
+      {hint && createPortal(<FullscreenHint onClose={() => setHint(false)} />, document.body)}
     </>
   );
 }
