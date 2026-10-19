@@ -7,6 +7,8 @@ interface Props {
   listening: boolean;
   partial: string;
   error: DictationError | null;
+  /** What can be said besides the text itself (the editor's commands by default). */
+  hints?: string[];
   onStop(): void;
   onClose(): void;
 }
@@ -17,7 +19,7 @@ export function DictationOverlay(props: Props) {
   return <DictationCard key={props.listening ? 'listening' : 'error'} {...props} />;
 }
 
-function DictationCard({ listening, partial, error, onStop, onClose }: Props) {
+function DictationCard({ listening, partial, error, hints = VOICE_COMMAND_HINTS, onStop, onClose }: Props) {
   // Esc and Back stop listening (keeping what was said), or close the message.
   const { ref, onKeyDown, tabIndex } = useModal(listening ? onStop : onClose);
   return (
@@ -33,7 +35,7 @@ function DictationCard({ listening, partial, error, onStop, onClose }: Props) {
               {partial || '…'}
             </p>
             <p className="dictation-commands">
-              Puoi anche dire: {VOICE_COMMAND_HINTS.map((h) => `«${h}»`).join(', ')}
+              Puoi anche dire: {hints.map((h) => `«${h}»`).join(', ')}
             </p>
             <button type="button" className="big-button primary" onClick={onStop} autoFocus>
               <Icon name="check" className="big-button-icon" />

@@ -2281,3 +2281,41 @@ textarea {
     animation: none;
   }
 }
+
+/* Indovina: «Lo sapevo» and «Non lo sapevo» are the two big buttons, side by
+   side and alike (a frame, no colour that judges), above the usual bar. */
+.quiz-answers {
+  justify-content: center;
+  padding-block: 8px;
+}
+.editor .review-bar.quiz-answers .big-button {
+  flex: 1 1 0;
+  max-width: 260px;
+  min-height: 64px;
+  padding-inline: 8px;
+  border: 2px solid var(--primary);
+}
+.editor .review-bar.quiz-answers .quiz-voice {
+  flex: 0 1 28%;
+  max-width: 140px;
+  border-color: var(--line);
+}
+.review-bar.quiz-answers .big-button-label {
+  font-size: min(1rem, 4.2vw);
+  white-space: normal;
+  text-align: center;
+}
+.quiz-text {
+  font-size: min(1.15rem, 5.5vw);
+}
+.quiz-summary {
+  max-height: 30vh;
+  overflow-y: auto;
+}
+.review-bar .quiz-again {
+  flex: 2 1 0;
+}
+.review-bar .quiz-again .big-button-label {
+  white-space: normal;
+  text-align: center;
+}
