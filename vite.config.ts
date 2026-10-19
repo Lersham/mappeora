@@ -34,14 +34,23 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Shown by Chrome's richer install dialog (npm run screenshots).
+        screenshots: [
+          { src: 'screenshots/narrow-1.webp', sizes: '1080x1920', type: 'image/webp', form_factor: 'narrow', label: 'Un ramo della mappa «La Rivoluzione francese», colorato' },
+          { src: 'screenshots/narrow-2.webp', sizes: '1080x1920', type: 'image/webp', form_factor: 'narrow', label: 'Ripassa con «Indovina»: i concetti si scoprono uno alla volta' },
+          { src: 'screenshots/wide-1.webp', sizes: '1920x1080', type: 'image/webp', form_factor: 'wide', label: 'La mappa «La Rivoluzione francese», a colori: il ramo «Le fasi»' },
+          { src: 'screenshots/wide-2.webp', sizes: '1920x1080', type: 'image/webp', form_factor: 'wide', label: '«Aspetto e voce»: caratteri per la dislessia, anche OpenDyslexic' },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,woff2,webp}'],
-        // The static pages (privacy, crediti, presentazione) are precached and served
+        // The static pages (privacy, crediti, presentazione, installa) are precached and served
         // as themselves; these files must never get the app shell as a navigation
         // fallback (robots.txt and sitemap.xml are not precached at all). Workbox
         // matches path + query, so a shared link like /privacy.html?ref=chat counts too.
-        navigateFallbackDenylist: [/^\/robots\.txt(?:\?.*)?$/, /^\/sitemap\.xml(?:\?.*)?$/, /^\/og-image\.png(?:\?.*)?$/, /^\/(?:mappe-concettuali-dsa|privacy|crediti)\.html(?:\?.*)?$/],
+        navigateFallbackDenylist: [/^\/robots\.txt(?:\?.*)?$/, /^\/sitemap\.xml(?:\?.*)?$/, /^\/og-image\.png(?:\?.*)?$/, /^\/(?:mappe-concettuali-dsa|privacy|crediti|installa)\.html(?:\?.*)?$/],
+        // Only the browser's install dialog fetches them, from the network: not worth precaching for every user.
+        globIgnores: ['screenshots/**'],
         runtimeCaching: [
           {
             // OCR engine and Italian model (Tesseract.js), downloaded on first use.
