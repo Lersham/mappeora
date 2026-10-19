@@ -1006,11 +1006,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   return (
     <div
       className={`editor${picking ? ' is-picking' : ''}${review.active ? ' is-reviewing' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
-      onPointerDownCapture={(e) => {
+      onPointerDownCapture={() => {
         touch();
-        // A press anywhere but on a concept (a button, the map) is something
-        // else: the branch tapped a moment ago no longer comes closer.
-        if (!(e.target as Element).closest('.react-flow__node')) cancelCloser();
+        // Any press, on a concept too, stops the branch tapped a moment ago from
+        // coming closer: the view must not glide under a finger that may be about
+        // to drag. If the press turns out to be a tap, onNodeClick starts it again.
+        cancelCloser();
       }}
       onKeyDownCapture={touch}
       onWheelCapture={touch}

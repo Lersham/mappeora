@@ -350,6 +350,15 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
 });
 
 test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
+  /** A real finger (CDP, Chromium only) and the zoom of the view. */
+  async function finger(page: Page) {
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', points: { x: number; y: number }[]) =>
+      cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+    const zoom = () => page.locator('.react-flow__viewport').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).a);
+    return { touch, zoom };
+  }
+
   test('sul foglio il dito su un concetto muove la mappa, quello scelto si trascina; «Sposta» libera i concetti', async ({ page, isMobile, browserName }) => {
     test.skip(!isMobile, 'vale per i touch screen');
     test.skip(browserName !== 'chromium', 'il dito vero (CDP) si simula solo in Chromium: qui lo prova il telefono');
@@ -364,9 +373,7 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
     const at = (b: typeof before, label: string) => b.find((x) => x.label === label)!;
     const start = at(before, 'Calore del sole');
     const [x, y] = [start.x + start.w / 2, start.y + start.h / 2];
-    const cdp = await page.context().newCDPSession(page);
-    const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', points: { x: number; y: number }[]) =>
-      cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+    const { touch, zoom } = await finger(page);
     await touch('touchStart', [{ x, y }]);
     for (let i = 1; i <= 8; i++) await touch('touchMove', [{ x: x + i * 5, y: y + i * 12 }]);
     await touch('touchEnd', []);
@@ -379,7 +386,6 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
     }
 
     // The concept in hand, and only it, goes where the finger takes it: before «Calore del sole», in its row.
-    const zoom = () => page.locator('.react-flow__viewport').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).a);
     const tap = await onScreen(page, node(page, 'Vapore'));
     const far = await zoom();
     await tap.click();
@@ -400,6 +406,30 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
 
     await toolbar(page, 'Sposta');
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(9);
+  });
+
+  test('un concetto toccato e subito ripreso per trascinarlo ferma l’avvicinamento del ramo', async ({ page, isMobile, browserName }) => {
+    test.skip(!isMobile, 'vale per i touch screen');
+    test.skip(browserName !== 'chromium', 'il dito vero (CDP) si simula solo in Chromium: qui lo prova il telefono');
+    await sampleMap(page);
+    const { touch, zoom } = await finger(page);
+    const far = await zoom();
+    const vapore = (await (await onScreen(page, node(page, 'Vapore'))).boundingBox())!;
+    const calore = (await node(page, 'Calore del sole').boundingBox())!;
+    const [vx, vy] = [vapore.x + vapore.width / 2, vapore.y + vapore.height / 2];
+
+    // A tap on a map seen from afar starts the branch coming closer after a short wait. The finger
+    // goes back down at once and rests longer than that wait (but less than a hold): the view stays put.
+    await touch('touchStart', [{ x: vx, y: vy }]);
+    await touch('touchEnd', []);
+    await touch('touchStart', [{ x: vx, y: vy }]);
+    await page.waitForTimeout(400);
+    for (let i = 1; i <= 10; i++) await touch('touchMove', [{ x: vx + ((calore.x - 20 - vx) * i) / 10, y: vy }]);
+    expect(await zoom()).toBeCloseTo(far, 3);
+    await touch('touchEnd', []);
+    await settled(page);
+    expect((await node(page, 'Vapore').boundingBox())!.x).toBeLessThan((await node(page, 'Calore del sole').boundingBox())!.x);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 });
 
