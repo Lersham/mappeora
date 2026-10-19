@@ -1,4 +1,4 @@
-// Gives the static pages (privacy, crediti, presentazione) the look the child chose in
+// Gives the static pages that load it (crediti, presentazione) the look the child chose in
 // the app: colours, text size, spacing, capitals. It only reads what the app saved on
 // this device ('mappeora-settings') and sends nothing anywhere. If anything is missing
 // or odd, the page keeps its own style. Same values as theme.css and settingsStore.ts.

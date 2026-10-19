@@ -31,8 +31,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,woff2,webp}'],
         // The static pages (privacy, crediti, presentazione) are precached and served
         // as themselves; these files must never get the app shell as a navigation
-        // fallback (robots.txt and sitemap.xml are not precached at all).
-        navigateFallbackDenylist: [/^\/robots\.txt$/, /^\/sitemap\.xml$/, /^\/og-image\.png$/, /^\/(?:mappe-concettuali-dsa|privacy|crediti)\.html$/],
+        // fallback (robots.txt and sitemap.xml are not precached at all). Workbox
+        // matches path + query, so a shared link like /privacy.html?ref=chat counts too.
+        navigateFallbackDenylist: [/^\/robots\.txt(?:\?.*)?$/, /^\/sitemap\.xml(?:\?.*)?$/, /^\/og-image\.png(?:\?.*)?$/, /^\/(?:mappe-concettuali-dsa|privacy|crediti)\.html(?:\?.*)?$/],
         runtimeCaching: [
           {
             // OCR engine and Italian model (Tesseract.js), downloaded on first use.

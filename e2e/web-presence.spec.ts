@@ -9,7 +9,9 @@ import { test, expect } from './fixtures';
  * look of the child on them, and the first paint of the app itself.
  */
 
-const STATIC_PAGES = ['/mappe-concettuali-dsa.html', '/privacy.html', '/crediti.html'];
+// privacy.html is the owner's text and is left as it was: it does not follow the child's look.
+const THEMED_PAGES = ['/mappe-concettuali-dsa.html', '/crediti.html'];
+const STATIC_PAGES = [...THEMED_PAGES, '/privacy.html'];
 const DARK_BG = 'rgb(29, 33, 41)'; // --bg of «scuro» in theme.css
 const CREAM_BG = 'rgb(253, 248, 236)';
 
@@ -148,22 +150,27 @@ test.describe('Pagina di presentazione', () => {
     }
   });
 
-  test('privacy e crediti si vedono bene negli sfondi scelti, anche con il testo più grande', async ({ page }) => {
-    for (const path of ['/privacy.html', '/crediti.html']) {
-      for (const theme of ['azzurro', 'scuro']) {
-        await page.goto(path);
-        const state = { theme, textScale: 1.8, font: 'opendyslexic', uppercase: true, wideSpacing: true };
-        await page.evaluate((value) => localStorage.setItem('mappeora-settings', JSON.stringify({ state: value, version: 1 })), state);
-        await page.reload();
-        expect(await seriousProblems(page), `${path} ${theme}`).toEqual([]);
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${path} ${theme}: scorrimento di lato`).toBe(true);
-      }
+  test('i crediti si vedono bene negli sfondi scelti, anche con il testo più grande', async ({ page }) => {
+    for (const theme of ['azzurro', 'scuro']) {
+      await page.goto('/crediti.html');
+      const state = { theme, textScale: 1.8, font: 'opendyslexic', uppercase: true, wideSpacing: true };
+      await page.evaluate((value) => localStorage.setItem('mappeora-settings', JSON.stringify({ state: value, version: 1 })), state);
+      await page.reload();
+      expect(await seriousProblems(page), theme).toEqual([]);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${theme}: scorrimento di lato`).toBe(true);
     }
+  });
+
+  test('la privacy resta com’è, senza errori, anche con un aspetto scelto nell’app', async ({ page }) => {
+    await seed(page, SCURO);
+    await page.goto('/privacy.html');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Privacy');
+    expect(await seriousProblems(page)).toEqual([]);
   });
 });
 
 test.describe('Le pagine statiche prendono l’aspetto scelto dal bambino', () => {
-  for (const path of STATIC_PAGES) {
+  for (const path of THEMED_PAGES) {
     test(`${path}: scuro, carattere grande e spaziatura ampia`, async ({ page }) => {
       await withVercelHeaders(page);
       await seed(page, SCURO);
@@ -179,7 +186,7 @@ test.describe('Le pagine statiche prendono l’aspetto scelto dal bambino', () =
   }
 
   test('senza impostazioni la pagina resta com’è, e segue la modalità scura del sistema', async ({ page }) => {
-    await page.goto('/privacy.html');
+    await page.goto('/crediti.html');
     await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.*/);
     expect(await bodyBackground(page)).toBe(CREAM_BG);
     await page.emulateMedia({ colorScheme: 'dark' });
@@ -189,26 +196,28 @@ test.describe('Le pagine statiche prendono l’aspetto scelto dal bambino', () =
   test('lo sfondo scelto nell’app vale più della modalità scura del sistema', async ({ page }) => {
     await seed(page, { state: { theme: 'crema' }, version: 1 });
     await page.emulateMedia({ colorScheme: 'dark' });
-    await page.goto('/privacy.html');
+    await page.goto('/crediti.html');
     expect(await bodyBackground(page)).toBe(CREAM_BG);
   });
 
   test('un’impostazione rotta lascia la pagina com’è, senza errori', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('mappeora-settings', '{"state": {"theme": "scu'));
-    await page.goto('/privacy.html');
+    await page.goto('/crediti.html');
     await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.*/);
     expect(await bodyBackground(page)).toBe(CREAM_BG);
   });
 
-  test('la privacy ha le frasi nuove e i due segnaposto per il titolare', async ({ page }) => {
+  test('la privacy ha ancora i due segnaposto per il titolare', async ({ page }) => {
     await page.goto('/privacy.html');
-    await expect(page.getByText('Ultimo aggiornamento: 18 ottobre 2026')).toBeVisible();
     await expect(page.locator('.todo')).toHaveText(['[nome del titolare: da completare]', '[indirizzo email: da completare]']);
-    await expect(page.getByText('legittimo interesse')).toBeVisible();
-    await expect(page.getByText(/Data Privacy Framework/)).toBeVisible();
-    await expect(page.getByText(/hai copiato un’immagine/)).toBeVisible();
-    await expect(page.getByText(/breve nota tecnica \(mai il contenuto delle mappe\)/)).toBeVisible();
-    await expect(page.locator('footer').getByRole('link', { name: 'Che cos’è MappAmi' })).toHaveAttribute('href', 'mappe-concettuali-dsa.html');
+  });
+
+  test('la presentazione rimanda alla privacy e alla dettatura con internet', async ({ page }) => {
+    await page.goto('/mappe-concettuali-dsa.html');
+    const answer = page.getByRole('heading', { name: 'Serve internet?' }).locator('xpath=following-sibling::p[1]');
+    await expect(answer).toContainText('dettare con il browser');
+    await answer.getByRole('link', { name: 'Privacy' }).click();
+    await expect(page).toHaveURL(/privacy\.html$/);
   });
 
   test('i crediti rimandano alla presentazione', async ({ page }) => {
@@ -317,6 +326,15 @@ test.describe('Service worker e pagine statiche', () => {
       await page.goto(path);
       await expect(page, path).toHaveTitle(title);
       await expect(page.locator('#root')).toHaveCount(0);
+    }
+    // A shared link often carries a tail (?ref=chat): it is still the page, not the app.
+    for (const [path, title] of [
+      ['/privacy.html?ref=chat', 'Privacy – MappAmi'],
+      ['/mappe-concettuali-dsa.html?from=scuola', 'Mappe concettuali per DSA e dislessia | MappAmi'],
+    ] as const) {
+      await page.goto(path);
+      await expect(page, path).toHaveTitle(title);
+      await expect(page.locator('#root'), path).toHaveCount(0);
     }
     // And the app is still the app.
     await page.goto('/');

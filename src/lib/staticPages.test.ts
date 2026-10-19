@@ -9,7 +9,10 @@ import vercelJson from '../../vercel.json?raw';
 /** Every static page in public/: the ones search engines and share previews see. */
 const pages = import.meta.glob<string>('../../public/*.html', { query: '?raw', import: 'default', eager: true });
 const SITE = 'https://mapp-ami.vercel.app';
-const STATIC_PAGES = ['mappe-concettuali-dsa.html', 'privacy.html', 'crediti.html'];
+// Presentazione and crediti carry the share-preview tags, the child's look and the footer.
+// privacy.html is the owner's text and is left as it was: it only gets the basic checks.
+const PAGES_WITH_META = ['mappe-concettuali-dsa.html', 'crediti.html'];
+const STATIC_PAGES = [...PAGES_WITH_META, 'privacy.html'];
 
 const parse = (html: string) => new DOMParser().parseFromString(html, 'text/html');
 const meta = (doc: Document, selector: string) => doc.querySelector(selector)?.getAttribute('content') ?? '';
@@ -21,7 +24,7 @@ describe('public/*.html', () => {
     expect(entries.map(([name]) => name).sort()).toEqual([...STATIC_PAGES].sort());
   });
 
-  describe.each(entries)('%s', (name, html) => {
+  describe.each(entries)('%s', (_name, html) => {
     const doc = parse(html);
 
     it('is Italian, has a title and a description', () => {
@@ -30,14 +33,6 @@ describe('public/*.html', () => {
       expect(doc.title.length).toBeLessThanOrEqual(60);
       expect(meta(doc, 'meta[name=description]').length).toBeGreaterThan(40);
       expect(meta(doc, 'meta[name=description]').length).toBeLessThanOrEqual(170);
-    });
-
-    it('has its own canonical address and matching Open Graph tags', () => {
-      const canonical = `${SITE}/${name}`;
-      expect(doc.querySelector('link[rel=canonical]')?.getAttribute('href')).toBe(canonical);
-      expect(meta(doc, 'meta[property="og:url"]')).toBe(canonical);
-      expect(meta(doc, 'meta[property="og:title"]')).toBe(doc.title);
-      expect(meta(doc, 'meta[property="og:description"]')).toBe(meta(doc, 'meta[name=description]'));
     });
 
     it('uses no plain http:// links and loads nothing from other sites', () => {
@@ -54,14 +49,32 @@ describe('public/*.html', () => {
       }
     });
 
-    it('takes the look the child chose in the app', () => {
-      expect(doc.querySelector('script[src="static-settings.js"][defer]')).not.toBeNull();
+    it('has one h1', () => {
+      expect(doc.querySelectorAll('h1')).toHaveLength(1);
+    });
+  });
+
+  describe.each(PAGES_WITH_META)('%s', (name) => {
+    const doc = parse(pages[`../../public/${name}`]);
+
+    it('has its own canonical address and matching Open Graph tags', () => {
+      const canonical = `${SITE}/${name}`;
+      expect(doc.querySelector('link[rel=canonical]')?.getAttribute('href')).toBe(canonical);
+      expect(meta(doc, 'meta[property="og:url"]')).toBe(canonical);
+      expect(meta(doc, 'meta[property="og:title"]')).toBe(doc.title);
+      expect(meta(doc, 'meta[property="og:description"]')).toBe(meta(doc, 'meta[name=description]'));
     });
 
-    it('has one h1, and a footer that leads to the other pages', () => {
-      expect(doc.querySelectorAll('h1')).toHaveLength(1);
+    it('takes the look the child chose in the app, before the page is drawn', () => {
+      // In <head> and not deferred: a deferred script can run after the first paint, with a flash of the page's own colours.
+      const script = doc.head.querySelector('script[src="static-settings.js"]');
+      expect(script).not.toBeNull();
+      expect(script!.hasAttribute('defer') || script!.hasAttribute('async')).toBe(false);
+      expect(script!.hasAttribute('type')).toBe(false);
+    });
+
+    it('has a footer that leads to the other pages', () => {
       const footerLinks = [...doc.querySelectorAll('footer a')].map((a) => a.getAttribute('href'));
-      // The landing page is linked from the footers of privacy and crediti.
       expect(footerLinks).toEqual(expect.arrayContaining(STATIC_PAGES.filter((p) => p !== name)));
     });
   });
@@ -111,17 +124,6 @@ describe('public/*.html', () => {
       expect(html).toContain('[nome del titolare: da completare]');
       expect(html).toContain('[indirizzo email: da completare]');
       expect(html.match(/class="todo"/g)).toHaveLength(2);
-    });
-
-    it('says what the app keeps, asks and sends', () => {
-      const text = parse(html).body.textContent!.replace(/\s+/g, ' ');
-      expect(text).toContain('Ultimo aggiornamento: 18 ottobre 2026');
-      expect(text).toContain('legittimo interesse');
-      expect(text).toContain('Stati Uniti');
-      expect(text).toMatch(/Data Privacy Framework/);
-      expect(text).toMatch(/clausole contrattuali standard/);
-      expect(text).toContain('hai copiato un’immagine');
-      expect(text).toContain('MappAmi tiene sul dispositivo una breve nota tecnica (mai il contenuto delle mappe). Non la manda a nessuno');
     });
   });
 });
@@ -192,7 +194,7 @@ describe('robots.txt and sitemap.xml', () => {
 
   it('lists the home and the static pages', () => {
     const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-    expect(urls).toEqual([`${SITE}/`, ...STATIC_PAGES.map((p) => `${SITE}/${p}`)]);
+    expect([...urls].sort()).toEqual([`${SITE}/`, ...STATIC_PAGES.map((p) => `${SITE}/${p}`)].sort());
   });
 });
 
@@ -243,7 +245,7 @@ describe('theme-init.js', () => {
   afterEach(resetPage);
 
   it('is tiny', () => {
-    expect(new TextEncoder().encode(themeInit).length).toBeLessThan(1500);
+    expect(new TextEncoder().encode(themeInit).length).toBeLessThan(1024);
   });
 
   it('applies everything the child saved', () => {
