@@ -84,6 +84,8 @@ test.describe('Indovina: «Lo sapevo» e «Non lo sapevo»', () => {
     await expect(page.locator('.concept-node.review-current')).toHaveCount(2);
     await expect(node(page, 'Estate')).toHaveClass(/review-current/);
     await expect(node(page, 'Inverno')).not.toHaveClass(/review-current/);
+    // no concept is the one in hand: none keeps its «Leggi» button
+    await expect(page.locator('.concept-speak')).toHaveCount(0);
     await expect(bar(page).getByRole('button')).toHaveText(['Indietro', 'Ripassa solo questi', 'Fine']);
     await expect(answers(page)).toHaveCount(0);
     await barsFit(page);

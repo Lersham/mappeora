@@ -169,7 +169,8 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const isReading = useReading((s) => s.nodeId === id);
   const visibility = useReview((s) => reviewVisibility(s, id));
   const reviewing = useReview((s) => s.active);
-  const isReviewStep = useReview((s) => s.active && s.steps[s.index]?.nodeId === id);
+  // The «Indovina» summary shows the whole map: no concept is the one in hand any more.
+  const isReviewStep = useReview((s) => s.active && !(s.mode === 'quiz' && s.done) && s.steps[s.index]?.nodeId === id);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(data.label);
   const inputRef = useRef<HTMLTextAreaElement>(null);
