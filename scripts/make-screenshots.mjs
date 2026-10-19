@@ -87,6 +87,21 @@ async function wholeMap(page) {
   await settled(page);
 }
 
+/** Zooms the map about a point, like a pinch (React Flow zooms on Ctrl + wheel), until it reaches the given scale. */
+async function zoomTo(page, scale, x, y) {
+  const current = () => page.locator('.react-flow__viewport').evaluate((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
+  await page.mouse.move(x, y);
+  await page.keyboard.down('Control');
+  for (let i = 0; i < 40; i++) {
+    const now = await current();
+    if (Math.abs(now - scale) / scale < 0.04) break;
+    await page.mouse.wheel(0, now < scale ? -40 : 40);
+    await page.waitForTimeout(60);
+  }
+  await page.keyboard.up('Control');
+  await settled(page);
+}
+
 /** Looks at the picture before it is kept: nothing in the way of the map. */
 async function readyToShoot(page) {
   await page.mouse.move(0, 0);
@@ -151,9 +166,23 @@ async function shoot(page, name) {
   await page.getByRole('button', { name: /^Indovina/ }).click();
   await page.getByRole('button', { name: 'Scopri', exact: true }).waitFor();
   // Some concepts in, to see the map filling up: the next one is still hidden.
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 14; i++) {
     await page.getByRole('button', { name: 'Scopri', exact: true }).click();
     await page.getByRole('button', { name: 'Avanti', exact: true }).click();
+  }
+  await settled(page);
+  // A step back from the question, to see the column of concepts found so far, with the «?» near the bottom.
+  const question = page.locator('.concept-node').filter({ hasText: /^\?$/ });
+  const at = async () => (await question.boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 };
+  let box = await at();
+  await zoomTo(page, 0.55, box.x + box.width / 2, box.y + box.height / 2);
+  for (let i = 0; i < 20; i++) {
+    box = await at();
+    // 478 px from the top: the «?» low on the screen, the column above it, and no neighbour cut at the left.
+    const off = box.y + box.height / 2 - 478;
+    if (Math.abs(off) < 8) break;
+    await page.mouse.wheel(0, off);
+    await page.waitForTimeout(80);
   }
   await settled(page);
   await shoot(page, 'narrow-2');
@@ -164,6 +193,8 @@ async function shoot(page, name) {
   const page = await open({ width: 1920, height: 1080 }, false);
   await colouredExample(page);
   await wholeMap(page);
+  // The middle of the map, close enough to read: the whole of it would be 4 px of text in the install dialog.
+  await zoomTo(page, 0.75, 1170, 440);
   await shoot(page, 'wide-1');
 }
 {

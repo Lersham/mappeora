@@ -30,6 +30,7 @@ export function FullscreenHint({ onClose }: { onClose(): void }) {
       <p>
         <a href="/installa.html#ipad" target="_blank" rel="noopener" style={{ display: 'inline-block', padding: '10px 0', color: 'var(--primary)' }}>
           Guarda come si fa
+          <span className="sr-only"> (si apre in un’altra scheda)</span>
         </a>
       </p>
       <div className="dialog-actions">

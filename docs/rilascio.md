@@ -23,7 +23,7 @@ npm run test:csp                                           # il sito con le inte
         run: npm run test:csp
   ```
 
-- Le schermate per la finestra «Installa» di Chrome (`public/screenshots/*.webp`) si rifanno con `npm run screenshots` (serve un `npx vite preview --port 4182` acceso; `--url` per un altro indirizzo) quando l'aspetto dell'app cambia molto. Guardarle una per una: niente finestra di benvenuto, niente parole tagliate. Ognuna sotto i 150 KB.
+- Le schermate per la finestra «Installa» di Chrome (`public/screenshots/*.webp`) si rifanno con `npm run screenshots` (serve un `npx vite preview --port 4182` acceso; `--url` per un altro indirizzo) quando l'aspetto dell'app cambia molto. Guardarle una per una: niente finestra di benvenuto, niente parole tagliate. Ognuna sotto i 150 KB. Sono elencate in `screenshots` del manifest in `vite.config.ts` (nome, misura, etichetta) e lasciate fuori dalla cache del service worker con `globIgnores: ['screenshots/**']`: le scarica solo Chrome quando mostra la finestra «Installa». Se cambiano nome o misura, aggiornare anche quell'elenco; dopo `npm run build`, `dist/sw.js` non deve nominarle.
 - Cambiato `vercel.json` (policy, intestazioni)? Rilanciare sempre `npm run test:csp`. Aggiunto un servizio esterno o una funzione che usa internet? Aggiornare anche la policy, la pagina `public/privacy.html` e il test.
 
 ## 2. Dopo la pubblicazione: prova di fumo

@@ -114,6 +114,8 @@ test.describe('«Guarda come si fa» nell’avviso dello schermo intero', () => 
     await expect(link).toBeInViewport({ ratio: 1 });
     await expect(link).toHaveAttribute('href', '/installa.html#ipad');
     await expect(link).toHaveAttribute('target', '_blank');
+    // A screen reader is told that it leaves this window; the child sees only «Guarda come si fa».
+    await expect(link).toHaveAccessibleName(/si apre in un’altra scheda/);
     await expect(link).toHaveAttribute('rel', /noopener/);
     expect(await seriousProblems(page)).toEqual([]);
     // The dialog keeps its place: the child comes back to it.

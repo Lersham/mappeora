@@ -12,12 +12,12 @@ Variante breve, per un titolo: *MappAmi, le mappe concettuali per DSA che ti leg
 
 ## 2. Tre testi pronti
 
-Da incollare così o da accorciare. Il nome del mittente e l'indirizzo email (vedi [Come ricevere pareri](#4-come-ricevere-pareri-senza-tracciare-nessuno)) vanno messi dal proprietario: `[…]`.
+Da incollare così o da accorciare. **Non scrivere «non viene raccolto nessun dato»**: l'app non raccoglie i dati di chi la usa e le mappe restano sul dispositivo, ma il sito è ospitato da Vercel, che per poco tempo registra dati tecnici delle visite (indirizzo IP, browser, pagina richiesta), e jsDelivr vede l'indirizzo IP quando si caricano le illustrazioni: è scritto nell'[informativa](../public/privacy.html). I testi sotto dicono solo cose vere anche per chi li confronta con l'informativa. Il nome del mittente e l'indirizzo email (vedi [Come ricevere pareri](#4-come-ricevere-pareri-senza-tracciare-nessuno)) vanno messi dal proprietario: `[…]`.
 
 **Per i genitori** (gruppi, chat di classe, passaparola)
 
 > Se vostro figlio ha un DSA e fa fatica con le mappe concettuali, forse vi può essere utile MappAmi: è gratuita, non vuole account né email e si apre dal browser del tablet, del Chromebook o del computer, senza scaricare niente. Legge la mappa ad alta voce evidenziando la parola, scrive quello che il bambino detta, ha tre caratteri per la dislessia (Lexend, Atkinson, OpenDyslexic) e può leggere il testo da una foto della pagina del libro: la foto resta sul dispositivo. La mappa però la costruisce lui, scegliendo le parole importanti: l'app non la fa al posto suo.
-> Le mappe restano sul dispositivo e non viene raccolto nessun dato. Sul tablet va messa nella schermata Home (qui c'è come: https://mapp-ami.vercel.app/installa.html). Provatela e ditemi cosa ne pensate: [email].
+> MappAmi non raccoglie dati su chi la usa: niente account, niente statistiche, e le mappe restano sul dispositivo (come ogni sito, il server vede l'indirizzo IP: è scritto nell'informativa). Sul tablet va messa nella schermata Home (qui c'è come: https://mapp-ami.vercel.app/installa.html). Provatela e ditemi cosa ne pensate: [email].
 
 **Per gli insegnanti, anche di sostegno**
 
@@ -26,7 +26,7 @@ Da incollare così o da accorciare. Il nome del mittente e l'indirizzo email (ve
 
 **Per le associazioni** (sezioni AID, gruppi di genitori DSA)
 
-> Vi presento MappAmi, un'app gratuita per fare mappe concettuali, nata per i ragazzi con DSA: https://mapp-ami.vercel.app. Non ha account, pubblicità né statistiche, e le mappe restano sul dispositivo (gli utenti sono spesso minorenni). Legge con la parola evidenziata, ascolta la dettatura, ha tre caratteri ad alta leggibilità, legge il testo da una foto del libro sul dispositivo e stampa una versione in bianco e nero per la verifica. Non genera le mappe con l'intelligenza artificiale: le costruisce il ragazzo, con le sue parole.
+> Vi presento MappAmi, un'app gratuita per fare mappe concettuali, nata per i ragazzi con DSA: https://mapp-ami.vercel.app. Non ha account né pubblicità, non raccoglie dati su chi la usa e le mappe restano sul dispositivo (gli utenti sono spesso minorenni; come ogni sito, il server vede l'indirizzo IP, e l'informativa lo dice). Legge con la parola evidenziata, ascolta la dettatura, ha tre caratteri ad alta leggibilità, legge il testo da una foto del libro sul dispositivo e stampa una versione in bianco e nero per la verifica. Non genera le mappe con l'intelligenza artificiale: le costruisce il ragazzo, con le sue parole.
 > Funziona nel browser di iPad, Chromebook, tablet Android e computer; la guida all'installazione è su https://mapp-ami.vercel.app/installa.html. Se vi sembra utile, potete segnalarla ai soci o a una serata sugli strumenti compensativi. Accetto volentieri critiche e consigli da chi la usa ogni giorno: [email].
 
 Non servono nomi di concorrenti, né confronti nei testi ([docs/mercato.md](mercato.md) è per noi).

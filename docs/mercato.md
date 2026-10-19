@@ -15,7 +15,7 @@ Serve a scegliere con i dati in mano cosa dire di MappAmi e cosa costruire dopo.
 | **Algor Education** | Web, iOS (4,65 su 210 voti), Android (4,4 su 248 recensioni, oltre 50.000 download) | Gratis: 15.000 caratteri e 30 crediti (circa 2 schede di studio); poi 2,99 / 5,49 / 7,99 € al mese | **Sì** | **Sì**: mappe da PDF, foto, testo, YouTube |
 | **Reasy** (Tech4All, nato dal progetto europeo Vrailexia) | iOS (3,8 su 5 voti) | Gratis con acquisti nell'app ⚠ (prezzi non osservati) | **Sì** (sincronizzazione) | Mappe automatiche da PDF o foto |
 | **Read4Mi** | Solo iOS osservato (0 voti) | 9,99 € al mese o 99,99 € l'anno | Non osservato ⚠ | Sì: OCR con AI, anche scrittura a mano; mappe a mano o automatiche |
-| **Mindomo** | iOS 4,58 (631 voti), Android 4,8, web | Gratis: 3 diagrammi; Premium circa 6–7 € al mese ⚠ (approssimato) | Sì | Non osservata |
+| **Mindomo** | iOS 4,58 (631 voti), Android 4,8, web | Gratis: 3 diagrammi; Premium circa 6–7 € al mese ⚠ (approssimato) | Non osservato ⚠ (probabile) | Non osservata |
 | **MindMeister** | Android 3,9, web | Gratis: 3 mappe | Sì (registrazione) | Non osservata |
 | **XMind** | iOS 4,69 (3.549 voti), Android 4,6, computer | Gratis: 10 mappe online, esportazione con filigrana; Pro 4,92 $ al mese | Non osservato | Non osservata |
 | **SimpleMind** | iOS 3,98 (531 voti) | Gratis | No | Non osservata |
@@ -34,7 +34,7 @@ Altri nomi visti, non mappe concettuali complete: **CmapTools** (computer, grati
 | Algor | ⚠ dichiarata solo nel suo blog, non nella pagina del prodotto | Non osservata | Sì (foto, PDF) | Non osservato | ⚠ dichiarato solo nel blog | Schede con ripetizione a intervalli, quiz | Non osservata |
 | Reasy | Sì (per parola, frase o testo); significato delle parole | Non osservata | Sì (PDF o foto) | Non osservato | EasyReading e altri | Non osservato | Sincronizzazione con l'account |
 | Read4Mi | Sì, da PDF ad audiolibro con evidenziazione sincronizzata; voci neurali | Sì | Sì, anche scrittura a mano | Non osservato | Non osservati | Non osservato | Non osservata (esporta immagine o PDF) |
-| Mindomo, MindMeister, XMind | Non osservata (Mindomo: non nella pagina dei prezzi; MindMeister: non citata) | Non osservata | Non osservato | Non osservato | Non osservati | Non osservato | Con account; esportazioni (XMind: con filigrana nel gratuito) |
+| Mindomo, MindMeister, XMind | Non osservata (Mindomo: non nella pagina dei prezzi; MindMeister: non citata) | Non osservata | Non osservato | Non osservato | Non osservati | Non osservato | Probabilmente con account ⚠ (osservato solo per MindMeister); esportazioni (XMind: con filigrana nel gratuito) |
 
 **Come si posiziona MappAmi**, in una frase da usare ovunque: *gratuita, senza account, nel browser di tablet, Chromebook e computer della scuola, con OCR sul dispositivo e lettura con parola evidenziata, che lascia costruire la mappa al bambino.*
 

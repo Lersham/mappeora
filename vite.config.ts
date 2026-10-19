@@ -22,9 +22,18 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Shown by Chrome's richer install dialog (npm run screenshots).
+        screenshots: [
+          { src: 'screenshots/narrow-1.webp', sizes: '1080x1920', type: 'image/webp', form_factor: 'narrow', label: 'Un ramo della mappa «La Rivoluzione francese», colorato' },
+          { src: 'screenshots/narrow-2.webp', sizes: '1080x1920', type: 'image/webp', form_factor: 'narrow', label: 'Ripassa con «Indovina»: i concetti si scoprono uno alla volta' },
+          { src: 'screenshots/wide-1.webp', sizes: '1920x1080', type: 'image/webp', form_factor: 'wide', label: 'La mappa «La Rivoluzione francese», a colori: il ramo «Le fasi»' },
+          { src: 'screenshots/wide-2.webp', sizes: '1920x1080', type: 'image/webp', form_factor: 'wide', label: '«Aspetto e voce»: caratteri per la dislessia, anche OpenDyslexic' },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,woff2,webp}'],
+        // Only the browser's install dialog fetches them, from the network: not worth precaching for every user.
+        globIgnores: ['screenshots/**'],
         runtimeCaching: [
           {
             // OCR engine and Italian model (Tesseract.js), downloaded on first use.
