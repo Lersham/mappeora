@@ -2292,9 +2292,9 @@ textarea {
 [data-uppercase='true'] .text-preview {
   text-transform: uppercase;
 }
-.text-preview-row {
-  /* Scrolled into view above the buttons that stay at the bottom of the card. */
-  scroll-margin-bottom: calc(var(--card-pad) + 6.5rem);
+.export-dialog {
+  /* The buttons stay at the bottom of the card: what is scrolled into view (the text, then the message under it) stops above them. */
+  scroll-padding-bottom: calc(var(--card-pad) + 6.5rem);
 }
 .text-status {
   min-height: 1.5em;

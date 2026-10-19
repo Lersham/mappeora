@@ -49,7 +49,16 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
   const kinds = (
     <div className="export-kinds">
       {KINDS.map((k) => (
-        <OptionCard key={k.value} icon={k.icon} name={k.label} description={k.desc} pressed={kind === k.value} onClick={() => setKind(k.value)} />
+        <OptionCard
+          key={k.value}
+          icon={k.icon}
+          name={k.label}
+          description={k.desc}
+          pressed={kind === k.value}
+          // The editor closes this dialog when the export in progress is done: the child cannot start reading the text meanwhile.
+          disabled={busy}
+          onClick={() => setKind(k.value)}
+        />
       ))}
     </div>
   );

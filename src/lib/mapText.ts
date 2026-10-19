@@ -18,13 +18,21 @@ interface Entry {
   branch: number;
 }
 
+/** A link the tree cannot show (drawn between two branches, or closing a loop): the reading never says it. */
+interface CrossLink {
+  from: string;
+  to: string;
+  /** Empty when the child left the line without words. */
+  word: string;
+}
+
 /**
  * The visible concepts depth first, branch by branch, as the app reads a
  * sheet (collapsed branches stay out, like in the reading and the export).
  * A map nearly always starts from a concept named like the map: that one
  * is the title, not a first bullet repeating it.
  */
-function walk(map: ConceptMap): { title: string; entries: Entry[] } {
+function walk(map: ConceptMap): { title: string; entries: Entry[]; crossLinks: CrossLink[] } {
   const title = oneLine(map.title) || 'Mappa';
   const shown = visiblePart(map);
   const labels = new Map(shown.nodes.map((n) => [n.id, oneLine(n.label)]));
@@ -56,7 +64,21 @@ function walk(map: ConceptMap): { title: string; entries: Entry[] } {
       visit(e.target, label ? 1 : 0);
     }
   }
-  return { title, entries };
+
+  // The text stays after the map is gone: a relation the child drew must not vanish from it.
+  const inTree = new Set([...kids.values()].flat().map((e) => e.id));
+  const rank = new Map(entries.map((e, i) => [e.id, i]));
+  const place = (id: string) => rank.get(id) ?? -1; // the concept that is the title comes first
+  const crossLinks = shown.edges
+    .filter((e) => !inTree.has(e.id) && e.source !== e.target && labels.get(e.source) && labels.get(e.target))
+    .sort((a, b) => place(a.source) - place(b.source) || place(a.target) - place(b.target))
+    .map((e) => ({ from: labels.get(e.source)!, to: labels.get(e.target)!, word: oneLine(e.label ?? '') }));
+  return { title, entries, crossLinks };
+}
+
+/** True when «Scaletta» has to leave out links that «Frasi» tells (see CrossLink). */
+export function hasCrossLinks(map: ConceptMap): boolean {
+  return walk(map).crossLinks.length > 0;
 }
 
 /** The title, then the concepts as bullets («- », two spaces more for each level). */
@@ -68,16 +90,20 @@ export function mapToOutline(map: ConceptMap): string {
 /** A sentence ends with a full stop, unless it already ends with a mark. */
 const closed = (text: string) => (/[.!?…:;]$/.test(text) ? text : `${text}.`);
 
+const linkSentence = (l: CrossLink) => closed(l.word ? `${l.from} ${l.word} ${l.to}` : `C’è un collegamento da ${l.from} a ${l.to}`);
+
 /**
  * The title, then the sentences of the reading («L’acqua è formata da
- * idrogeno»), a paragraph for each branch of the main concept.
+ * idrogeno»), a paragraph for each branch of the main concept, and a last
+ * one for the links between branches.
  */
 export function mapToSentences(map: ConceptMap): string {
-  const { title, entries } = walk(map);
+  const { title, entries, crossLinks } = walk(map);
   const said = new Map(readingOrder(visiblePart(map), { depthFirst: true }).map((s) => [s.nodeId, oneLine(s.text)]));
   const paragraphs: string[][] = [];
   for (const e of entries) (paragraphs[e.branch] ??= []).push(closed(said.get(e.id) ?? e.label));
-  return [title, ...paragraphs.filter(Boolean).map((p) => p.join(' '))].join('\n\n');
+  const across = [...new Set(crossLinks.map(linkSentence))].join(' ');
+  return [title, ...paragraphs.filter(Boolean).map((p) => p.join(' ')), ...(across ? [across] : [])].join('\n\n');
 }
 
 export function mapToText(map: ConceptMap, style: TextStyle): string {
