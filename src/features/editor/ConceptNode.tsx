@@ -7,7 +7,7 @@ import { LADDER } from '../../lib/ladder';
 import { beginStep, endStep, useMapStore } from '../../store/mapStore';
 import { NODE_WIDTH } from '../../lib/mapFile';
 import { useReading } from '../../store/readingStore';
-import { useReadAloud } from '../../hooks/useReadAloud';
+import { readNodeAloud } from '../../hooks/useReadAloud';
 import { reviewVisibility, useReview } from '../../store/reviewStore';
 import { illustrationUrl } from '../../services/illustrations';
 import { Icon } from '../../components/Icon';
@@ -52,7 +52,10 @@ function HighlightedLabel({ id, label }: { id: string; label: string }) {
   return (
     <>
       {label.slice(0, start)}
-      <mark className="spoken-word">{label.slice(start, end)}</mark>
+      {/* Its padding must not widen the concept: that moves the whole sheet at every word. */}
+      <mark className="spoken-word" style={{ margin: '0 -2px' }}>
+        {label.slice(start, end)}
+      </mark>
       {label.slice(end)}
     </>
   );
@@ -167,7 +170,6 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   const visibility = useReview((s) => reviewVisibility(s, id));
   const reviewing = useReview((s) => s.active);
   const isReviewStep = useReview((s) => s.active && s.steps[s.index]?.nodeId === id);
-  const { readNode } = useReadAloud();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(data.label);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -315,7 +317,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
               aria-label={`Leggi: ${data.label}`}
               onClick={(e) => {
                 e.stopPropagation();
-                readNode(id);
+                readNodeAloud(id);
               }}
             >
               <Icon name="speak" />
