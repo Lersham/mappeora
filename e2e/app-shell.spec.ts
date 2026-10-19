@@ -73,6 +73,13 @@ test.describe('Aspetto: Ripristina si può annullare', () => {
     await expect(voiceSelect).toHaveValue(voice);
   });
 
+  test('già alle impostazioni di partenza, «Ripristina» lo dice comunque', async ({ page }) => {
+    const panel = await settings(page);
+    await panel.getByRole('button', { name: 'Ripristina' }).click();
+    await expect(panel.getByRole('status').filter({ hasText: 'Ho rimesso le impostazioni di partenza.' })).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-font', 'lexend');
+  });
+
   test('con la voce predefinita, «Annulla» la lascia predefinita', async ({ page }) => {
     const panel = await settings(page);
     const voiceSelect = panel.locator('select');
