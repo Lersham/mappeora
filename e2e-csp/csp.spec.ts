@@ -157,7 +157,8 @@ test.describe('Content-Security-Policy del sito vero', () => {
     await expect(tile.locator('img')).toBeVisible();
     await expect.poll(() => tile.locator('img').evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth)).toBeGreaterThan(0);
     await tile.click();
-    await expect(concept(page, 'Il vulcano').locator('.concept-illustration')).toHaveAttribute('src', /^data:image\/png;base64,/);
+    // Saved smaller as WebP where the browser writes it, else as PNG.
+    await expect(concept(page, 'Il vulcano').locator('.concept-illustration')).toHaveAttribute('src', /^data:image\/(webp|png);base64,/);
   });
 
   test('la pagina «Come installare» si carica e si legge senza violazioni', async ({ page }) => {
