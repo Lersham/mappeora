@@ -6,8 +6,11 @@ import { SpokenError } from '../../components/SpokenError';
 import { isNative } from '../../services/platform';
 import { TOUCH } from '../../lib/touch';
 import type { PageCount, Paper } from '../../lib/pagePlan';
+import { TextExport } from './TextExport';
 
 export type ExportKind = 'pdf' | 'png' | 'file';
+/** «Testo» is made inside the dialog (see TextExport): the editor never gets it, so ExportChoice stays as it was. */
+type DialogKind = ExportKind | 'text';
 
 export interface ExportChoice {
   kind: ExportKind;
@@ -17,9 +20,10 @@ export interface ExportChoice {
   print: boolean;
 }
 
-const KINDS: { value: ExportKind; icon: string; label: string; desc: string }[] = [
+const KINDS: { value: DialogKind; icon: string; label: string; desc: string }[] = [
   { value: 'pdf', icon: '📄', label: 'PDF da stampare', desc: 'Per il quaderno, la verifica, l’esame.' },
   { value: 'png', icon: '🖼️', label: 'Immagine', desc: 'Da mandare in chat o mettere in una presentazione.' },
+  { value: 'text', icon: '📝', label: 'Testo', desc: 'Per copiarla in una ricerca, in un documento o in un messaggio.' },
   { value: 'file', icon: '✏️', label: 'File modificabile', desc: 'Per continuare la mappa su un altro dispositivo o mandarla all’insegnante.' },
 ];
 
@@ -38,19 +42,40 @@ interface Props {
 }
 
 export function ExportDialog({ busy, error, onExport, onClose }: Props) {
-  const [kind, setKind] = useState<ExportKind>('pdf');
+  const [kind, setKind] = useState<DialogKind>('pdf');
   const [paper, setPaper] = useState<Paper>('a4');
   const [pages, setPages] = useState<PageCount>(1);
   const [simple, setSimple] = useState(false);
-  const run = (print: boolean) => onExport({ kind, paper, pages, simple, print });
+  const run = (print: boolean) => kind !== 'text' && onExport({ kind, paper, pages, simple, print });
+  const kinds = (
+    <div className="export-kinds">
+      {KINDS.map((k) => (
+        <OptionCard
+          key={k.value}
+          icon={k.icon}
+          name={k.label}
+          description={k.desc}
+          pressed={kind === k.value}
+          // The editor closes this dialog when the export in progress is done: the child cannot start reading the text meanwhile.
+          disabled={busy}
+          onClick={() => setKind(k.value)}
+        />
+      ))}
+    </div>
+  );
+
+  if (kind === 'text') {
+    return (
+      <Dialog title="Salva e manda" onClose={onClose} className="export-dialog">
+        {kinds}
+        <TextExport onClose={onClose} />
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog title="Salva e manda" onClose={onClose} className="export-dialog">
-      <div className="export-kinds">
-        {KINDS.map((k) => (
-          <OptionCard key={k.value} icon={k.icon} name={k.label} description={k.desc} pressed={kind === k.value} onClick={() => setKind(k.value)} />
-        ))}
-      </div>
+      {kinds}
 
       {kind === 'pdf' && (
         <>

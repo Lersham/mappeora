@@ -232,7 +232,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Salva e manda',
-    text: `La mappa si salva da sola, mentre lavori. «Salva e manda» ne fa una copia da tenere sul dispositivo o da mandare: «PDF da stampare» per il quaderno, «Immagine» da mandare in chat, «File modificabile» per continuarla su un altro dispositivo. ${TOP_OR_ALTRO}`,
+    text: `La mappa si salva da sola, mentre lavori. «Salva e manda» ne fa una copia da tenere sul dispositivo o da mandare: «PDF da stampare» per il quaderno, «Immagine» da mandare in chat, «Testo» da copiare in un documento, «File modificabile» per continuarla su un altro dispositivo. ${TOP_OR_ALTRO}`,
     target: 'salva',
     done: opened('export'),
   },

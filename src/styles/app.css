@@ -2324,3 +2324,23 @@ textarea {
   white-space: normal;
   text-align: center;
 }
+
+/* «Salva e manda» → «Testo»: the text as it will be copied, in the child's reading font (see .ocr-text). */
+.text-preview {
+  display: block;
+  width: 100%;
+  height: clamp(160px, 32vh, 320px);
+  resize: vertical;
+}
+[data-uppercase='true'] .text-preview {
+  text-transform: uppercase;
+}
+.export-dialog {
+  /* The buttons stay at the bottom of the card: what is scrolled into view (the text, then the message under it) stops above them. */
+  scroll-padding-bottom: calc(var(--card-pad) + 6.5rem);
+}
+.text-status {
+  min-height: 1.5em;
+  margin: 8px 0 0;
+  font-weight: 600;
+}
