@@ -41,7 +41,7 @@ Per ora si pubblica **solo la versione web** (decisione del 18/10/2026): le app 
 
 | Funzione | Dove |
 |---|---|
-| 🖼️ Immagini nei nodi, con colore e forma. Due schede: **✨ Illustrazioni** (Fluent Emoji di Microsoft, licenza MIT: circa 1.600 immagini cercabili in italiano **sul dispositivo** grazie ai nomi e alle parole chiave Unicode CLDR, es. «Vesuvio» → 🌋) e **📷 Foto**. La ricerca ignora articoli e preposizioni, cerca la frase e poi le singole parole e mette prima i risultati esatti. L'immagine scelta viene **salvata dentro la mappa**, quindi funziona offline e nel file `.mappami`; le mappe vecchie la salvano alla prima apertura con internet. Le illustrazioni si salvano a 192 px in WebP, con la trasparenza (circa un settimo del peso di prima: da circa 45 KB a circa 6 KB); dove il browser non scrive WebP (Safari) si salvano in PNG a 192 px, solo se pesano meno. 192 px bastano anche per l'esportazione in PNG e PDF. Foto e vecchi simboli non cambiano. Si apre toccando ancora il concetto scelto (o da «Immagine» nella barra); **colore e forma stanno in cima**, la scelta dell'immagine sotto | `src/features/editor/NodeStyleDialog.tsx`, `src/services/illustrations.ts`, `src/lib/searchText.ts`, `src/services/embed.ts` |
+| 🖼️ Immagini nei nodi, con colore e forma. Due schede: **✨ Illustrazioni** (Fluent Emoji di Microsoft, licenza MIT: circa 1.600 immagini cercabili in italiano **sul dispositivo** grazie ai nomi e alle parole chiave Unicode CLDR, es. «Vesuvio» → 🌋) e **📷 Foto**. La ricerca ignora articoli e preposizioni, cerca la frase e poi le singole parole e mette prima i risultati esatti. L'immagine scelta viene **salvata dentro la mappa**, quindi funziona offline e nel file `.mappami`; le mappe vecchie la salvano alla prima apertura con internet. Le illustrazioni si salvano a 224 px (prima 256) in WebP, con la trasparenza; dove il browser non scrive WebP (Safari) si salvano in PNG a 224 px, solo se pesano meno. Le mappe diventano molto più leggere su Android e sul web, solo un po' su iPhone e iPad. 224 px bastano per uno schermo con tre pixel per punto e per l'esportazione in PNG e PDF. Foto e vecchi simboli non cambiano. Si apre toccando ancora il concetto scelto (o da «Immagine» nella barra); **colore e forma stanno in cima**, la scelta dell'immagine sotto | `src/features/editor/NodeStyleDialog.tsx`, `src/services/illustrations.ts`, `src/lib/searchText.ts`, `src/services/embed.ts` |
 | 🧩 Modelli pronti: Libera, 5 W, Causa ed effetto, Linea del tempo (verticale), Confronto | `src/lib/templates.ts`, `src/features/home/NewMapDialog.tsx` |
 | 🧠 Ripasso "Un passo alla volta" e "Indovina" (concetto nascosto, poi «Scopri») | `src/store/reviewStore.ts`, `src/features/editor/ReviewBar.tsx` |
 | ✅ **«Indovina» con autoverifica**: dopo «Scopri» compaiono due pulsanti grandi, «Lo sapevo» e «Non lo sapevo». Si può rispondere anche a voce: «A voce», poi «lo sapevo» o «non lo sapevo». Si capiscono solo le frasi intere, così «non sapevo» non diventa mai «sapevo». Ogni risposta porta al concetto dopo; «Avanti» salta senza contare. Alla fine c'è un riepilogo senza giudizi, letto ad alta voce, con la mappa intera e i concetti da rivedere cerchiati: «Ne sapevi 8 su 10. Da rivedere: …». «Ripassa solo questi» rifà il quiz con i soli concetti da rivedere (gli altri restano sulla mappa come indizi). Le risposte vivono solo durante il ripasso: niente viene salvato, niente notifiche | `src/store/reviewStore.ts`, `src/features/editor/QuizBar.tsx`, `src/lib/voiceCommands.ts` (`parseQuizAnswer`), `src/components/DictationOverlay.tsx` |
@@ -241,16 +241,17 @@ La chiave di firma non è mai nel repository (che è pubblico): si crea con `bas
 
 ### Test end-to-end
 
-In `e2e/` ci sono circa 90 test che usano l'app come farebbe uno studente: su un **computer** (1280×860) e su un **telefono** (Pixel 7), quindi circa 180 esecuzioni (alcuni test valgono solo per il computer o per il telefono). Ogni test riparte da un browser vuoto. Controllano:
+In `e2e/` ci sono circa 240 test che usano l'app come farebbe uno studente: su un **computer** (1280×860) e su un **telefono** (Pixel 7), quindi circa 480 esecuzioni (alcuni test valgono solo per il computer o per il telefono). Con il motore di Safari (WebKit) si possono provare anche su **iPad** e **iPhone**, a mano: `--project=ipad --project=iphone`. Ogni test riparte da un browser vuoto. Controllano:
 - creare mappe da ogni modello, salvataggio automatico, cancellazione, mappe di esempio;
 - aggiungere, rinominare, annullare ed eliminare concetti; parole di collegamento; rami comprimibili; disposizione a foglio A4 senza sovrapposizioni; trascinamento per riordinare;
 - immagini: ricerca delle illustrazioni, Google Immagini, incolla, foto dalla galleria;
-- Menu «Altro» sul telefono, 🔊 sul concetto scelto, benvenuto al primo avvio;
-- file `.mappami`, PNG, PDF su 1, 2 o 4 fogli A4/A3, stampa;
-- lettura ad alta voce (ordine e parola evidenziata), ripasso, Indovina, Interrogazione, dettatura con i comandi vocali;
+- Menu «Altro» sul telefono, 🔊 sul concetto scelto, benvenuto al primo avvio (`welcome.spec.ts`), guscio dell'app mentre si carica e dopo un aggiornamento (`app-shell.spec.ts`), colori dei rami (`colors.spec.ts`);
+- file `.mappami`, PNG, PDF su 1, 2 o 4 fogli A4/A3, stampa; la mappa in frasi da copiare o condividere (`text-export.spec.ts`);
+- lettura ad alta voce (ordine e parola evidenziata), ripasso, Indovina con «Lo sapevo» e «Non lo sapevo» (`quiz-selfcheck.spec.ts`), Interrogazione, dettatura con i comandi vocali; gli errori detti anche a voce (`spoken-errors.spec.ts`);
 - aspetto (carattere, sfondo, maiuscolo), «Dal libro» senza internet, e la scelta delle parole (a tocchi e con l'evidenziatore) su un testo letto da un finto motore OCR;
-- l'informativa privacy, raggiungibile dalla schermata iniziale;
-- **accessibilità** con axe-core (WCAG 2.2 AA): nessun problema grave nelle schermate principali e nell'informativa privacy.
+- l'informativa privacy, raggiungibile dalla schermata iniziale; le pagine statiche, `robots.txt`, `sitemap.xml`, l'immagine di anteprima e il manifest (`web-presence.spec.ts`); la pagina «Come installare» e il suo collegamento dall'avviso dello schermo intero (`installa.spec.ts`);
+- **prestazioni** dell'editor (`editor-perf.spec.ts`): quante volte React ridisegna linee e concetti scegliendo, trascinando, scrivendo il titolo e leggendo ad alta voce, e un'illustrazione da 256 px salvata a 224 px in WebP, trasparente;
+- **accessibilità** con axe-core (WCAG 2.2 AA): nessun problema grave nelle schermate principali, nei dialoghi (anche «Testo» e il riepilogo di «Indovina»), nell'informativa privacy, nella presentazione, nei crediti e in «Come installare», col tema chiaro e con quello scuro.
 
 Come funzionano:
 - **Rete simulata:** le illustrazioni su jsDelivr e Google rispondono con dati finti (`e2e/fixtures.ts`). I test funzionano offline e danno sempre lo stesso risultato.
@@ -259,6 +260,8 @@ Come funzionano:
 - **Server:** i test avviano da soli build e server (`vite preview` sulla porta 4173), oppure riusano quello già acceso.
 - **Rapporto:** `npm run test:e2e:report` apre il rapporto HTML, con screenshot e tracce dei test falliti.
 - **Browser:** Playwright è fissato alla versione 1.56.1, la stessa del Chromium preinstallato nelle sessioni cloud. Su un altro computer, la prima volta: `npx playwright install chromium`.
+
+**Intestazioni di produzione:** i test sopra girano su `vite preview`, che non manda nessuna Content-Security-Policy. `npm run test:csp` (`playwright.csp.config.ts`, `e2e-csp/csp.spec.ts`) costruisce l'app e la serve da `dist/` con `scripts/serve-dist.mjs`, che applica le intestazioni di `vercel.json` (porta 4190, o `CSP_PORT`); cammina dall'elenco al PDF, all'immagine, alle illustrazioni, al service worker e a «Come installare», e fallisce a ogni violazione. La CI non lo lancia ancora: la riga da aggiungere a `ci.yml` è in `docs/rilascio.md`.
 
 ### App Android
 
