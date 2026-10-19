@@ -17,6 +17,7 @@ import { isNative } from './services/platform';
 import { updateReady } from './services/pwaUpdate';
 import { flushAutosave } from './services/autosave';
 import { logError } from './services/errorLog';
+import { takeReload } from './services/preloadError';
 
 // What breaks is kept on this device only (see services/errorLog.ts): the child can copy it for whoever helps.
 window.addEventListener('error', (e) => {
@@ -48,17 +49,10 @@ if (!isNative()) {
   void navigator.storage?.persisted?.().then((done) => done || navigator.storage.persist()).catch(() => {});
 }
 
-// A part loaded later (Riordina, PDF…) belongs to an older version that is
-// gone: only the new version has it. Save, then load the new version.
+// A part loaded later (the editor, Riordina, PDF…) belongs to an older version
+// that is gone: only the new version has it. Save, then load the new version.
 window.addEventListener('vite:preloadError', () => {
-  try {
-    // Once: if the new version fails too, reloading again would not help.
-    if (!navigator.onLine || sessionStorage.getItem('mappeora-reloaded')) return;
-    sessionStorage.setItem('mappeora-reloaded', '1');
-  } catch {
-    return;
-  }
-  void flushAutosave().then(() => location.reload());
+  if (takeReload()) void flushAutosave().then(() => location.reload());
 });
 
 createRoot(document.getElementById('root')!).render(
@@ -69,14 +63,3 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 );
-
-// It booted: the next failure of a part loaded later may recover again (an
-// installed app stays open for days). Not at once, so a failure that comes
-// with every start cannot reload in a loop.
-setTimeout(() => {
-  try {
-    sessionStorage.removeItem('mappeora-reloaded');
-  } catch {
-    // Blocked: nothing was set either.
-  }
-}, 10_000);

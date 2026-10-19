@@ -221,30 +221,79 @@ test.describe('Colore della barra del browser', () => {
 });
 
 test.describe('Ripresa dopo un aggiornamento', () => {
-  test('il ricaricamento automatico torna possibile dopo un avvio riuscito', async ({ page }) => {
+  /** True while the page is the one loaded at the start: a reload throws the marker away. */
+  const stillThere = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as { __alive?: boolean }).__alive === true);
+
+  test('il ricaricamento automatico è fermo un minuto dopo l’ultimo, poi torna possibile', async ({ page }) => {
     await page.clock.install();
     await page.addInitScript(() => {
-      // As after one automatic reload: the flag is set, once per session.
+      // As just after one automatic reload: the moment of the last one is noted, once per session.
       if (!sessionStorage.getItem('e2e-seeded')) {
         sessionStorage.setItem('e2e-seeded', '1');
-        sessionStorage.setItem('mappeora-reloaded', '1');
+        sessionStorage.setItem('mappeora-reloaded', String(Date.now()));
       }
     });
     await page.goto('/');
     await expect(page.getByRole('button', { name: 'Nuova mappa' })).toBeVisible();
-    const flag = () => page.evaluate(() => sessionStorage.getItem('mappeora-reloaded'));
-    // Right after the start the protection against a reload loop is still there...
-    expect(await flag()).toBe('1');
-    await page.clock.fastForward(11_000);
-    // ...and a while later it is gone.
-    await expect.poll(flag).toBeNull();
+    const noted = () => page.evaluate(() => Number(sessionStorage.getItem('mappeora-reloaded')));
+    const before = await noted();
+    await page.evaluate(() => ((window as unknown as { __alive: boolean }).__alive = true));
 
-    // A part that fails to load then reloads the page once, and sets the flag again.
+    // A part that fails to load right after a reload: reloading again would not help.
+    await page.evaluate(() => window.dispatchEvent(new Event('vite:preloadError')));
+    await page.waitForTimeout(500);
+    expect(await stillThere(page)).toBe(true);
+    expect(await noted()).toBe(before);
+
+    // Much later (an installed app stays open for days, and nothing was started in between)...
+    await page.clock.fastForward(61_000);
+    // ...it recovers: the page loads again, and the moment is noted anew.
     await Promise.all([
       page.waitForEvent('load'),
       page.evaluate(() => window.dispatchEvent(new Event('vite:preloadError'))),
     ]);
-    expect(await flag()).toBe('1');
+    expect(await noted()).toBeGreaterThan(before);
+  });
+
+  test('se il file dell’editor non arriva in anticipo, la pagina non si ricarica da sola', async ({ page, consoleErrors }) => {
+    const EDITOR = /\/assets\/MapEditor-[^/]+\.js$/;
+    const failed = page.waitForEvent('requestfailed', (r) => EDITOR.test(r.url()));
+    await page.route(EDITOR, (route) => route.abort());
+    await page.goto('/');
+    await page.evaluate(() => ((window as unknown as { __alive: boolean }).__alive = true));
+    await failed;
+    await page.waitForTimeout(1000);
+    // Nobody asked for the editor yet: the list stays, and nothing is noted for a reload.
+    expect(await stillThere(page)).toBe(true);
+    await expect(page.getByRole('button', { name: 'Nuova mappa' })).toBeVisible();
+    expect(await page.evaluate(() => sessionStorage.getItem('mappeora-reloaded'))).toBeNull();
+    consoleErrors.splice(0);
+  });
+
+  test('se l’editor non arriva quando serve, «Torna alle mappe» ricarica la pagina e la mappa resta', async ({ page, consoleErrors }) => {
+    const EDITOR = /\/assets\/MapEditor-[^/]+\.js$/;
+    await page.addInitScript(() => {
+      // A reload was just done: this one shows the help screen instead of reloading by itself.
+      if (!sessionStorage.getItem('e2e-seeded')) {
+        sessionStorage.setItem('e2e-seeded', '1');
+        sessionStorage.setItem('mappeora-reloaded', String(Date.now()));
+      }
+    });
+    await page.route(EDITOR, (route) => route.abort());
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nuova mappa' }).click();
+    await page.getByPlaceholder("es. Il ciclo dell'acqua").fill('I vulcani');
+    await page.getByRole('button', { name: 'Crea' }).click();
+    await expect(page.getByRole('heading', { name: 'Qualcosa è andato storto' })).toBeVisible();
+    expect(consoleErrors.length).toBeGreaterThan(0);
+    consoleErrors.splice(0);
+
+    // Going back to the list would fail again at the next map: a new page gets the part again.
+    await page.unroute(EDITOR);
+    await Promise.all([page.waitForEvent('load'), page.getByRole('button', { name: 'Torna alle mappe' }).click()]);
+    await expect(page.locator('.map-title')).toHaveText(['I vulcani']);
+    await page.locator('.map-open', { hasText: 'I vulcani' }).click();
+    await expect(page.locator('.title-input')).toHaveValue('I vulcani');
   });
 });
 
@@ -261,7 +310,7 @@ test.describe('Apri file', () => {
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: 'Apri file' }).click();
     await (await chooser).setFiles(file);
-    await expect(page.getByRole('alert')).toContainText('Non riesco a leggere questo file');
+    await expect(page.getByRole('alert')).toHaveText('Questo file è troppo grande per essere una mappa.');
     await expect(page.getByRole('button', { name: 'Apri file' })).toBeVisible();
   });
 });

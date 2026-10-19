@@ -15,6 +15,7 @@ import { embedMissingImages } from './services/embed';
 import { flushAutosave, recovered, showMap, useSaveStatus } from './services/autosave';
 import { reloadIfSafe } from './services/pwaUpdate';
 import { isNative } from './services/platform';
+import { loadInBackground } from './services/preloadError';
 import { backIsHandled, handleBack, installWebBack } from './lib/backButton';
 import { BigButton } from './components/BigButton';
 import { Dialog } from './components/Dialog';
@@ -48,7 +49,8 @@ function usePrefetchEditor() {
   useEffect(() => {
     // Someone on a limited data plan asked for less.
     if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return;
-    const prefetch = () => void loadEditor().catch(() => {});
+    // In the background: a failure here must not reload the page (see services/preloadError).
+    const prefetch = () => void loadInBackground(loadEditor).catch(() => {});
     if (typeof requestIdleCallback === 'function') {
       const id = requestIdleCallback(prefetch, { timeout: 5000 });
       return () => cancelIdleCallback(id);

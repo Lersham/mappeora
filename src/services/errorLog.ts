@@ -32,7 +32,8 @@ function scrub(text: string): string {
   return text
     .slice(0, 1000)
     .replace(/data:[^\s"')]*/g, 'data:…')
-    .replace(/"[^]*" is not valid JSON/, '"…" is not valid JSON')
+    // V8 quotes the start of the text, with "..." after the quote when it cut it, and before it when the error is mid-text.
+    .replace(/"[^]*"(?:\.\.\.)? is not valid JSON/, '"…" is not valid JSON')
     .replace(/\s+/g, ' ')
     .trim();
 }

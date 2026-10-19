@@ -157,8 +157,11 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     let text: string | null;
     try {
       text = await pickMapFile();
-    } catch {
-      return setImportError('Non riesco a leggere questo file. Se è su Drive o in una chat, scaricalo prima sul dispositivo.');
+    } catch (e) {
+      // A file that is too big says so; any other failure is most likely a cloud file not downloaded yet.
+      return setImportError(
+        e instanceof MapFileError ? e.message : 'Non riesco a leggere questo file. Se è su Drive o in una chat, scaricalo prima sul dispositivo.',
+      );
     }
     if (text === null) return;
     try {

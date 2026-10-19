@@ -2,6 +2,7 @@ import { Component, type ReactNode } from 'react';
 import { Mascot } from './Mascot';
 import { CopyDetails } from './CopyDetails';
 import { logError } from '../services/errorLog';
+import { isChunkLoadError } from '../services/preloadError';
 
 interface Props {
   children: ReactNode;
@@ -13,11 +14,12 @@ interface Props {
 }
 
 /** A crash shows a way out instead of a blank page. */
-export class ErrorBoundary extends Component<Props, { failed: boolean }> {
-  state = { failed: false };
+export class ErrorBoundary extends Component<Props, { failed: boolean; partMissing: boolean }> {
+  state = { failed: false, partMissing: false };
 
-  static getDerivedStateFromError() {
-    return { failed: true };
+  static getDerivedStateFromError(error: unknown) {
+    // A part of the app that did not load stays failed until the page is loaded again (React.lazy and the browser both remember it).
+    return { failed: true, partMissing: isChunkLoadError(error) };
   }
 
   componentDidCatch(error: unknown) {
@@ -42,7 +44,12 @@ export class ErrorBoundary extends Component<Props, { failed: boolean }> {
             <button
               type="button"
               className="big-button primary"
-              onClick={() => void Promise.resolve(onReset()).then(() => this.setState({ failed: false }))}
+              onClick={() =>
+                void Promise.resolve(onReset()).then(() =>
+                  // After onReset, which saves: back on the list, with the part loaded again.
+                  this.state.partMissing ? window.location.reload() : this.setState({ failed: false }),
+                )
+              }
             >
               <span className="big-button-label">Torna alle mappe</span>
             </button>

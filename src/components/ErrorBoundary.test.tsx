@@ -7,10 +7,10 @@ import { ErrorBoundary } from './ErrorBoundary';
 
 let host: HTMLDivElement;
 let root: Root;
-let broken = true;
+let broken: string | false = 'crash in the child';
 
 function Child() {
-  if (broken) throw new Error('crash in the child');
+  if (broken) throw new Error(broken);
   return <p>Tutto bene</p>;
 }
 
@@ -23,7 +23,7 @@ const button = (name: string) => [...host.querySelectorAll('button')].find((b) =
 
 beforeEach(() => {
   localStorage.clear();
-  broken = true;
+  broken = 'crash in the child';
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
@@ -35,6 +35,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   Reflect.deleteProperty(navigator, 'clipboard');
 });
 
@@ -70,6 +71,19 @@ describe('ErrorBoundary', () => {
     await act(async () => button('Torna alle mappe').click());
     expect(onReset).toHaveBeenCalledOnce();
     expect(host.textContent).toBe('Tutto bene');
+  });
+
+  it('«Torna alle mappe» loads the page again when a part of the app could not be loaded', async () => {
+    // A failed load is remembered by the browser and by React.lazy: going back to the list would crash again.
+    const reload = vi.fn();
+    vi.stubGlobal('location', { ...window.location, reload });
+    const onReset = vi.fn();
+    broken = 'Failed to fetch dynamically imported module: https://mapp-ami.vercel.app/assets/MapEditor-abc.js';
+    await show(onReset);
+    await act(async () => button('Torna alle mappe').click());
+    // Saved first, then the new page.
+    expect(onReset).toHaveBeenCalledOnce();
+    expect(reload).toHaveBeenCalledOnce();
   });
 
   it('copies the details to the clipboard and says so politely', async () => {

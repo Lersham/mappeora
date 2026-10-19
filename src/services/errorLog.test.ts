@@ -61,14 +61,48 @@ describe('logError', () => {
     expect(JSON.stringify(log)).not.toContain('segreta');
   });
 
-  it('leaves out pictures and the text of a file that failed to parse', async () => {
+  it('leaves out pictures', async () => {
     const { logError, readErrorLog } = await load();
     logError(new Error('Image failed: data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ=='), 'window');
-    logError(new SyntaxError('Unexpected token \'x\', "{"title":"Il mio diario"..." is not valid JSON'), 'window');
     const text = JSON.stringify(readErrorLog());
     expect(text).not.toContain('/9j/');
-    expect(text).not.toContain('diario');
-    expect(text).toContain('is not valid JSON');
+  });
+
+  it('leaves out the text around a JSON error, in each form the engine writes it', async () => {
+    const { logError, readErrorLog, errorReport } = await load();
+    // Made by the engine itself: how it quotes the text differs (short, cut, or from the middle).
+    const texts = [
+      'x',
+      'Il mio diario segreto: oggi ho litigato con Luca',
+      '[1,2,3,4,5,6,7,8,9,10, il diario segreto di Anna e di tutta la classe',
+    ];
+    for (const text of texts) {
+      try {
+        JSON.parse(text);
+      } catch (e) {
+        logError(e, 'promise');
+      }
+    }
+    const log = JSON.stringify(readErrorLog());
+    const report = errorReport();
+    for (const secret of ['diario', 'segreto', 'Luca', 'Anna', 'classe']) {
+      expect(log).not.toContain(secret);
+      expect(localStorage.getItem('mappeora-errors')).not.toContain(secret);
+      expect(report).not.toContain(secret);
+    }
+  });
+
+  it('also leaves out the text of the forms other engines write', async () => {
+    const { logError, readErrorLog } = await load();
+    logError(new SyntaxError('Unexpected token \'I\', "Il mio dia"... is not valid JSON'), 'window');
+    logError(new SyntaxError('Unexpected token \'m\', ..."7,8,9,10, mio diario"... is not valid JSON'), 'window');
+    logError(new SyntaxError('Unexpected token \'a\', "a map titl" is not valid JSON'), 'window');
+    const log = readErrorLog();
+    expect(log.map((e) => e.message)).toEqual([
+      'SyntaxError: Unexpected token \'I\', "…" is not valid JSON',
+      'SyntaxError: Unexpected token \'m\', ..."…" is not valid JSON',
+      'SyntaxError: Unexpected token \'a\', "…" is not valid JSON',
+    ]);
   });
 
   it('never throws when the storage is blocked, and still knows this session\'s errors', async () => {
