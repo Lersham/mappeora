@@ -1006,12 +1006,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   return (
     <div
       className={`editor${picking ? ' is-picking' : ''}${review.active ? ' is-reviewing' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
-      onPointerDownCapture={() => {
+      onPointerDownCapture={(e) => {
         touch();
         // Any press, on a concept too, stops the branch tapped a moment ago from
         // coming closer: the view must not glide under a finger that may be about
         // to drag. If the press turns out to be a tap, onNodeClick starts it again.
         cancelCloser();
+        // A glide already under way stops where it is. On the empty map d3-zoom
+        // does it, but a concept that can be dragged is out of its reach (nopan).
+        if ((e.target as Element).closest('.react-flow__node.draggable')) void setViewport(getViewport());
       }}
       onKeyDownCapture={touch}
       onWheelCapture={touch}
