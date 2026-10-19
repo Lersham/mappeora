@@ -171,29 +171,127 @@ test.describe('Indovina: «Lo sapevo» e «Non lo sapevo»', () => {
     await expect(page.locator('.review-bar')).toHaveCount(0);
   });
 
-  test('con la tastiera: si risponde con Invio e il fuoco passa al «Scopri» seguente', async ({ page, isMobile }) => {
+  test('con la tastiera: «Scopri» porta il fuoco sulle risposte, e dopo ognuna sul «Scopri» seguente', async ({ page, isMobile }) => {
     test.skip(isMobile, 'keyboard only');
     await seasons(page, ['Estate']);
     await startQuiz(page);
     await page.keyboard.press('ArrowRight'); // «Scopri» with the arrow, as with a clicker
     await expect(answers(page)).toBeVisible();
-    await answers(page).getByRole('button', { name: 'Non lo sapevo', exact: true }).focus();
+    // the answers are announced and the next Tab is on them, not on «Avanti»
+    await expect(answers(page)).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(answers(page).getByRole('button', { name: 'Non lo sapevo', exact: true })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(progress(page)).toHaveText('2 / 2');
     await expect(bar(page).getByRole('button', { name: 'Scopri' })).toBeFocused();
+    // «Scopri» with Enter, as from the keyboard
     await page.keyboard.press('Enter');
-    await answers(page).getByRole('button', { name: 'Lo sapevo', exact: true }).focus();
+    await expect(answers(page)).toBeFocused();
+    // a second Enter does not answer by mistake
+    await page.keyboard.press('Enter');
+    await expect(answers(page)).toBeVisible();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(answers(page).getByRole('button', { name: 'Lo sapevo', exact: true })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(summary(page)).toHaveText('Ne sapevi 1 su 2. Da rivedere: Le stagioni.');
     // the end: the keyboard is on the next thing to do
     await expect(bar(page).getByRole('button', { name: 'Ripassa solo questi' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(progress(page)).toHaveText('1 / 1');
+    // and again on the next «Scopri», not lost with the button that went away
+    await expect(bar(page).getByRole('button', { name: 'Scopri' })).toBeFocused();
     // arrows still walk through the concepts without answering
     await page.keyboard.press('ArrowRight');
     await expect(answers(page)).toBeVisible();
     await page.keyboard.press('ArrowLeft');
     await expect(progress(page)).toHaveText('1 / 1');
+  });
+
+  test('«Indietro» non porta via il fuoco: si può tornare indietro più volte con Invio', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'keyboard only');
+    await seasons(page);
+    await startQuiz(page);
+    for (let i = 0; i < 3; i++) await grade(page, true);
+    await expect(progress(page)).toHaveText('4 / 4');
+    const back = bar(page).getByRole('button', { name: 'Indietro' });
+    await back.focus();
+    await page.keyboard.press('Enter');
+    await expect(progress(page)).toHaveText('3 / 4');
+    await expect(back).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(progress(page)).toHaveText('2 / 4');
+    await expect(back).toBeFocused();
+  });
+
+  test('«Finito!» dopo una risposta lascia il fuoco sul riepilogo, sul pulsante da usare', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'keyboard only');
+    await newMap(page, 'Le stagioni');
+    await startQuiz(page);
+    await reveal(page);
+    await expect(answers(page)).toBeFocused();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter'); // «Non lo sapevo»: the only concept, the end
+    await expect(summary(page)).toHaveText('Nessun problema, ripassando si impara! Da rivedere: Le stagioni.');
+    await expect(bar(page).getByRole('button', { name: 'Ripassa solo questi' })).toBeFocused();
+    // «Indietro» to the concept, then «Finito!» after the answer was given
+    await bar(page).getByRole('button', { name: 'Indietro' }).click();
+    await expect(answers(page)).toBeVisible();
+    await bar(page).getByRole('button', { name: 'Finito!' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(summary(page)).toBeVisible();
+    await expect(bar(page).getByRole('button', { name: 'Ripassa solo questi' })).toBeFocused();
+  });
+
+  test('un riepilogo lungo resta corto, e se non basta lo spazio si può scorrere con la tastiera', async ({ page }) => {
+    const many = Array.from({ length: 12 }, (_, i) => `Concetto ${i + 1}`);
+    await seasons(page, many);
+    await startQuiz(page);
+    for (let i = 0; i < many.length + 1; i++) await grade(page, false);
+    const text = 'Nessun problema, ripassando si impara! Da rivedere: Le stagioni, Concetto 1, Concetto 2, Concetto 3, Concetto 4 e altri 8.';
+    await expect(summary(page)).toHaveText(text);
+    // the whole list is still one step away: «Ripassa solo questi» asks all of them
+    await expect.poll(async () => (await spoken(page)).at(-1)).toBe(text);
+    await expect(page.locator('.concept-node.review-current')).toHaveCount(13);
+    // whatever the room, a caption that scrolls can be reached with Tab
+    await expect(summary(page)).toHaveAttribute('tabindex', '0');
+    await expect(page.getByRole('region', { name: 'Riepilogo' })).toBeVisible();
+    await barsFit(page);
+    expect(await seriousProblems(page)).toEqual([]);
+    await bar(page).getByRole('button', { name: 'Ripassa solo questi' }).click();
+    await expect(progress(page)).toHaveText('1 / 13');
+  });
+
+  test('un concetto con la sola immagine si chiama «Concetto senza nome», come altrove', async ({ page }) => {
+    // From a copy: a new concept cannot be left without words, but a picture one can come without.
+    const map = {
+      id: 'm1', title: 'Le stagioni', createdAt: 1, updatedAt: Date.now(), template: 'libera',
+      nodes: [
+        { id: 'a', label: 'Le stagioni', position: { x: 0, y: 0 } },
+        { id: 'b', label: 'Estate', position: { x: -150, y: 150 } },
+        { id: 'c', label: '', position: { x: 150, y: 150 }, image: { kind: 'emoji', ref: '🌸' } },
+      ],
+      edges: [
+        { id: 'e1', source: 'a', target: 'b' },
+        { id: 'e2', source: 'a', target: 'c' },
+      ],
+    };
+    await page.goto('/');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Apri file' }).click();
+    await (await chooser).setFiles({
+      name: 'copia.mappami', mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify({ format: 'mappeora-archivio', version: 1, savedAt: 1, maps: [map] })),
+    });
+    await expect(page.getByRole('status')).toContainText('Ho ritrovato 1 mappa');
+    await page.locator('.map-title', { hasText: 'Le stagioni' }).click();
+    await expect(nodes(page)).toHaveCount(3);
+    await startQuiz(page);
+    for (const knew of [true, false, false]) await grade(page, knew);
+    const text = 'Ne sapevi 1 su 3. Da rivedere: Estate, Concetto senza nome.';
+    await expect(summary(page)).toHaveText(text);
+    await expect.poll(async () => (await spoken(page)).at(-1)).toBe(text);
   });
 
   test('a voce: «lo sapevo», «non sapevo»… dopo aver premuto «A voce»', async ({ page }) => {

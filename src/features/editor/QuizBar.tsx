@@ -7,6 +7,7 @@ import type { ReadingStep } from '../../lib/readingOrder';
 import { parseQuizAnswer, QUIZ_VOICE_HINTS } from '../../lib/voiceCommands';
 import { useMapStore } from '../../store/mapStore';
 import { quizSummary, useReview } from '../../store/reviewStore';
+import { spokenLabel } from './a11yLabels';
 
 interface Props {
   onRepeat(): void;
@@ -27,12 +28,13 @@ export function QuizBar({ onRepeat, onOverview, onExit }: Props) {
   const { readText } = useReadAloud();
   const [unclear, setUnclear] = useState(false);
   const main = useRef<HTMLElement>(null);
+  const answers = useRef<HTMLDivElement>(null);
 
   const last = index === steps.length - 1;
   const graded = Object.keys(known).length + Object.keys(missed).length > 0;
   const hasMissed = Object.keys(missed).length > 0;
-  // The concept's name, not the whole proposition that is read aloud.
-  const nameOf = (step: ReadingStep) => nodes?.find((n) => n.id === step.nodeId)?.label.replace(/\s+/g, ' ').trim() || step.text;
+  // The concept's name, not the whole proposition that is read aloud; a concept without one is called as everywhere else.
+  const nameOf = (step: ReadingStep) => spokenLabel(nodes?.find((n) => n.id === step.nodeId)?.label ?? '');
   const summary = done ? quizSummary({ steps, known, missed }, nameOf) : '';
 
   useEffect(() => setUnclear(false), [index, revealed, done]);
@@ -53,10 +55,26 @@ export function QuizBar({ onRepeat, onOverview, onExit }: Props) {
     refocus.current = false;
     main.current?.querySelector<HTMLElement>('.quiz-focus')?.focus();
   }, [index, done]);
-  const grade = (knew: boolean) => {
+  const goOn = (action: () => void) => {
     refocus.current = true;
-    answer(knew);
+    action();
   };
+  const grade = (knew: boolean) => goOn(() => answer(knew));
+
+  // «Scopri» turns into «Ripeti» under the finger, and the answers appear
+  // before it in the page: without a cue, Tab would skip them and a screen
+  // reader would say nothing. Focus goes to the group (not to a button, so a
+  // second Enter cannot answer by mistake) only when «Scopri» was used from
+  // the bar or a clicker, never when going back with «Indietro».
+  const before = useRef({ index, revealed });
+  useEffect(() => {
+    const was = before.current;
+    before.current = { index, revealed };
+    if (!revealed || was.revealed || was.index !== index || done) return;
+    const at = document.activeElement;
+    if (at && at !== document.body && !main.current?.contains(at)) return;
+    answers.current?.focus();
+  }, [index, revealed, done]);
 
   const answerByVoice = async () => {
     setUnclear(false);
@@ -74,11 +92,16 @@ export function QuizBar({ onRepeat, onOverview, onExit }: Props) {
   return (
     <>
       {/* Always there, so a screen reader announces what changes in it. */}
-      <p className={text ? `present-caption quiz-text${done ? ' quiz-summary' : ''}` : 'sr-only'} aria-live="polite">
+      {/* The summary can be longer than the room: it scrolls, so the keyboard must reach it. */}
+      <p
+        className={text ? `present-caption quiz-text${done ? ' quiz-summary' : ''}` : 'sr-only'}
+        aria-live="polite"
+        {...(done ? { tabIndex: 0, role: 'region', 'aria-label': 'Riepilogo' } : {})}
+      >
         {text}
       </p>
       {revealed && !done && (
-        <div className="toolbar review-bar quiz-answers" role="group" aria-label="Come è andata?">
+        <div ref={answers} tabIndex={-1} className="toolbar review-bar quiz-answers" role="group" aria-label="Come è andata?">
           <BigButton icon="reset" label="Non lo sapevo" onClick={() => grade(false)} />
           {dictation.supported && <BigButton icon="mic" label="A voce" className="quiz-voice" onClick={() => void answerByVoice()} disabled={dictation.listening} />}
           <BigButton icon="check" label="Lo sapevo" onClick={() => grade(true)} />
@@ -88,7 +111,7 @@ export function QuizBar({ onRepeat, onOverview, onExit }: Props) {
         <BigButton icon="back" label="Indietro" onClick={prev} disabled={index === 0 && !done} />
         {done ? (
           <>
-            {hasMissed && <BigButton icon="brain" label="Ripassa solo questi" variant="primary" className="quiz-focus quiz-again" onClick={retryMissed} />}
+            {hasMissed && <BigButton icon="brain" label="Ripassa solo questi" variant="primary" className="quiz-focus quiz-again" onClick={() => goOn(retryMissed)} />}
             <BigButton icon="party" label="Fine" variant={hasMissed ? 'default' : 'primary'} className={hasMissed ? '' : 'quiz-focus'} onClick={onExit} />
           </>
         ) : (
@@ -103,7 +126,7 @@ export function QuizBar({ onRepeat, onOverview, onExit }: Props) {
             )}
             {last && revealed ? (
               // Without having answered anything there is no summary to show.
-              <BigButton icon="party" label="Finito!" onClick={graded ? finish : onExit} />
+              <BigButton icon="party" label="Finito!" onClick={graded ? () => goOn(finish) : onExit} />
             ) : (
               <BigButton icon="forward" label="Avanti" onClick={next} disabled={last} />
             )}

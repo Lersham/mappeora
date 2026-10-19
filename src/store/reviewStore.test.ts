@@ -155,6 +155,17 @@ describe('Indovina: knew / did not know', () => {
     );
   });
 
+  it('a long list of concepts to look at again is cut short, never «e altri 1»', () => {
+    const many = Array.from({ length: 14 }, (_, i) => ({ nodeId: `n${i}`, text: `Concetto ${i + 1}` }));
+    const flags = (from: number, to: number) => Object.fromEntries(many.slice(from, to).map((m) => [m.nodeId, true as const]));
+    // the first n concepts are missed, the rest known
+    const sum = (n: number) => quizSummary({ steps: many, known: flags(n, 14), missed: flags(0, n) });
+    // up to six names are all said: one more name is shorter than «e altri 1»
+    expect(sum(6)).toBe('Ne sapevi 8 su 14. Da rivedere: Concetto 1, Concetto 2, Concetto 3, Concetto 4, Concetto 5, Concetto 6.');
+    expect(sum(7)).toBe('Ne sapevi 7 su 14. Da rivedere: Concetto 1, Concetto 2, Concetto 3, Concetto 4, Concetto 5 e altri 2.');
+    expect(sum(14)).toBe('Nessun problema, ripassando si impara! Da rivedere: Concetto 1, Concetto 2, Concetto 3, Concetto 4, Concetto 5 e altri 9.');
+  });
+
   it('«Ripassa solo questi» asks again only the missed concepts, the others stay as clues', () => {
     state().start(steps, 'quiz');
     for (const knew of [true, false, false]) {

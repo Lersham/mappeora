@@ -2312,6 +2312,11 @@ textarea {
   max-height: 30vh;
   overflow-y: auto;
 }
+/* The answers take the focus when they appear and the summary can be tabbed to (see QuizBar): the ring goes inside, as the bar's edge would clip it. */
+.quiz-answers:focus-visible,
+.quiz-summary:focus-visible {
+  outline-offset: -3px;
+}
 .review-bar .quiz-again {
   flex: 2 1 0;
 }

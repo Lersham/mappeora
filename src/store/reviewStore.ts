@@ -163,6 +163,9 @@ export function ripetimiSummary(s: Pick<ReviewState, 'steps' | 'heard'>): string
   return `Hai spiegato ${explained} ${explained === 1 ? 'concetto' : 'concetti'} su ${total}. ${missing.length === 1 ? 'Ti manca' : 'Ti mancano'}: ${missing.join(', ')}.`;
 }
 
+/** Indovina summary: this many names, then «e altri N»; the others are ringed on the map. */
+const LISTED = 5;
+
 /**
  * Indovina, at the end: how many concepts the child knew and which ones to
  * look at again. Only the concepts the child answered count; «name» gives the
@@ -180,5 +183,7 @@ export function quizSummary(
   // Nobody is told they know «0 su 3».
   const known = total - missed.length;
   const head = known === 0 ? 'Nessun problema, ripassando si impara!' : `Ne sapevi ${known} su ${total}.`;
-  return `${head} Da rivedere: ${missed.join(', ')}.`;
+  // Never «e altri 1»: one more name takes the room of those words.
+  const list = missed.length > LISTED + 1 ? `${missed.slice(0, LISTED).join(', ')} e altri ${missed.length - LISTED}` : missed.join(', ');
+  return `${head} Da rivedere: ${list}.`;
 }
