@@ -1,5 +1,4 @@
-import { toPng } from 'html-to-image';
-import { getNodesBounds, type Node } from '@xyflow/react';
+import type { Node } from '@xyflow/react';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { isNative } from './platform';
@@ -109,6 +108,8 @@ async function renderOnce(nodes: Node[], background: string, simple: boolean): P
   const flow = document.querySelector<HTMLElement>('.react-flow');
   const el = flow?.querySelector<HTMLElement>('.react-flow__viewport');
   if (!flow || !el) throw new Error('viewport-not-found');
+  // Loaded here, not at the top: backup.ts imports this file, and the list of maps must not wait for them.
+  const [{ toPng }, { getNodesBounds }] = await Promise.all([import('html-to-image'), import('@xyflow/react')]);
   await document.fonts?.ready; // the reading font, not a stand-in
   const shown = nodes.filter((n) => !n.hidden);
   const bounds = labelRects(flow, el).reduce(union, getNodesBounds(shown));

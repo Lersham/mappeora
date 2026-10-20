@@ -2,8 +2,7 @@ import type { ConceptMap } from '../../types/map';
 import { NEW_CONCEPT_LABEL } from '../../lib/mapFactory';
 import { spanningTree } from '../../lib/tree';
 
-/** The title of the map the tutorial makes. */
-export const TUTORIAL_TITLE = 'La mia prima mappa';
+export { TUTORIAL_TITLE } from '../../lib/mapFactory';
 
 /** The button a step asks for: it is highlighted (and «Altro» too, when it is in there). */
 export type TutorialTarget =
@@ -22,7 +21,7 @@ export type TutorialTarget =
   | 'elimina'
   | 'solo-mappa';
 
-/** A window the editor opens: «Ripassa», «Salva e manda»… ('settings' is «Aspetto», 'focus' «Solo la mappa», 'style' «Immagine e colore»). */
+/** A window the editor opens: «Ripassa», «Salva e manda»… ('settings' is «Aspetto», 'focus' «Solo la mappa», 'style' «Nome, colore e immagine»). */
 export type TutorialTool = 'photo' | 'review' | 'export' | 'settings' | 'focus' | 'style';
 
 /** What the child has done so far, as the tutorial sees it. */
@@ -114,7 +113,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Tocca, ritocca, tieni premuto',
-    text: 'Su un riquadro funzionano tre gesti. Un tocco lo sceglie: in basso compare la sua barra, con Nome, Immagine, Cambia ramo ed Elimina. Un altro tocco sullo stesso riquadro, anche dopo un po’, apre «Immagine e colore». Tenerlo premuto e poi alzare il dito serve a cambiarne il nome. Prova: tocca «Luce e calore» e poi toccalo ancora.',
+    text: 'Su un riquadro funzionano tre gesti. Un tocco lo sceglie: in basso compare la sua barra, con Nome, Immagine, Cambia ramo ed Elimina. Un altro tocco sullo stesso riquadro, anche dopo un po’, apre «Nome, colore e immagine» (col mouse basta un doppio clic): in cima c’è il nome, sotto il colore. Tenerlo premuto e poi alzare il dito serve a cambiarne il nome. Prova: tocca «Luce e calore» e poi toccalo ancora.',
     done: opened('style'),
   },
   {
@@ -175,7 +174,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Metti i concetti dove vuoi',
-    text: `I concetti si mettono in fila da soli, uno sotto l’altro come un albero. Per cambiare l’ordine di due fratelli, trascina un concetto a destra o a sinistra. Per metterli proprio dove vuoi tu, premi «Sposta», in basso, e poi trascinali. ${IN_ALTRO}`,
+    text: `I concetti si mettono in fila da soli, uno sotto l’altro come un albero. Per cambiare l’ordine di due fratelli, trascina un concetto a destra o a sinistra. Per metterli proprio dove vuoi tu, premi «Sposta», in basso, e poi trascinali. «Sposta» resta acceso: premilo di nuovo per rimetterli sul foglio. ${IN_ALTRO}`,
     target: 'sposta',
     first: (map) =>
       map.freeLayout
@@ -201,7 +200,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Un colore tutto suo',
-    text: 'Puoi colorare anche un concetto solo. Toccalo una volta per sceglierlo, poi toccalo ancora (oppure premi «Immagine», in basso): si apre «Immagine e colore». Scegli un colore e premi «Fatto».',
+    text: 'Puoi colorare anche un concetto solo. Toccalo una volta per sceglierlo, poi toccalo ancora (col mouse: doppio clic; oppure premi «Immagine», in basso): si apre «Nome, colore e immagine». Sotto il nome scegli un colore e premi «Fatto».',
     target: 'immagine',
     done: (now, start) =>
       now.map.nodes.some((n) => {

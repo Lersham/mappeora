@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
+    <title>Come installare MappAmi su iPad, Android e computer</title>
+    <meta name="description" content="Come mettere MappAmi sull’iPad, sul tablet Android, sul Chromebook e sul computer: pochi passi, senza negozio di app e senza account." />
+    <link rel="canonical" href="https://mapp-ami.vercel.app/installa.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MappAmi" />
+    <meta property="og:locale" content="it_IT" />
+    <meta property="og:title" content="Come installare MappAmi su iPad, Android e computer" />
+    <meta property="og:description" content="Come mettere MappAmi sull’iPad, sul tablet Android, sul Chromebook e sul computer: pochi passi, senza negozio di app e senza account." />
+    <meta property="og:url" content="https://mapp-ami.vercel.app/installa.html" />
+    <script src="static-settings.js"></script>
+    <style>
+      :root {
+        --bg: #fdf8ec;
+        --card: #ffffff;
+        --text: #1f2a36;
+        --muted: #4b5866;
+        --accent: #2b54b0;
+        --accent-text: #ffffff;
+        --line: #e4dccb;
+      }
+      /* Without a look saved in the app, the page follows the system's dark mode. */
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme]) {
+          --bg: #1b2129;
+          --card: #252d37;
+          --text: #eef1f4;
+          --muted: #b9c2cc;
+          --accent: #8db8e8;
+          --accent-text: #10161f;
+          --line: #3a4553;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+        font-size: 1.125rem;
+        line-height: var(--line-height, 1.65);
+        letter-spacing: var(--letter-spacing, 0.01em);
+        word-spacing: var(--word-spacing, normal);
+        overflow-wrap: break-word;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 1.5rem 16px 4rem;
+      }
+      h1 {
+        font-size: 2rem;
+        line-height: 1.2;
+        margin: 1rem 0 0.5rem;
+      }
+      h2 {
+        font-size: 1.5rem;
+        line-height: 1.25;
+        margin: 0 0 0.5rem;
+      }
+      h3 {
+        font-size: 1.15rem;
+        margin: 1.25rem 0 0.25rem;
+      }
+      p,
+      li {
+        max-width: 65ch;
+      }
+      a {
+        color: var(--accent);
+        text-underline-offset: 0.2em;
+      }
+      a:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+      .back {
+        display: inline-block;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.75rem;
+        background: var(--accent);
+        color: var(--accent-text);
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .back:focus-visible {
+        outline-color: var(--text);
+      }
+      .lead {
+        color: var(--muted);
+      }
+      /* Where am I going: one big button per device. */
+      .pick {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 1.25rem 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .pick a {
+        display: inline-block;
+        min-height: 48px;
+        padding: 0.6rem 1rem;
+        border-radius: 0.75rem;
+        background: var(--card);
+        border: 2px solid var(--line);
+        font-weight: 600;
+        text-decoration: none;
+        /* «Chromebook» in capitals, at the biggest text, is wider than a 320 px phone: it breaks rather than scroll sideways. */
+        overflow-wrap: anywhere;
+      }
+      section {
+        margin-top: 2rem;
+        padding: 1rem 1.25rem 1.25rem;
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 1rem;
+        scroll-margin-top: 1rem;
+      }
+      /* Arriving from the app (#ipad), the right card stands out. */
+      section:target {
+        border-color: var(--accent);
+      }
+      .steps {
+        margin: 0.75rem 0 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: step;
+      }
+      .steps > li {
+        position: relative;
+        margin: 0;
+        padding: 0.4rem 0 0.4rem 3.25rem;
+        counter-increment: step;
+      }
+      .steps > li::before {
+        content: counter(step);
+        position: absolute;
+        left: 0;
+        top: 0.35rem;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--accent-text);
+        font-weight: 700;
+        line-height: 2.25rem;
+        text-align: center;
+      }
+      .icon {
+        display: inline-block;
+        width: 1.25em;
+        height: 1.25em;
+        vertical-align: -0.25em;
+      }
+      .why {
+        margin-top: 1rem;
+        padding: 0.25rem 1rem 0.75rem;
+        border-left: 6px solid var(--accent);
+        background: var(--bg);
+        border-radius: 0.5rem;
+      }
+      .why ul {
+        margin: 0;
+        padding-left: 1.25rem;
+      }
+      .why li + li {
+        margin-top: 0.5rem;
+      }
+      .small {
+        color: var(--muted);
+      }
+      /* An address stays whole: if it does not fit on the line it moves to the next one, without a break at its hyphen.
+         Only when it is wider than the column itself (big text on a small phone) does it break, rather than scroll sideways. */
+      .url {
+        display: inline-block;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+      }
+      footer {
+        margin-top: 2.5rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 1rem;
+      }
+      footer a {
+        display: inline-block;
+        padding: 0.75rem 0;
+      }
+      kbd {
+        padding: 0.05rem 0.4rem;
+        border: 2px solid var(--line);
+        border-radius: 0.4rem;
+        background: var(--bg);
+        font: inherit;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="back" href="/">Apri MappAmi</a>
+
+      <h1>Come installare MappAmi</h1>
+      <p class="lead">
+        MappAmi si apre nel browser: non c’è un negozio di app e non serve nessun account. Se però la metti sul tablet o sul computer come
+        un’app, parte con un tocco, va a schermo intero e le tue mappe restano al sicuro.
+      </p>
+      <p class="lead">
+        Aprila una volta con internet e aspetta qualche secondo: poi si apre anche senza. Solo «Dal libro» ha bisogno di internet la prima
+        volta, per scaricare il motore che legge le foto (circa 6 MB).
+      </p>
+
+      <nav aria-label="Scegli il tuo dispositivo">
+        <ul class="pick" role="list">
+          <li><a href="#ipad">iPad e iPhone</a></li>
+          <li><a href="#android">Tablet e telefono Android</a></li>
+          <li><a href="#chromebook">Chromebook</a></li>
+          <li><a href="#computer">Computer</a></li>
+          <li><a href="#lim">LIM</a></li>
+        </ul>
+      </nav>
+
+      <section id="ipad" aria-labelledby="t-ipad">
+        <h2 id="t-ipad">iPad e iPhone (Safari)</h2>
+        <ol class="steps" role="list">
+          <li>Apri <strong class="url">mapp-ami.vercel.app</strong> con <strong>Safari</strong>.</li>
+          <li>
+            Tocca <strong>Condividi</strong>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 15V3M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1" />
+            </svg>
+            (un quadrato con una freccia che sale). Su iPad sta in alto a destra. Su iPhone sta in basso, oppure dentro il menu ⋯ (tre puntini).
+          </li>
+          <li>Scorri la lista verso l’alto e tocca <strong>«Aggiungi alla schermata Home»</strong>.</li>
+          <li>Tocca <strong>«Aggiungi»</strong>, in alto a destra.</li>
+          <li><strong>Apri MappAmi dalla sua icona</strong> sulla schermata Home, non da Safari.</li>
+        </ol>
+
+        <div class="why">
+          <h3>Perché farlo?</h3>
+          <ul>
+            <li>
+              <strong>Schermo intero vero.</strong> In Safari, se fai scorrere il dito verso il basso, tornano le barre di Safari: quel gesto è
+              del sistema e nessun sito può spegnerlo. Aperta dall’icona, MappAmi non ha le barre, nemmeno quando sposti la mappa col dito.
+            </li>
+            <li>
+              <strong>Le mappe restano.</strong> Safari può cancellare i dati di un sito se non lo apri per 7 giorni. L’app sulla schermata
+              Home tiene le mappe.
+            </li>
+          </ul>
+        </div>
+
+        <h3>Hai già fatto delle mappe in Safari?</h3>
+        <p>
+          Nell’app sulla schermata Home le vecchie mappe di Safari di solito non compaiono da sole. Prima, in Safari, premi
+          <strong>«Salva tutte le mappe»</strong> nella schermata iniziale: è un file con tutte le tue mappe. Poi apri l’app dalla sua
+          icona e premi <strong>«Apri file»</strong>.
+        </p>
+        <p>
+          Anche dopo, ogni tanto premi <strong>«Salva tutte le mappe»</strong>: tieni il file dove vuoi, per esempio su Drive o nei File.
+        </p>
+      </section>
+
+      <section id="android" aria-labelledby="t-android">
+        <h2 id="t-android">Tablet e telefono Android (Chrome)</h2>
+        <ol class="steps" role="list">
+          <li>Apri <strong class="url">mapp-ami.vercel.app</strong> con <strong>Chrome</strong>.</li>
+          <li>
+            Tocca il menu <strong>⋮</strong>
+            <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" />
+            </svg>
+            (tre puntini), in alto a destra.
+          </li>
+          <li>Tocca <strong>«Installa app»</strong>. Se non c’è, tocca <strong>«Aggiungi a schermata Home»</strong>.</li>
+          <li>Conferma con <strong>«Installa»</strong>.</li>
+          <li>L’icona di MappAmi arriva tra le tue app. Aprila da lì.</li>
+        </ol>
+        <p class="small">Con un altro browser cerca nel menu la voce «Installa app» o «Aggiungi a schermata Home».</p>
+      </section>
+
+      <section id="chromebook" aria-labelledby="t-chromebook">
+        <h2 id="t-chromebook">Chromebook (Chrome)</h2>
+        <ol class="steps" role="list">
+          <li>Apri <strong class="url">mapp-ami.vercel.app</strong> con <strong>Chrome</strong>.</li>
+          <li>
+            In fondo alla barra dell’indirizzo, a destra, compare un’icona
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="12" rx="2" /><path d="M12 7v5M9.5 10l2.5 2.5 2.5-2.5M8 20h8" />
+            </svg>
+            (uno schermo con una freccia che scende). Toccala e scegli <strong>«Installa»</strong>.
+          </li>
+          <li>
+            Non la vedi? Apri il menu <strong>⋮</strong> e cerca <strong>«Installa MappAmi»</strong>. Può stare dentro «Salva e condividi».
+          </li>
+          <li>MappAmi si apre in una finestra tutta sua. La ritrovi nel Lanciatore, in basso a sinistra.</li>
+        </ol>
+        <p class="small">
+          Se il Chromebook è della scuola, può darsi che l’installazione sia bloccata. Nessun problema: MappAmi funziona lo stesso nel
+          browser.
+        </p>
+      </section>
+
+      <section id="computer" aria-labelledby="t-computer">
+        <h2 id="t-computer">Computer (Chrome, Edge)</h2>
+        <ol class="steps" role="list">
+          <li>Apri <strong class="url">mapp-ami.vercel.app</strong> con <strong>Chrome</strong> o con <strong>Edge</strong>.</li>
+          <li>
+            In fondo alla barra dell’indirizzo, a destra, compare l’icona di installazione
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="12" rx="2" /><path d="M12 7v5M9.5 10l2.5 2.5 2.5-2.5M8 20h8" />
+            </svg>
+            . Cliccala e scegli <strong>«Installa»</strong>.
+          </li>
+          <li>
+            Non la vedi? Apri il menu del browser e cerca <strong>«Installa MappAmi»</strong> (in Edge: «App», poi «Installa questo sito
+            come app»).
+          </li>
+          <li>MappAmi si apre in una finestra sua e ha un’icona tra i programmi.</li>
+        </ol>
+        <p class="small">
+          Su Mac con Safari: menu <strong>File</strong>, poi <strong>«Aggiungi al Dock»</strong>. Firefox non installa le app: apri MappAmi
+          in una scheda e funziona lo stesso. La dettatura però c’è in Chrome, Edge e Safari, non in Firefox.
+        </p>
+      </section>
+
+      <section id="lim" aria-labelledby="t-lim">
+        <h2 id="t-lim">LIM, la lavagna interattiva</h2>
+        <p>Sulla LIM non serve installare niente: apri <strong class="url">mapp-ami.vercel.app</strong> nel browser e apri la mappa.</p>
+        <ol class="steps" role="list">
+          <li>
+            Tocca <strong>«Solo la mappa»</strong> (il pulsante con la lavagna, vicino allo zoom): spariscono tutti i pulsanti e resta la
+            mappa, grande.
+          </li>
+          <li>Per riavere i pulsanti: <strong>«Mostra i pulsanti»</strong>, oppure il tasto <kbd>Esc</kbd>, oppure Indietro.</li>
+          <li>
+            Per l’interrogazione: <strong>«Ripassa»</strong> e poi <strong>«Interrogazione»</strong>. La mappa va a schermo intero, un
+            concetto alla volta. Si va avanti con le frecce, con la barra spaziatrice, con PagSu e PagGiù (anche con il telecomando delle
+            presentazioni) o toccando un concetto.
+          </li>
+          <li>L’app legge solo se premi <strong>«Leggi»</strong>: a parlare è lo studente.</li>
+        </ol>
+        <p class="small">
+          La LIM di solito la usano tante classi: le mappe restano nel browser di quella lavagna. Alla fine premi «Salva e manda», scegli
+          «File modificabile» e poi «Salva»: porta il file con te.
+        </p>
+      </section>
+
+      <footer>
+        <a href="/">Apri MappAmi</a>
+        <a href="mappe-concettuali-dsa.html">Che cos’è MappAmi</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="crediti.html">Crediti</a>
+      </footer>
+    </main>
+  </body>
+</html>

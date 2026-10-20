@@ -12,9 +12,20 @@ import '@xyflow/react/dist/style.css';
 import './styles/theme.css';
 import './styles/app.css';
 import App from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { isNative } from './services/platform';
-import { updateReady } from './services/pwaUpdate';
+import { rememberRegistration, updateReady } from './services/pwaUpdate';
 import { flushAutosave } from './services/autosave';
+import { logError } from './services/errorLog';
+import { takeReload } from './services/preloadError';
+
+// What breaks is kept on this device only (see services/errorLog.ts): the child can copy it for whoever helps.
+window.addEventListener('error', (e) => {
+  // The browser's own note about a layout that took two frames: nothing broke.
+  if (/^ResizeObserver loop/.test(e.message)) return;
+  logError(e.error ?? e.message, 'window');
+});
+window.addEventListener('unhandledrejection', (e) => logError(e.reason, 'promise'));
 
 // The native apps bundle their assets: the service worker is only for web/PWA.
 if (!isNative()) {
@@ -25,6 +36,7 @@ if (!isNative()) {
     // for a new version for days. Look each time it comes back, and hourly.
     onRegisteredSW: (_url, registration) => {
       if (!registration) return;
+      rememberRegistration(registration);
       const check = () => void registration.update().catch(() => {});
       setInterval(check, 60 * 60 * 1000);
       document.addEventListener('visibilitychange', () => {
@@ -38,21 +50,17 @@ if (!isNative()) {
   void navigator.storage?.persisted?.().then((done) => done || navigator.storage.persist()).catch(() => {});
 }
 
-// A part loaded later (Riordina, PDF…) belongs to an older version that is
-// gone: only the new version has it. Save, then load the new version.
+// A part loaded later (the editor, Riordina, PDF…) belongs to an older version
+// that is gone: only the new version has it. Save, then load the new version.
 window.addEventListener('vite:preloadError', () => {
-  try {
-    // Once: if the new version fails too, reloading again would not help.
-    if (!navigator.onLine || sessionStorage.getItem('mappeora-reloaded')) return;
-    sessionStorage.setItem('mappeora-reloaded', '1');
-  } catch {
-    return;
-  }
-  void flushAutosave().then(() => location.reload());
+  if (takeReload()) void flushAutosave().then(() => location.reload());
 });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {/* Outside the one in App: a crash in App's own hooks must not leave a blank page. */}
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );

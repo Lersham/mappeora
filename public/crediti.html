@@ -6,6 +6,14 @@
     <link rel="icon" type="image/png" href="icon-192.png" />
     <title>Crediti e licenze – MappAmi</title>
     <meta name="description" content="Crediti e licenze dei materiali di terzi usati da MappAmi: illustrazioni, caratteri e lettura del testo dalle foto." />
+    <link rel="canonical" href="https://mapp-ami.vercel.app/crediti.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MappAmi" />
+    <meta property="og:locale" content="it_IT" />
+    <meta property="og:title" content="Crediti e licenze – MappAmi" />
+    <meta property="og:description" content="Crediti e licenze dei materiali di terzi usati da MappAmi: illustrazioni, caratteri e lettura del testo dalle foto." />
+    <meta property="og:url" content="https://mapp-ami.vercel.app/crediti.html" />
+    <script src="static-settings.js"></script>
     <style>
       :root {
         --bg: #fdf8ec;
@@ -13,15 +21,18 @@
         --text: #1f2a36;
         --muted: #4b5866;
         --accent: #2b54b0;
+        --accent-text: #ffffff;
         --line: #e4dccb;
       }
+      /* Without a look saved in the app, the page follows the system's dark mode. */
       @media (prefers-color-scheme: dark) {
-        :root:not([data-theme='light']) {
+        :root:not([data-theme]) {
           --bg: #1b2129;
           --card: #252d37;
           --text: #eef1f4;
           --muted: #b9c2cc;
           --accent: #8db8e8;
+          --accent-text: #10161f;
           --line: #3a4553;
         }
       }
@@ -32,8 +43,12 @@
         margin: 0;
         background: var(--bg);
         color: var(--text);
-        font: 1.125rem/1.65 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-        letter-spacing: 0.01em;
+        font-family: var(--font-body, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+        font-size: 1.125rem;
+        line-height: var(--line-height, 1.65);
+        letter-spacing: var(--letter-spacing, 0.01em);
+        word-spacing: var(--word-spacing, normal);
+        overflow-wrap: break-word;
       }
       main {
         max-width: 44rem;
@@ -58,6 +73,12 @@
       }
       a {
         color: var(--accent);
+      }
+      footer {
+        margin-top: 2.5rem;
+        padding-top: 1rem;
+        border-top: 2px solid var(--line);
+        color: var(--muted);
       }
       .back {
         display: inline-block;
@@ -91,6 +112,7 @@
         background: var(--card);
         border: 2px solid var(--line);
         border-radius: 1rem;
+        text-transform: none;
       }
     </style>
   </head>
@@ -148,6 +170,10 @@ SOFTWARE.</pre>
         MappAmi è costruita con software libero, tra cui React, React Flow, ELK, Dexie, jsPDF, Zustand e Capacitor, ciascuno con la propria licenza
         (in prevalenza MIT).
       </p>
+
+      <footer>
+        <p><a href="mappe-concettuali-dsa.html">Che cos’è MappAmi</a> · <a href="installa.html">Come installarla</a> · <a href="privacy.html">Privacy</a></p>
+      </footer>
     </main>
   </body>
 </html>

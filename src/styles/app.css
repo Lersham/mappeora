@@ -70,10 +70,11 @@ textarea {
   touch-action: manipulation;
   transition: background-color 0.12s;
 }
-.big-button:hover:not(:disabled) {
+.big-button:hover:not(:disabled, [aria-disabled='true']) {
   background: var(--tint-strong);
 }
-.big-button:disabled {
+.big-button:disabled,
+.big-button[aria-disabled='true'] {
   opacity: 0.4;
   cursor: default;
 }
@@ -81,7 +82,7 @@ textarea {
   background: var(--primary);
   color: var(--primary-text);
 }
-.big-button.primary:hover:not(:disabled) {
+.big-button.primary:hover:not(:disabled, [aria-disabled='true']) {
   background: color-mix(in srgb, var(--primary) 85%, #000);
 }
 .big-button.danger {
@@ -156,9 +157,9 @@ textarea {
 .home-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap; /* large text: the buttons go under the name */
-  gap: 8px 12px;
+  justify-content: flex-start; /* the buttons sit right after the name, not pushed to the far edge */
+  flex-wrap: wrap; /* phone, large text: the whole group goes under the name */
+  gap: 0 12px;
 }
 .home-brand {
   display: flex;
@@ -194,7 +195,7 @@ textarea {
   gap: 8px;
   min-width: 0;
   min-height: 44px;
-  padding: 4px 14px;
+  padding: 4px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
@@ -210,6 +211,12 @@ textarea {
   line-height: 1.3;
 }
 @media (max-width: 520px) {
+  .home-header {
+    column-gap: 12px;
+  }
+  .home-brand {
+    font-size: 1.2rem; /* «MappAmi» in big text must still fit a 320 px screen */
+  }
   .home-brand img {
     width: 38px;
     height: 38px;
@@ -636,6 +643,36 @@ textarea {
   transform: translateX(-50%);
   width: min(560px, calc(100% - 32px));
 }
+.update-check {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+.update-check p {
+  margin: 0;
+}
+/* Good news, not a problem: the colours of the list's «Nuova versione». */
+.update-notice {
+  flex-wrap: wrap;
+  border-color: var(--focus);
+  border-left-width: 6px;
+  background: color-mix(in srgb, var(--highlight) 22%, var(--surface));
+  color: var(--text);
+}
+.update-notice p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.update-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.update-notice .big-button {
+  flex-direction: row;
+  min-height: 48px;
+  padding: 6px 16px;
+}
 .save-problem {
   flex-wrap: wrap;
 }
@@ -683,6 +720,20 @@ textarea {
 .toolbar .big-button:not(.primary),
 .review-bar .big-button:not(.primary) {
   background: transparent;
+}
+/* A tool that stays on («Sposta»): lit up, so the child sees it is working. */
+.toolbar .big-button[aria-pressed='true'],
+.more-grid .big-button[aria-pressed='true'] {
+  border: 2px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface));
+  font-weight: 700;
+}
+@media (forced-colors: active) {
+  .toolbar .big-button[aria-pressed='true'],
+  .more-grid .big-button[aria-pressed='true'] {
+    border-color: Highlight;
+    outline: 3px solid Highlight;
+  }
 }
 /* The word beside its icon: the top bar is one thin row, and the height it
    leaves goes to the map (a tablet held sideways has little of it). */
@@ -974,6 +1025,17 @@ textarea {
 }
 .is-picking .react-flow__node {
   cursor: crosshair;
+}
+/* With a mouse, a big hand with a white border (lucide «hand» and «grab»):
+   the system one is small and easy to lose while the map moves. While the
+   map or a concept is being moved it stays closed, whatever passes under it. */
+.editor .react-flow__pane.draggable,
+.editor:not(.is-picking) .react-flow__node.draggable {
+  cursor: url('../assets/cursor/grab.svg') 16 16, grab;
+}
+.editor .react-flow__pane.dragging,
+.editor .react-flow:has(.react-flow__pane.dragging, .react-flow__node.dragging) * {
+  cursor: url('../assets/cursor/grabbing.svg') 16 16, grabbing !important;
 }
 .is-picking .react-flow__node:hover .concept-node {
   outline: 3px dashed var(--primary);
@@ -1506,6 +1568,9 @@ textarea {
   }
 }
 .overlay-card fieldset {
+  /* A fieldset is as wide as its widest content by default: a text field
+     inside it would push the card sideways with large text. */
+  min-inline-size: 0;
   border: none;
   padding: 0;
   margin: 16px 0 0;
@@ -1736,8 +1801,19 @@ textarea {
 .listenable > div {
   flex: 1;
 }
-.export-kinds .option-card {
+/* Tablets and computers: a wider card, with the three kinds side by side
+   when they fit (the text scale makes them wrap sooner). */
+.overlay-card.export-dialog {
+  width: min(calc(820px * var(--text-scale) / 1.15), 100%);
+}
+.export-kinds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(calc(12rem * var(--text-scale) / 1.15), 100%), 1fr));
+  gap: 8px;
   margin-bottom: 8px;
+}
+.export-kinds .option-card {
+  margin: 0;
 }
 .print-frame {
   position: fixed;
@@ -1842,8 +1918,28 @@ textarea {
   font-weight: 600;
   font-size: min(1.1rem, 4.5vw);
 }
+/* The yellow alone is 1.2:1 on the light papers (WCAG 1.4.11), and in the
+   Indovina summary the ring is the only cue for the concepts past «e altri N»:
+   the outer line is --primary, 3:1 or more on every paper. Not --focus: the
+   keyboard ring is that colour, and a concept in focus would look unringed. */
 .concept-node.review-current {
-  box-shadow: 0 0 0 6px var(--highlight);
+  box-shadow: 0 0 0 4px var(--highlight), 0 0 0 8px var(--primary);
+}
+/* The keyboard ring goes past the ring (8px, then a gap), not over it. */
+.react-flow__node:focus-visible > .concept-node.review-current {
+  outline-offset: 11px;
+}
+/* Forced colours drop shadows, and one outline is all a concept has: the ring
+   is a frame of its own, so the keyboard ring keeps the outline. */
+@media (forced-colors: active) {
+  .concept-node.review-current::before {
+    content: '';
+    position: absolute;
+    inset: -9px;
+    border: 4px solid Highlight;
+    border-radius: inherit;
+    pointer-events: none;
+  }
 }
 .concept-node.review-dim {
   opacity: 0.4;
@@ -2281,3 +2377,47 @@ textarea {
     animation: none;
   }
 }
+
+/* Indovina: «Lo sapevo» and «Non lo sapevo» are the two big buttons, side by
+   side and alike (a frame, no colour that judges), above the usual bar. */
+.quiz-answers {
+  justify-content: center;
+  padding-block: 8px;
+}
+.editor .review-bar.quiz-answers .big-button {
+  flex: 1 1 0;
+  max-width: 260px;
+  min-height: 64px;
+  padding-inline: 8px;
+  border: 2px solid var(--primary);
+}
+.editor .review-bar.quiz-answers .quiz-voice {
+  flex: 0 1 28%;
+  max-width: 140px;
+  border-color: var(--line);
+}
+.review-bar.quiz-answers .big-button-label {
+  font-size: min(1rem, 4.2vw);
+  white-space: normal;
+  text-align: center;
+}
+.quiz-text {
+  font-size: min(1.15rem, 5.5vw);
+}
+.quiz-summary {
+  max-height: 30vh;
+  overflow-y: auto;
+}
+/* The answers take the focus when they appear and the summary can be tabbed to (see QuizBar): the ring goes inside, as the bar's edge would clip it. */
+.quiz-answers:focus-visible,
+.quiz-summary:focus-visible {
+  outline-offset: -3px;
+}
+.review-bar .quiz-again {
+  flex: 2 1 0;
+}
+.review-bar .quiz-again .big-button-label {
+  white-space: normal;
+  text-align: center;
+}
+

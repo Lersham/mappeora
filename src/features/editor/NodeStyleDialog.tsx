@@ -3,6 +3,7 @@ import { Dialog } from '../../components/Dialog';
 import { MicButton } from '../../components/MicButton';
 import { BigButton } from '../../components/BigButton';
 import { Listenable } from '../../components/OptionCard';
+import { SpokenError } from '../../components/SpokenError';
 import {
   ILLUSTRATIONS_CREDIT,
   illustrationThumbUrl,
@@ -11,7 +12,7 @@ import {
   searchIllustrations,
   type Illustration,
 } from '../../services/illustrations';
-import { toDataUrl } from '../../services/embed';
+import { toIllustrationDataUrl } from '../../services/embed';
 import { COLOR_NAMES, DEFAULT_COLOR, NODE_COLORS } from '../../lib/palette';
 import { useMapStore } from '../../store/mapStore';
 import { photoToDataUrl, pickPhoto, type PhotoSource } from '../../services/photo';
@@ -53,6 +54,7 @@ const TABS: { value: Tab; label: string }[] = [
 export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): void }) {
   const updateNode = useMapStore((s) => s.updateNode);
   const [tab, setTab] = useState<Tab>('illustrazioni');
+  const [name, setName] = useState(node.label);
   const [query, setQuery] = useState(node.label);
   const [illustrations, setIllustrations] = useState<Illustration[] | null>(null);
   const [suggested, setSuggested] = useState<Illustration[]>([]);
@@ -93,7 +95,7 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     pending.current?.abort();
     pending.current = null;
     updateNode(node.id, { image });
-    onClose();
+    close();
   };
 
   /**
@@ -104,7 +106,7 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     const download = new AbortController();
     pending.current = download;
     setBusy(true);
-    const src = await toDataUrl(illustrationUrl(i.path), download.signal);
+    const src = await toIllustrationDataUrl(illustrationUrl(i.path), download.signal);
     // Closed, or «Togli immagine», while waiting: nothing more to do.
     if (pending.current !== download) return;
     choose(src ? { kind: 'illustrazione', ref: i.path, src } : { kind: 'emoji', ref: i.glyph });
@@ -225,8 +227,45 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
 
   const shownIllustrations = illustrations && illustrations.length > 0 ? illustrations : suggested;
 
+  /** The new name goes into the map when the field is left (one undo step, not one per letter). */
+  const saveName = (next = name) => {
+    const label = next.trim();
+    if (!label || label === node.label) return;
+    updateNode(node.id, { label });
+    // The search still had the old name: it follows the new one.
+    if (query === node.label) setQuery(label);
+  };
+  const close = () => {
+    saveName();
+    onClose();
+  };
+
   return (
-    <Dialog title="Immagine e colore" onClose={onClose} className="style-dialog">
+    <Dialog title="Nome, colore e immagine" onClose={close} className="style-dialog">
+      <fieldset>
+        <legend>Nome</legend>
+        <div className="search-row">
+          <input
+            className="text-field"
+            value={name}
+            aria-label="Nome del concetto"
+            enterKeyHint="done"
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => saveName()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveName();
+            }}
+          />
+          <MicButton
+            onText={(t) => {
+              setName(t);
+              saveName(t);
+            }}
+            label="Detta il nome"
+          />
+        </div>
+      </fieldset>
+
       <fieldset>
         <legend>Colore</legend>
         <div className="choice-row">
@@ -317,9 +356,9 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
             />
           </div>
           {pasteHint && (
-            <p className="muted small" role="status">
+            <SpokenError className="muted small" role="status">
               Hai copiato un’immagine? Premi «Incolla immagine».
-            </p>
+            </SpokenError>
           )}
           <Listenable text={GOOGLE_STEPS.join(' ')} label="Ascolta come fare">
             <ol className="photo-web-steps muted small">
@@ -346,18 +385,14 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
               }}
             />
           )}
-          {photoError && (
-            <p className="field-error" role="alert">
-              {photoError}
-            </p>
-          )}
+          {photoError && <SpokenError>{photoError}</SpokenError>}
           <p className="credit">Le immagini trovate su Google appartengono ai loro autori: usale solo per studiare.</p>
         </>
       )}
 
       <div className="dialog-actions">
         {node.image && <BigButton icon="image-off" label="Togli immagine" onClick={() => choose(undefined)} />}
-        <BigButton icon="check" label="Fatto" variant="primary" onClick={onClose} />
+        <BigButton icon="check" label="Fatto" variant="primary" onClick={close} />
       </div>
     </Dialog>
   );

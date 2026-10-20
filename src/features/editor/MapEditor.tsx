@@ -53,6 +53,7 @@ import { motion } from '../../lib/motion';
 import { TOUCH } from '../../lib/touch';
 import { MAP_ARIA_LABELS, edgeAriaLabel, spokenLabel } from './a11yLabels';
 import { SaveProblemNotice } from './SaveProblemNotice';
+import { UpdateNotice } from './UpdateNotice';
 import { OptionCard } from '../../components/OptionCard';
 import { TutorialCoach } from '../tutorial/TutorialCoach';
 import { TUTORIAL_STEPS, type TutorialProgress, type TutorialTarget, type TutorialTool } from '../tutorial/steps';
@@ -475,6 +476,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   /** After «Riordina», a review: the page view if the map needs it, else all of it. */
   const showMap = (delay: number) =>
     setTimeout(() => {
+      following.current = true;
       const page = pageView();
       if (page) void setViewport(page, { duration: motion(400) });
       else void fitView({ padding: fitPadding(0.2), duration: motion(400) });
@@ -498,6 +500,34 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     return () => clearTimeout(t);
   }, [measured, sizes, map.nodes]);
   const touch = () => void (touched.current = true);
+
+  // The map's area can change size after the view was made for it: in the
+  // guide «Ben fatto!» adds a line below the map, and the last branch ended
+  // up under the tools of the concept in hand. Until the child moves the map
+  // or adds to it, that view follows the area.
+  const following = useRef(false);
+  const showMapNow = useRef(showMap);
+  showMapNow.current = showMap;
+  useEffect(() => void (following.current = false), [map.nodes.length]);
+  useEffect(() => {
+    const flow = document.querySelector('.editor .react-flow');
+    if (!flow) return;
+    let last = flow.getBoundingClientRect();
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver(() => {
+      const box = flow.getBoundingClientRect();
+      if (Math.abs(box.width - last.width) < 1 && Math.abs(box.height - last.height) < 1) return;
+      last = box;
+      if (!following.current) return;
+      clearTimeout(t);
+      t = showMapNow.current(100);
+    });
+    observer.observe(flow);
+    return () => {
+      observer.disconnect();
+      clearTimeout(t);
+    };
+  }, []);
 
   /**
    * A new concept can land outside the visible part of the map: once the
@@ -941,17 +971,20 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // then where it stays on the sheet.
   const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
     { key: 'photo', icon: 'camera', label: 'Dal libro', className: 'group-start', onClick: () => setDialog({ kind: 'photo' }) },
-    ...(sheetMode
+    // It stays on screen, lit up while the concepts are free: pressed again,
+    // it puts them back on the sheet, as «Riordina» does.
+    ...(sheetTemplate
       ? [
           {
             key: 'layout',
             icon: 'hand' as const,
             label: 'Sposta',
-            title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
+            title: sheetMode
+              ? 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.'
+              : 'Stai mettendo i concetti dove vuoi. Premi di nuovo per rimetterli sul foglio A4.',
+            'aria-pressed': !sheetMode,
             className: 'group-start',
-            onClick: () => {
-              actions.setFreeLayout(true);
-            },
+            onClick: () => actions.setFreeLayout(sheetMode),
           },
         ]
       : []),
@@ -960,7 +993,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       icon: 'tidy',
       label: 'Riordina',
       title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4. I colori restano come sono.' : 'Rimetti la mappa in ordine. I colori restano come sono.',
-      className: sheetMode ? undefined : 'group-start',
+      className: sheetTemplate ? undefined : 'group-start',
       onClick: tidyAndOffer,
       disabled: arranging,
     },
@@ -1008,12 +1041,20 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       className={`editor${picking ? ' is-picking' : ''}${review.active ? ' is-reviewing' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
       onPointerDownCapture={(e) => {
         touch();
-        // A press anywhere but on a concept (a button, the map) is something
-        // else: the branch tapped a moment ago no longer comes closer.
-        if (!(e.target as Element).closest('.react-flow__node')) cancelCloser();
+        if ((e.target as Element).closest('.react-flow')) following.current = false;
+        // Any press, on a concept too, stops the branch tapped a moment ago from
+        // coming closer: the view must not glide under a finger that may be about
+        // to drag. If the press turns out to be a tap, onNodeClick starts it again.
+        cancelCloser();
+        // A glide already under way stops where it is. On the empty map d3-zoom
+        // does it, but a concept that can be dragged is out of its reach (nopan).
+        if ((e.target as Element).closest('.react-flow__node.draggable')) void setViewport(getViewport());
       }}
       onKeyDownCapture={touch}
-      onWheelCapture={touch}
+      onWheelCapture={() => {
+        touch();
+        following.current = false;
+      }}
     >
       <header className="topbar">
         <BigButton icon="back" label="Mappe" aria-label="Mappe" title="Mappe" onClick={onBack} />
@@ -1101,6 +1142,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             if (review.mode !== 'interrogazione') return;
             const i = review.order[node.id];
             if (i !== undefined) review.goTo(i);
+          }}
+          // With a mouse, a double click opens the concept's window (the second
+          // click usually does already, but not when the first one was still
+          // being turned into a selection).
+          onNodeDoubleClick={(e, node) => {
+            if (!editing || picking || (e.target as Element).closest('button, textarea, input')) return;
+            cancelCloser();
+            actions.select(node.id);
+            setDialog({ kind: 'style' });
           }}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
           nodesDraggable={editing && !locked}
@@ -1240,6 +1290,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
       <div className="editor-notices">
         <SaveProblemNotice />
+        {editing && !focusMode && tutorialStep === null && <UpdateNotice />}
         {notice && (
           <div className="editor-notice" role="alert">
             <span>{notice}</span>

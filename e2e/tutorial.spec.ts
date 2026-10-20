@@ -52,11 +52,11 @@ test.describe('Impara facendo', () => {
     await rename(page, 'Nuovo concetto', 'Luce e calore');
     await next('Tocca, ritocca, tieni premuto');
 
-    // A tap chooses it, another one opens «Immagine e colore».
+    // A tap chooses it, another one opens «Nome, colore e immagine».
     await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
     await (await onScreen(page, node(page, 'Luce e calore'))).click();
     await (await onScreen(page, node(page, 'Luce e calore'))).click();
-    const style = page.getByRole('dialog', { name: 'Immagine e colore' });
+    const style = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
     await expect(style).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(style).toHaveCount(0);
@@ -138,7 +138,7 @@ test.describe('Impara facendo', () => {
       await coach.getByRole('button', { name: 'Avanti' }).click();
       await expect(coach.getByRole('heading', { name: title })).toBeVisible();
     };
-    /** A concept that is not the one in hand (a tap on that one opens «Immagine e colore»). */
+    /** A concept that is not the one in hand (a tap on that one opens «Nome, colore e immagine»). */
     const choose = async (label: string) => {
       await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
       await (await onScreen(page, node(page, label))).click();
@@ -200,13 +200,14 @@ test.describe('Impara facendo', () => {
     // The colours are to be seen: on a phone the map's area is a strip wider
     // than it is tall, and no concept may end up under the tools of the one
     // in hand.
-    expect(await hidden(page)).toEqual([]);
+    // «Ben fatto!» makes the map's area shorter: the view follows it.
+    await expect.poll(() => hidden(page)).toEqual([]);
     await next('Un colore tutto suo');
 
     await choose('Estate');
     await expect(tools.getByRole('button', { name: 'Immagine', exact: true })).toHaveClass(/tutorial-target/);
-    await (await onScreen(page, node(page, 'Estate'))).click(); // a second tap: «Immagine e colore»
-    const style = page.getByRole('dialog', { name: 'Immagine e colore' });
+    await (await onScreen(page, node(page, 'Estate'))).click(); // a second tap: «Nome, colore e immagine»
+    const style = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
     await style.locator('.color-swatch[aria-pressed="false"]').first().click();
     await style.getByRole('button', { name: 'Fatto' }).click();
     await next('Togli un concetto');
