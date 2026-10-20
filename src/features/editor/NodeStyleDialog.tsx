@@ -54,6 +54,7 @@ const TABS: { value: Tab; label: string }[] = [
 export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): void }) {
   const updateNode = useMapStore((s) => s.updateNode);
   const [tab, setTab] = useState<Tab>('illustrazioni');
+  const [name, setName] = useState(node.label);
   const [query, setQuery] = useState(node.label);
   const [illustrations, setIllustrations] = useState<Illustration[] | null>(null);
   const [suggested, setSuggested] = useState<Illustration[]>([]);
@@ -94,7 +95,7 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     pending.current?.abort();
     pending.current = null;
     updateNode(node.id, { image });
-    onClose();
+    close();
   };
 
   /**
@@ -226,8 +227,45 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
 
   const shownIllustrations = illustrations && illustrations.length > 0 ? illustrations : suggested;
 
+  /** The new name goes into the map when the field is left (one undo step, not one per letter). */
+  const saveName = (next = name) => {
+    const label = next.trim();
+    if (!label || label === node.label) return;
+    updateNode(node.id, { label });
+    // The search still had the old name: it follows the new one.
+    if (query === node.label) setQuery(label);
+  };
+  const close = () => {
+    saveName();
+    onClose();
+  };
+
   return (
-    <Dialog title="Immagine e colore" onClose={onClose} className="style-dialog">
+    <Dialog title="Nome, colore e immagine" onClose={close} className="style-dialog">
+      <fieldset>
+        <legend>Nome</legend>
+        <div className="search-row">
+          <input
+            className="text-field"
+            value={name}
+            aria-label="Nome del concetto"
+            enterKeyHint="done"
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => saveName()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveName();
+            }}
+          />
+          <MicButton
+            onText={(t) => {
+              setName(t);
+              saveName(t);
+            }}
+            label="Detta il nome"
+          />
+        </div>
+      </fieldset>
+
       <fieldset>
         <legend>Colore</legend>
         <div className="choice-row">
@@ -354,7 +392,7 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
 
       <div className="dialog-actions">
         {node.image && <BigButton icon="image-off" label="Togli immagine" onClick={() => choose(undefined)} />}
-        <BigButton icon="check" label="Fatto" variant="primary" onClick={onClose} />
+        <BigButton icon="check" label="Fatto" variant="primary" onClick={close} />
       </div>
     </Dialog>
   );

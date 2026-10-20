@@ -76,12 +76,12 @@ test.describe('Messaggi da ascoltare', () => {
     await expect.poll(() => spoken(page)).toEqual(['Non sono riuscito a preparare il file. Riprova.']);
   });
 
-  test('«Immagine e colore»: l’errore degli appunti si ascolta, e «Ascolta come fare» resta distinto', async ({ page, isMobile }) => {
+  test('«Nome, colore e immagine»: l’errore degli appunti si ascolta, e «Ascolta come fare» resta distinto', async ({ page, isMobile }) => {
     test.skip(isMobile, 'gli appunti del browser si provano sul computer');
     await newMap(page, 'Il Colosseo');
     await node(page, 'Il Colosseo').click();
     await toolbar(page, 'Immagine');
-    const dialog = page.getByRole('dialog', { name: 'Immagine e colore' });
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
     await dialog.getByRole('button', { name: /Foto e Google/ }).click();
     await page.evaluate(() => navigator.clipboard.writeText('ciao'));
     await dialog.getByRole('button', { name: 'Incolla immagine' }).click();

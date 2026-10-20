@@ -146,7 +146,7 @@ test.describe('Content-Security-Policy del sito vero', () => {
     expect(JSON.parse(file.bytes.toString()).map.title).toBe('Il vulcano');
   });
 
-  test('«Immagine e colore», scheda Illustrazioni: la scelta finisce dentro la mappa', async ({ page }) => {
+  test('«Nome, colore e immagine», scheda Illustrazioni: la scelta finisce dentro la mappa', async ({ page }) => {
     await newMap(page, 'Il vulcano');
     await concept(page, 'Il vulcano').click();
     await tool(page, 'Immagine');

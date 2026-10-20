@@ -21,7 +21,7 @@ export type TutorialTarget =
   | 'elimina'
   | 'solo-mappa';
 
-/** A window the editor opens: «Ripassa», «Salva e manda»… ('settings' is «Aspetto», 'focus' «Solo la mappa», 'style' «Immagine e colore»). */
+/** A window the editor opens: «Ripassa», «Salva e manda»… ('settings' is «Aspetto», 'focus' «Solo la mappa», 'style' «Nome, colore e immagine»). */
 export type TutorialTool = 'photo' | 'review' | 'export' | 'settings' | 'focus' | 'style';
 
 /** What the child has done so far, as the tutorial sees it. */
@@ -113,7 +113,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Tocca, ritocca, tieni premuto',
-    text: 'Su un riquadro funzionano tre gesti. Un tocco lo sceglie: in basso compare la sua barra, con Nome, Immagine, Cambia ramo ed Elimina. Un altro tocco sullo stesso riquadro, anche dopo un po’, apre «Immagine e colore». Tenerlo premuto e poi alzare il dito serve a cambiarne il nome. Prova: tocca «Luce e calore» e poi toccalo ancora.',
+    text: 'Su un riquadro funzionano tre gesti. Un tocco lo sceglie: in basso compare la sua barra, con Nome, Immagine, Cambia ramo ed Elimina. Un altro tocco sullo stesso riquadro, anche dopo un po’, apre «Nome, colore e immagine» (col mouse basta un doppio clic): in cima c’è il nome, sotto il colore. Tenerlo premuto e poi alzare il dito serve a cambiarne il nome. Prova: tocca «Luce e calore» e poi toccalo ancora.',
     done: opened('style'),
   },
   {
@@ -200,7 +200,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Un colore tutto suo',
-    text: 'Puoi colorare anche un concetto solo. Toccalo una volta per sceglierlo, poi toccalo ancora (oppure premi «Immagine», in basso): si apre «Immagine e colore». Scegli un colore e premi «Fatto».',
+    text: 'Puoi colorare anche un concetto solo. Toccalo una volta per sceglierlo, poi toccalo ancora (col mouse: doppio clic; oppure premi «Immagine», in basso): si apre «Nome, colore e immagine». Sotto il nome scegli un colore e premi «Fatto».',
     target: 'immagine',
     done: (now, start) =>
       now.map.nodes.some((n) => {
@@ -232,7 +232,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Salva e manda',
-    text: `La mappa si salva da sola, mentre lavori. «Salva e manda» ne fa una copia da tenere sul dispositivo o da mandare: «PDF da stampare» per il quaderno, «Immagine» da mandare in chat, «Testo» da copiare in un documento, «File modificabile» per continuarla su un altro dispositivo. ${TOP_OR_ALTRO}`,
+    text: `La mappa si salva da sola, mentre lavori. «Salva e manda» ne fa una copia da tenere sul dispositivo o da mandare: «PDF da stampare» per il quaderno, «Immagine» da mandare in chat, «File modificabile» per continuarla su un altro dispositivo. ${TOP_OR_ALTRO}`,
     target: 'salva',
     done: opened('export'),
   },

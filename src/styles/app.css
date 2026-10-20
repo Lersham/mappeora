@@ -157,9 +157,9 @@ textarea {
 .home-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap; /* large text: the buttons go under the name */
-  gap: 8px 12px;
+  justify-content: flex-start; /* the buttons sit right after the name, not pushed to the far edge */
+  flex-wrap: wrap; /* phone, large text: the whole group goes under the name */
+  gap: 0 12px;
 }
 .home-brand {
   display: flex;
@@ -195,7 +195,7 @@ textarea {
   gap: 8px;
   min-width: 0;
   min-height: 44px;
-  padding: 4px 14px;
+  padding: 4px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
@@ -211,6 +211,12 @@ textarea {
   line-height: 1.3;
 }
 @media (max-width: 520px) {
+  .home-header {
+    column-gap: 12px;
+  }
+  .home-brand {
+    font-size: 1.2rem; /* «MappAmi» in big text must still fit a 320 px screen */
+  }
   .home-brand img {
     width: 38px;
     height: 38px;
@@ -976,6 +982,17 @@ textarea {
 .is-picking .react-flow__node {
   cursor: crosshair;
 }
+/* With a mouse, a big hand with a white border (lucide «hand» and «grab»):
+   the system one is small and easy to lose while the map moves. While the
+   map or a concept is being moved it stays closed, whatever passes under it. */
+.editor .react-flow__pane.draggable,
+.editor:not(.is-picking) .react-flow__node.draggable {
+  cursor: url('../assets/cursor/grab.svg') 16 16, grab;
+}
+.editor .react-flow__pane.dragging,
+.editor .react-flow:has(.react-flow__pane.dragging, .react-flow__node.dragging) * {
+  cursor: url('../assets/cursor/grabbing.svg') 16 16, grabbing !important;
+}
 .is-picking .react-flow__node:hover .concept-node {
   outline: 3px dashed var(--primary);
   outline-offset: 3px;
@@ -1507,6 +1524,9 @@ textarea {
   }
 }
 .overlay-card fieldset {
+  /* A fieldset is as wide as its widest content by default: a text field
+     inside it would push the card sideways with large text. */
+  min-inline-size: 0;
   border: none;
   padding: 0;
   margin: 16px 0 0;
@@ -1737,8 +1757,19 @@ textarea {
 .listenable > div {
   flex: 1;
 }
-.export-kinds .option-card {
+/* Tablets and computers: a wider card, with the three kinds side by side
+   when they fit (the text scale makes them wrap sooner). */
+.overlay-card.export-dialog {
+  width: min(calc(820px * var(--text-scale) / 1.15), 100%);
+}
+.export-kinds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(calc(12rem * var(--text-scale) / 1.15), 100%), 1fr));
+  gap: 8px;
   margin-bottom: 8px;
+}
+.export-kinds .option-card {
+  margin: 0;
 }
 .print-frame {
   position: fixed;
@@ -2346,22 +2377,3 @@ textarea {
   text-align: center;
 }
 
-/* «Salva e manda» → «Testo»: the text as it will be copied, in the child's reading font (see .ocr-text). */
-.text-preview {
-  display: block;
-  width: 100%;
-  height: clamp(160px, 32vh, 320px);
-  resize: vertical;
-}
-[data-uppercase='true'] .text-preview {
-  text-transform: uppercase;
-}
-.export-dialog {
-  /* The buttons stay at the bottom of the card: what is scrolled into view (the text, then the message under it) stops above them. */
-  scroll-padding-bottom: calc(var(--card-pad) + 6.5rem);
-}
-.text-status {
-  min-height: 1.5em;
-  margin: 8px 0 0;
-  font-weight: 600;
-}

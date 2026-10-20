@@ -38,6 +38,22 @@ test.describe('Stampa e PDF', () => {
     });
   }
 
+  test('«Salva e manda»: tre tipi, senza «Testo»; sul computer la finestra è larga e li mette uno accanto all’altro', async ({ page, isMobile }) => {
+    await toolbar(page, 'Salva e manda');
+    const dialog = page.getByRole('dialog', { name: 'Salva e manda' });
+    const kinds = dialog.locator('.export-kinds .option-card');
+    await expect(kinds).toHaveCount(3);
+    await expect(kinds.nth(0)).toContainText('PDF da stampare');
+    await expect(kinds.nth(1)).toContainText('Immagine');
+    await expect(kinds.nth(2)).toContainText('File modificabile');
+    await expect(dialog.getByRole('button', { name: /^Testo/ })).toHaveCount(0);
+    if (isMobile) return;
+    const card = (await page.locator('.overlay-card.export-dialog').boundingBox())!;
+    expect(card.width).toBeGreaterThan(700);
+    const tops = await Promise.all([0, 1, 2].map(async (i) => (await kinds.nth(i).boundingBox())!.y));
+    expect(new Set(tops.map(Math.round)).size).toBe(1);
+  });
+
   test('versione per la verifica, foglio A3', async ({ page }) => {
     await toolbar(page, 'Salva e manda');
     await page.getByRole('button', { name: 'A3 (grande)' }).click();

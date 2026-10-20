@@ -209,7 +209,7 @@ test.describe('Contrasto forzato (Windows ad alto contrasto)', () => {
     expect([sel.outlineStyle, sel.outlineWidth]).toEqual(['solid', '3px']);
 
     await concept.click();
-    const dialog = page.getByRole('dialog', { name: 'Immagine e colore' });
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
     await expect(dialog).toBeVisible();
     const swatch = dialog.locator('.color-swatch[aria-pressed="true"]');
     await expect(swatch).toHaveCount(1);

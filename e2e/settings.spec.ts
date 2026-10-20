@@ -107,8 +107,8 @@ test('Testo grande, OpenDyslexic e spaziatura ampia: in nessuna schermata parole
   await looks('la mappa');
   await page.locator('.concept-node').first().click();
   await toolbar(page, 'Immagine');
-  await looks('Immagine e colore');
-  await close('Immagine e colore');
+  await looks('Nome, colore e immagine');
+  await close('Nome, colore e immagine');
   const bar = page.getByRole('navigation', { name: 'Strumenti' });
   if (await bar.getByRole('button', { name: 'Altro', exact: true }).isVisible()) {
     await bar.getByRole('button', { name: 'Altro', exact: true }).click();

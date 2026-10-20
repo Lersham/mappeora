@@ -6,7 +6,7 @@ test.describe('File .mappami', () => {
   test('salva la mappa come file e la riapre come copia, con le immagini', async ({ page }, info) => {
     await sampleMap(page);
     // an illustration, to check it travels inside the file
-    // «Neve» was the last one added, so it is in hand: a tap on it opens «Immagine e colore».
+    // «Neve» was the last one added, so it is in hand: a tap on it opens «Nome, colore e immagine».
     await node(page, 'Neve').click();
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('neve');
     await page.locator('.illustration-tile').first().click();

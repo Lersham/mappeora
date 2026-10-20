@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { test, expect, spoken } from './fixtures';
 import { addConcept, boxes, holdOn, newMap, node, nodes, onScreen, overlapping, rename, sampleMap, settled, showAll, tapLink, tidyUp, toolbar } from './helpers';
 
@@ -14,7 +14,7 @@ test.describe('Editor', () => {
     await page.getByRole('button', { name: 'Ripeti' }).click();
     await expect(node(page, 'Invertebrati')).toBeVisible();
 
-    // A concept just named is the one in hand: another tap on it would open «Immagine e colore».
+    // A concept just named is the one in hand: another tap on it would open «Nome, colore e immagine».
     await expect(node(page, 'Invertebrati')).toHaveClass(/is-selected/);
     await toolbar(page, 'Elimina');
     await expect(nodes(page)).toHaveCount(2);
@@ -72,6 +72,40 @@ test.describe('Editor', () => {
     await page.getByRole('button', { name: 'Annulla' }).click();
     await settled(page);
     expect((await node(page, 'Vapore').boundingBox())!.x).toBeGreaterThan((await node(page, 'Calore del sole').boundingBox())!.x);
+  });
+
+  test('col mouse: una manina grande sulla mappa, chiusa mentre la sposti; il doppio clic apre «Nome, colore e immagine», col nome in cima', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'il mouse si prova sul computer');
+    await sampleMap(page);
+    const cursor = (target: Locator) => target.evaluate((el) => getComputedStyle(el).cursor);
+    const pane = page.locator('.react-flow__pane');
+    expect(await cursor(pane)).toMatch(/^url\(.*\) 16 16, grab$/);
+    expect(await cursor(page.locator('.react-flow__node', { has: node(page, 'Vapore') }))).toMatch(/, grab$/);
+    // Moving the map: the hand stays closed, also over the concepts and the lines it passes.
+    const box = (await pane.boundingBox())!;
+    await page.mouse.move(box.x + box.width - 40, box.y + box.height - 40);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width - 140, box.y + box.height - 90, { steps: 5 });
+    expect(await cursor(pane)).toMatch(/, grabbing$/);
+    expect(await cursor(node(page, 'Vapore'))).toMatch(/, grabbing$/);
+    await page.mouse.up();
+    expect(await cursor(pane)).toMatch(/, grab$/);
+
+    await node(page, 'Vapore').dblclick();
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('legend').first()).toHaveText('Nome');
+    const legends = await dialog.locator('legend').allTextContents();
+    expect(legends.indexOf('Nome')).toBeLessThan(legends.indexOf('Colore'));
+    const name = dialog.getByRole('textbox', { name: 'Nome del concetto' });
+    await expect(name).toHaveValue('Vapore');
+    await name.fill('Vapore acqueo');
+    await dialog.getByRole('button', { name: 'Fatto' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(node(page, 'Vapore acqueo')).toBeVisible();
+    // one undo gives the old name back
+    await page.getByRole('button', { name: 'Annulla' }).click();
+    await expect(node(page, /^Vapore$/)).toBeVisible();
   });
 
   test('«Sposta» lascia i concetti dove li metti, «Riordina» rimette la mappa sul foglio A4', async ({ page, isMobile }) => {
@@ -401,7 +435,7 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
     await touch('touchEnd', []);
     await settled(page);
     expect((await node(page, 'Vapore').boundingBox())!.x).toBeLessThan((await node(page, 'Calore del sole').boundingBox())!.x);
-    // A drag is not a tap on the concept in hand: «Immagine e colore» stays closed.
+    // A drag is not a tap on the concept in hand: «Nome, colore e immagine» stays closed.
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await toolbar(page, 'Sposta');
@@ -481,7 +515,7 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
 });
 
 test.describe('Editor: la barra del concetto scelto', () => {
-  /** Chooses a concept that is not the one in hand (a tap on that one opens «Immagine e colore»). */
+  /** Chooses a concept that is not the one in hand (a tap on that one opens «Nome, colore e immagine»). */
   const choose = async (page: Page, label: string) => {
     await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
     await (await onScreen(page, node(page, label))).click();
@@ -612,11 +646,11 @@ test.describe('Editor: la barra del concetto scelto', () => {
 });
 
 test.describe('Editor: un tocco per immagine e colore, tenere premuto per rinominare', () => {
-  test('il primo tocco seleziona; un secondo tocco apre «Immagine e colore» subito', async ({ page }) => {
+  test('il primo tocco seleziona; un secondo tocco apre «Nome, colore e immagine» subito', async ({ page }) => {
     await newMap(page, 'Gli animali');
     await settled(page);
     const target = await onScreen(page, node(page, 'Gli animali'));
-    const dialog = page.getByRole('dialog', { name: 'Immagine e colore' });
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
 
     await target.click({ delay: 60 }); // selects
     await page.waitForTimeout(600);
@@ -634,7 +668,7 @@ test.describe('Editor: un tocco per immagine e colore, tenere premuto per rinomi
     await settled(page);
     await rename(page, 'Gli animali', 'I mammiferi');
     await page.waitForTimeout(600);
-    await expect(page.getByRole('dialog', { name: 'Immagine e colore' })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: 'Nome, colore e immagine' })).toHaveCount(0);
     await expect(page.getByRole('textbox', { name: 'Testo del concetto' })).toHaveCount(0);
     // Chosen by the hold itself: «Elimina» is now enabled.
     await expect(node(page, 'I mammiferi')).toHaveClass(/is-selected/);
@@ -661,7 +695,7 @@ test.describe('Editor: un tocco per immagine e colore, tenere premuto per rinomi
     test.skip(!isMobile, 'il tocco vero si prova sul telefono');
     await newMap(page, 'Gli animali');
     await settled(page);
-    const dialog = page.getByRole('dialog', { name: 'Immagine e colore' });
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
     const field = page.getByRole('textbox', { name: 'Testo del concetto' });
     const target = await onScreen(page, node(page, 'Gli animali'));
 

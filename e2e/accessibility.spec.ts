@@ -97,11 +97,11 @@ test.describe('Accessibilità (axe-core): finestre e passi', () => {
     }
   });
 
-  test('Immagine e colore, in ogni scheda', async ({ page }) => {
+  test('Nome, colore e immagine, in ogni scheda', async ({ page }) => {
     await newMap(page, 'Il vulcano');
     await node(page, 'Il vulcano').click();
     await toolbar(page, 'Immagine');
-    const dialog = page.getByRole('dialog', { name: 'Immagine e colore' });
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
     await expect(dialog.locator('.illustration-tile').first()).toBeVisible();
     // the colour the concept has now is the one picked: the picked swatch is scanned too
     await expect(dialog.locator('.color-swatch[aria-pressed="true"]')).toHaveCount(1);
