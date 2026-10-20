@@ -1227,8 +1227,9 @@ textarea {
   align-items: center;
   gap: 4px;
   min-width: 140px;
-  /* Grows with the text size, so long words still fit on one line. */
-  max-width: min(calc(260px * var(--text-scale) / 1.15), 80vw);
+  /* Grows with the text size: wide enough for a name of a few words on one
+     line, and for long words never to be cut. */
+  max-width: min(calc(320px * var(--text-scale) / 1.15), 80vw);
   padding: 14px 18px;
   --node-border: rgba(0, 0, 0, 0.25);
   border: 3px solid var(--node-border);
@@ -1261,7 +1262,7 @@ textarea {
    out, like a title and its headings; the branch's in the colour of its lines. */
 .concept-node.sheet-root {
   --node-border: #1f2430;
-  max-width: min(calc(340px * var(--text-scale) / 1.15), 80vw);
+  max-width: min(calc(400px * var(--text-scale) / 1.15), 80vw);
   padding: 16px 26px;
   border-width: 4px;
 }
@@ -1298,7 +1299,8 @@ textarea {
   font-weight: 600;
   white-space: pre-wrap;
   overflow-wrap: break-word;
-  hyphens: auto;
+  /* A word cut in two with a dash is hard to read: whole words only. */
+  hyphens: manual;
 }
 .concept-input {
   /* Its words have at least the room the name had (the frame goes into
@@ -1374,6 +1376,12 @@ textarea {
     width: 100%;
     max-height: calc(100% - 48px);
     border-radius: 20px 20px 0 0;
+    padding-bottom: calc(var(--card-pad) + env(safe-area-inset-bottom));
+  }
+  .overlay.is-sheet > .dialog-card {
+    padding-bottom: 0;
+  }
+  .overlay.is-sheet > .dialog-card > :last-child {
     padding-bottom: calc(var(--card-pad) + env(safe-area-inset-bottom));
     animation: sheet-up 0.18s ease-out;
   }
@@ -1552,19 +1560,39 @@ textarea {
   font-size: min(1.4rem, 6vw);
   overflow-wrap: break-word;
 }
-.overlay-card > .dialog-actions {
-  /* Keep "Crea" / "Fatto" reachable in long dialogs on small screens. */
-  position: sticky;
-  bottom: calc(-1 * var(--card-pad));
-  margin: 16px calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));
+/* Keep "Crea" / "Fatto" reachable in long dialogs on small screens: the
+   words scroll above them, and never slide under them. */
+.overlay-card.dialog-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+.dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--card-pad);
+}
+.dialog-card > .dialog-actions {
+  flex: none;
   padding: 12px var(--card-pad) var(--card-pad);
-  background: var(--surface);
+  border-top: 1px solid var(--line);
 }
 /* A phone on its side: kept at the bottom, the buttons would cover nearly
-   all the window. They come after the words instead. */
+   all the window. They come after the words instead, and all scrolls. */
 @media (max-height: 480px) {
-  .overlay-card > .dialog-actions {
-    position: static;
+  .overlay-card.dialog-card {
+    overflow-y: auto;
+  }
+  .dialog-card > .dialog-body {
+    flex: none;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+  .dialog-card > .dialog-actions {
+    border-top: none;
   }
 }
 .overlay-card fieldset {
@@ -1825,9 +1853,13 @@ textarea {
 
 /* ---------- Node images ---------- */
 
+/* A picture is never wider than its concept: made narrower by hand, the
+   concept shrinks it instead of letting it stick out of its border. */
 .concept-picto {
   width: 72px;
-  height: 72px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
   object-fit: contain;
   background: #ffffff;
   border-radius: 10px;
@@ -1836,7 +1868,9 @@ textarea {
 
 .concept-illustration {
   width: 72px;
-  height: 72px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
   object-fit: contain;
   pointer-events: none;
 }
@@ -1844,8 +1878,9 @@ textarea {
   /* The whole picture, also when taken upright (a page of the book). */
   width: auto;
   height: auto;
-  max-width: 140px;
+  max-width: min(140px, 100%);
   max-height: 160px;
+  object-fit: contain;
   border-radius: 10px;
   pointer-events: none;
 }

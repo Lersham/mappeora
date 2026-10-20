@@ -65,7 +65,7 @@ test('Testo grande, OpenDyslexic e spaziatura ampia: le finestre di scelta resta
   const fits = async (dialog: Locator) => {
     await expect(dialog).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
-    return dialog.locator('.overlay-card').evaluate((card) => card.scrollWidth <= card.clientWidth + 1);
+    return dialog.locator('.dialog-body').evaluate((body) => body.scrollWidth <= body.clientWidth + 1);
   };
   await page.goto('/');
   await page.getByRole('button', { name: 'Nuova mappa' }).click();

@@ -226,7 +226,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
   return (
     <div
       className={`concept-node shape-${data.shape ?? 'rettangolo'}${sheetClass(data)}${selected ? ' is-selected' : ''}${isReading ? ' is-reading' : ''}${armed ? ' is-armed' : ''} review-${visibility}`}
-      style={{ background: data.color, ...(data.width && { width: data.width, minWidth: 0, maxWidth: 'none' }) }}
+      style={{ background: data.color, ...(data.width && { width: data.width, minWidth: 'min-content', maxWidth: 'none' }) }}
       onPointerDown={(e) => {
         swallow.current = false;
         cancelHold();
