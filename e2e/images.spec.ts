@@ -173,4 +173,34 @@ test.describe('Immagini nei concetti', () => {
     await (await chooser).setFiles({ name: 'foto.png', mimeType: 'image/png', buffer: PNG_1PX });
     await expect(node(page, 'Il mio esperimento').locator('.concept-photo')).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
   });
+  test('nel concetto ovale con la foto le parole restano dentro il bordo curvo', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'esempio' }).click();
+    await page.getByRole('button', { name: /^La nascita di Roma/ }).click();
+    const root = page.locator('.concept-node.shape-ellisse').filter({ has: page.locator('.concept-photo') });
+    await expect(root).toHaveCount(1);
+    await expect(root.locator('.concept-photo')).toHaveJSProperty('complete', true);
+    // How far in the curved border is at the height of the last line, against where the line starts.
+    const gap = await root.evaluate((el: HTMLElement) => {
+      const s = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      const scale = r.width / el.offsetWidth;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const [a, b = a] = s.borderBottomLeftRadius.split(' ');
+      const px = (v: string, size: number) => (v.endsWith('%') ? (parseFloat(v) / 100) * size : parseFloat(v));
+      // Radii larger than the box are scaled down together, as the browser draws them.
+      const f = Math.min(1, w / (2 * px(a, w)), h / (2 * px(b, h)));
+      const rx = px(a, w) * f;
+      const ry = px(b, h) * f;
+      const range = document.createRange();
+      range.selectNodeContents(el.querySelector('.concept-label')!);
+      const last = [...range.getClientRects()].at(-1)!;
+      const fromBottom = (r.bottom - last.bottom) / scale;
+      const dy = Math.max(0, ry - fromBottom);
+      const inset = rx * (1 - Math.sqrt(Math.max(0, 1 - (dy / ry) ** 2))) + parseFloat(s.borderLeftWidth);
+      return Math.min(last.left - r.left, r.right - last.right) / scale - inset;
+    });
+    expect(gap).toBeGreaterThan(0);
+  });
 });
