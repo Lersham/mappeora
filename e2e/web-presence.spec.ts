@@ -14,6 +14,7 @@ const THEMED_PAGES = ['/mappe-concettuali-dsa.html', '/crediti.html', '/installa
 const STATIC_PAGES = [...THEMED_PAGES, '/privacy.html'];
 const DARK_BG = 'rgb(29, 33, 41)'; // --bg of «scuro» in theme.css
 const CREAM_BG = 'rgb(253, 248, 236)';
+const WHITE_BG = 'rgb(255, 255, 255)';
 
 const SCURO = { state: { font: 'opendyslexic', textScale: 1.5, uppercase: false, wideSpacing: true, theme: 'scuro' }, version: 1 };
 
@@ -291,11 +292,11 @@ test.describe('Primo disegno dell’app con l’aspetto scelto', () => {
     expect(await bodyBackground(page)).toBe(DARK_BG);
   });
 
-  test('senza impostazioni parte crema, come l’app', async ({ page }) => {
+  test('senza impostazioni parte bianca, come l’app', async ({ page }) => {
     await recordAtDomContentLoaded(page);
     await page.route('**/assets/*.js', (route) => route.abort());
     await page.goto('/');
-    expect(await atDcl(page)).toMatchObject({ background: CREAM_BG, themeColor: '#fffdf7', theme: undefined, font: undefined, scale: '' });
+    expect(await atDcl(page)).toMatchObject({ background: WHITE_BG, themeColor: '#fff', theme: undefined, font: undefined, scale: '' });
   });
 
   test('con le impostazioni rotte l’app parte lo stesso', async ({ page }) => {

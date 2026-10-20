@@ -157,7 +157,7 @@ describe('index.html', () => {
   it('keeps the name MappAmi on the home screen and the theme colour', () => {
     expect(meta(doc, 'meta[name=application-name]')).toBe('MappAmi');
     expect(meta(doc, 'meta[name=apple-mobile-web-app-title]')).toBe('MappAmi');
-    expect(meta(doc, 'meta[name=theme-color]')).toBe('#fffdf7');
+    expect(meta(doc, 'meta[name=theme-color]')).toBe('#ffffff');
   });
 
   it('runs theme-init.js before the app, as a classic script', () => {
@@ -226,7 +226,7 @@ function resetPage() {
   const root = document.documentElement;
   for (const { name } of [...root.attributes]) if (name !== 'lang') root.removeAttribute(name);
   root.removeAttribute('style');
-  document.head.innerHTML = '<meta name="theme-color" content="#fffdf7">';
+  document.head.innerHTML = '<meta name="theme-color" content="#ffffff">';
 }
 
 const themeColor = () => document.querySelector('meta[name=theme-color]')!.getAttribute('content');
@@ -285,14 +285,14 @@ describe('theme-init.js', () => {
     }
   });
 
-  it('starts cream, without touching the attributes, when nothing is saved', () => {
+  it('starts white, without touching the attributes, when nothing is saved', () => {
     run(themeInit);
     const root = document.documentElement;
     expect(root.hasAttribute('data-theme')).toBe(false);
     expect(root.hasAttribute('data-font')).toBe(false);
     expect(root.style.getPropertyValue('--text-scale')).toBe('');
-    expect(themeColor()).toBe('#fffdf7');
-    expect(background()).toBe(asRgb('#fdf8ec'));
+    expect(themeColor()).toBe('#fff');
+    expect(background()).toBe(asRgb('#fff'));
   });
 
   it.each([
@@ -308,7 +308,7 @@ describe('theme-init.js', () => {
     setSettings(stored);
     expect(() => run(themeInit)).not.toThrow();
     expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
-    expect(background()).toBe(asRgb('#fdf8ec'));
+    expect(background()).toBe(asRgb('#fff'));
   });
 
   it('ignores values it does not know', () => {
@@ -320,7 +320,7 @@ describe('theme-init.js', () => {
     expect(root.hasAttribute('data-uppercase')).toBe(false);
     expect(root.hasAttribute('data-spacing')).toBe(false);
     expect(root.style.getPropertyValue('--text-scale')).toBe('');
-    expect(themeColor()).toBe('#fffdf7');
+    expect(themeColor()).toBe('#fff');
   });
 
   it.each([[0.79], [3.01], [-1], ['1.5'], [null], [true]])('refuses the text size %j', (textScale) => {
@@ -339,7 +339,7 @@ describe('theme-init.js', () => {
     setSettings({ state: { theme } });
     expect(() => run(themeInit)).not.toThrow();
     expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
-    expect(themeColor()).toBe('#fffdf7');
+    expect(themeColor()).toBe('#fff');
   });
 
   it('works when the page has no theme-color meta', () => {
@@ -356,7 +356,7 @@ describe('theme-init.js', () => {
     };
     try {
       expect(() => run(themeInit)).not.toThrow();
-      expect(background()).toBe(asRgb('#fdf8ec'));
+      expect(background()).toBe(asRgb('#fff'));
     } finally {
       Storage.prototype.getItem = real;
     }

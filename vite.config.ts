@@ -26,8 +26,8 @@ export default defineConfig({
         dir: 'ltr',
         categories: ['education', 'productivity'],
         prefer_related_applications: false,
-        theme_color: '#fffdf7',
-        background_color: '#fdf8ec',
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
         display: 'standalone',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

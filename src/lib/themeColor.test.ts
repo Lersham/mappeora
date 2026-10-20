@@ -13,10 +13,10 @@ describe('THEME_COLOR', () => {
   });
 
   it('is the page colour (--surface) of each background in the stylesheet', () => {
-    // :root is the default (crema); the others are [data-theme='…'] blocks.
+    // :root is the default (bianco); the others are [data-theme='…'] blocks.
     const surface = (selector: string) => new RegExp(`${selector}\\s*\\{[^}]*--surface:\\s*(#[0-9a-f]{6})`, 'i').exec(css)?.[1].toLowerCase();
-    expect(surface(':root')).toBe(THEME_COLOR.crema);
-    for (const theme of ['bianco', 'azzurro', 'scuro'] as const) {
+    expect(surface(':root')).toBe(THEME_COLOR.bianco);
+    for (const theme of ['crema', 'azzurro', 'scuro'] as const) {
       expect(surface(`\\[data-theme='${theme}'\\]`)).toBe(THEME_COLOR[theme]);
     }
   });

@@ -5,15 +5,16 @@
 :root {
   --text-scale: 1.15;
   --font-body: 'Lexend', system-ui, sans-serif;
-  --letter-spacing: 0.04em;
-  --word-spacing: 0.12em;
-  --line-height: 1.6;
+  --letter-spacing: normal;
+  --word-spacing: normal;
+  --line-height: 1.4;
 
-  --bg: #fdf8ec;
-  --surface: #fffdf7;
+  /* The default paper is «bianco»; the others are [data-theme='…'] blocks. */
+  --bg: #ffffff;
+  --surface: #ffffff;
   --text: #1f2430;
   --muted: #5b6270;
-  --border: #d9d1bd;
+  --border: #d0d4da;
   /* The blue of a school pen: actions. Red pen for what deletes, highlighter
      yellow for what to look at. */
   --primary: #2b54b0;
@@ -50,10 +51,10 @@
 [data-font='opendyslexic'] { --font-body: 'OpenDyslexic', system-ui, sans-serif; }
 [data-font='sistema'] { --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
 
-[data-spacing='normal'] {
-  --letter-spacing: normal;
-  --word-spacing: normal;
-  --line-height: 1.4;
+[data-spacing='wide'] {
+  --letter-spacing: 0.04em;
+  --word-spacing: 0.12em;
+  --line-height: 1.6;
 }
 
 [data-uppercase='true'] .concept-label,
@@ -72,11 +73,11 @@
   text-transform: uppercase;
 }
 
-/* Avoid pure white: cream and pastel backgrounds reduce visual stress. */
-[data-theme='bianco'] {
-  --bg: #ffffff;
-  --surface: #ffffff;
-  --border: #d0d4da;
+/* Cream and pastel backgrounds reduce visual stress for some children. */
+[data-theme='crema'] {
+  --bg: #fdf8ec;
+  --surface: #fffdf7;
+  --border: #d9d1bd;
 }
 [data-theme='azzurro'] {
   --bg: #eaf3fb;

@@ -1,7 +1,7 @@
 // Saved look at first paint, no «scuro» flash (released on load). Colours: [theme-color, --bg].
 ((d, s, T) => {
   try { s = JSON.parse(localStorage.getItem('mappeora-settings')).state || {}; } catch {}
-  var D = d.dataset, S = d.style, n = s.textScale, k = T.hasOwnProperty(s.theme) && s.theme, c = T[k || 'crema'], m = d.querySelector('[name=theme-color]');
+  var D = d.dataset, S = d.style, n = s.textScale, k = T.hasOwnProperty(s.theme) && s.theme, c = T[k || 'bianco'], m = d.querySelector('[name=theme-color]');
   if (k) D.theme = k;
   if (/^(lexend|atkinson|opendyslexic|sistema)$/.test(s.font)) D.font = s.font;
   if (s.uppercase === !!s.uppercase) D.uppercase = '' + s.uppercase;
