@@ -26,7 +26,8 @@ test.describe('Aspetto: Ripristina si può annullare', () => {
     const note = panel.getByRole('status').filter({ hasText: 'Ho rimesso le impostazioni di partenza.' });
     await expect(note).toBeVisible();
     await expect(html).toHaveAttribute('data-font', 'lexend');
-    await expect(html).toHaveAttribute('data-theme', 'crema');
+    await expect(html).toHaveAttribute('data-theme', 'bianco');
+    await expect(html).toHaveAttribute('data-spacing', 'normal');
     await expect(html).toHaveAttribute('data-uppercase', 'false');
     await expect(voiceSelect).toHaveValue('');
 
@@ -96,7 +97,7 @@ test.describe('Aspetto: Ripristina si può annullare', () => {
     await panel.getByRole('button', { name: 'Ripristina' }).click();
     await expect(panel.getByRole('button', { name: 'Annulla' })).toBeVisible();
     // A new choice: «Annulla» would also take it back.
-    await panel.getByRole('button', { name: 'Bianco' }).click();
+    await panel.getByRole('button', { name: 'Crema' }).click();
     await expect(panel.getByRole('button', { name: 'Annulla' })).toHaveCount(0);
 
     await panel.getByRole('button', { name: 'Atkinson' }).click();
