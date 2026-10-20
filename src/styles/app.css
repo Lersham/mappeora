@@ -721,6 +721,20 @@ textarea {
 .review-bar .big-button:not(.primary) {
   background: transparent;
 }
+/* A tool that stays on («Sposta»): lit up, so the child sees it is working. */
+.toolbar .big-button[aria-pressed='true'],
+.more-grid .big-button[aria-pressed='true'] {
+  border: 2px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface));
+  font-weight: 700;
+}
+@media (forced-colors: active) {
+  .toolbar .big-button[aria-pressed='true'],
+  .more-grid .big-button[aria-pressed='true'] {
+    border-color: Highlight;
+    outline: 3px solid Highlight;
+  }
+}
 /* The word beside its icon: the top bar is one thin row, and the height it
    leaves goes to the map (a tablet held sideways has little of it). */
 .topbar .big-button {

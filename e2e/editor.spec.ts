@@ -113,7 +113,8 @@ test.describe('Editor', () => {
     await sampleMap(page);
     const onSheet = await boxes(page);
     await toolbar(page, 'Sposta');
-    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toHaveCount(0);
+    // it stays on screen, lit up, while the concepts are free
+    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toHaveAttribute('aria-pressed', 'true');
 
     // far to the right of its branch: on the sheet it would snap back
     const neve = (await node(page, 'Neve').boundingBox())!;
@@ -127,7 +128,7 @@ test.describe('Editor', () => {
     expect(moved.x - neve.x).toBeGreaterThan(80);
 
     await tidyUp(page);
-    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toHaveAttribute('aria-pressed', 'false');
     await showAll(page);
     await settled(page);
     const tidy = await boxes(page);
@@ -440,6 +441,12 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
 
     await toolbar(page, 'Sposta');
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(9);
+    // Pressed again, it puts the concepts back on the sheet: only the one in hand moves.
+    await toolbar(page, 'Sposta');
+    await expect.poll(() => page.locator('.react-flow__node.draggable').count()).toBeLessThan(2);
+    // On the phone «Sposta» is in «Altro»: there it is no longer lit.
+    await page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Altro', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Altro' }).getByRole('button', { name: 'Sposta', exact: true })).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('un concetto toccato e subito ripreso per trascinarlo ferma l’avvicinamento del ramo', async ({ page, isMobile, browserName }) => {

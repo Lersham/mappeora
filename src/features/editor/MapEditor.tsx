@@ -971,17 +971,20 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // then where it stays on the sheet.
   const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
     { key: 'photo', icon: 'camera', label: 'Dal libro', className: 'group-start', onClick: () => setDialog({ kind: 'photo' }) },
-    ...(sheetMode
+    // It stays on screen, lit up while the concepts are free: pressed again,
+    // it puts them back on the sheet, as «Riordina» does.
+    ...(sheetTemplate
       ? [
           {
             key: 'layout',
             icon: 'hand' as const,
             label: 'Sposta',
-            title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
+            title: sheetMode
+              ? 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.'
+              : 'Stai mettendo i concetti dove vuoi. Premi di nuovo per rimetterli sul foglio A4.',
+            'aria-pressed': !sheetMode,
             className: 'group-start',
-            onClick: () => {
-              actions.setFreeLayout(true);
-            },
+            onClick: () => actions.setFreeLayout(sheetMode),
           },
         ]
       : []),
@@ -990,7 +993,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       icon: 'tidy',
       label: 'Riordina',
       title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4. I colori restano come sono.' : 'Rimetti la mappa in ordine. I colori restano come sono.',
-      className: sheetMode ? undefined : 'group-start',
+      className: sheetTemplate ? undefined : 'group-start',
       onClick: tidyAndOffer,
       disabled: arranging,
     },
