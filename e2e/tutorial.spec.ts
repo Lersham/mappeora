@@ -140,7 +140,15 @@ test.describe('Impara facendo', () => {
     };
     /** A concept that is not the one in hand (a tap on that one opens «Nome, colore e immagine»). */
     const choose = async (label: string) => {
-      await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
+      // An empty spot, like a person would tap: a corner may be under a concept's «+3».
+      const pane = page.locator('.react-flow__pane');
+      const empty = await pane.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        for (let y = 8; y < r.height; y += 24)
+          for (let x = 8; x < r.width; x += 24) if (document.elementFromPoint(r.x + x, r.y + y) === el) return { x, y };
+        return { x: 4, y: 4 };
+      });
+      await pane.click({ position: empty });
       await (await onScreen(page, node(page, label))).click();
     };
     /** The tool asked for stands out where it is: in a bar, or in «Altro» (which stands out too). */

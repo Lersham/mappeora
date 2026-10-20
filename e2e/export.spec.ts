@@ -15,7 +15,7 @@ test.describe('Stampa e PDF', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Esempi', exact: true }).click();
     await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-    await expect(page.locator('.concept-node')).toHaveCount(37);
+    await expect(page.locator('.concept-node')).toHaveCount(39);
   });
 
   for (const [sheets, pages] of [

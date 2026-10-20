@@ -103,7 +103,7 @@ test('Testo grande, OpenDyslexic e spaziatura ampia: in nessuna schermata parole
   await page.getByRole('button', { name: 'Esempi', exact: true }).click();
   await looks('Esempi');
   await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-  await expect(page.locator('.concept-node')).toHaveCount(37);
+  await expect(page.locator('.concept-node')).toHaveCount(39);
   await looks('la mappa');
   await page.locator('.concept-node').first().click();
   await toolbar(page, 'Immagine');

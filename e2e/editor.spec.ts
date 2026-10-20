@@ -283,7 +283,7 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Esempi', exact: true }).click();
     await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-    await expect(nodes(page)).toHaveCount(37);
+    await expect(nodes(page)).toHaveCount(39);
     await showAll(page);
     const onScreenPx = (label: string) =>
       node(page, label)
@@ -300,7 +300,7 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Esempi', exact: true }).click();
     await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-    await expect(nodes(page)).toHaveCount(37);
+    await expect(nodes(page)).toHaveCount(39);
     await settled(page);
     const canvas = (await page.locator('.react-flow').boundingBox())!;
     for (const b of await boxes(page)) {
@@ -317,7 +317,7 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Esempi', exact: true }).click();
     await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-    await expect(nodes(page)).toHaveCount(37);
+    await expect(nodes(page)).toHaveCount(39);
     await settled(page);
     const onScreenPx = (label: string) =>
       node(page, label)
@@ -359,7 +359,7 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Esempi', exact: true }).click();
     await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-    await expect(nodes(page)).toHaveCount(37);
+    await expect(nodes(page)).toHaveCount(39);
     await settled(page);
     // Not centred and cut at both ends: the main concept, whole, under the bar.
     const main = node(page, 'La Rivoluzione francese');
@@ -559,10 +559,11 @@ test.describe('Editor: la barra del concetto scelto', () => {
     // The words go on more lines when it is narrower: the height follows.
     await grip.focus();
     const wide = await width();
-    for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowLeft');
-    await expect.poll(width).toBe(wide - 120);
+    // Two steps only: it never gets narrower than its longest word, which is never broken.
+    for (let i = 0; i < 2; i++) await page.keyboard.press('ArrowLeft');
+    await expect.poll(width).toBe(wide - 40);
 
-    for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Annulla' }).click(); // the keys, one step each
+    for (let i = 0; i < 2; i++) await page.getByRole('button', { name: 'Annulla' }).click(); // the keys, one step each
     await expect.poll(width).toBe(wide);
     await page.getByRole('button', { name: 'Annulla' }).click(); // the whole drag at once
     await expect.poll(width).toBeCloseTo(before, 0);
