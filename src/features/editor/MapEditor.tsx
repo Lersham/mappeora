@@ -53,6 +53,7 @@ import { motion } from '../../lib/motion';
 import { TOUCH } from '../../lib/touch';
 import { MAP_ARIA_LABELS, edgeAriaLabel, spokenLabel } from './a11yLabels';
 import { SaveProblemNotice } from './SaveProblemNotice';
+import { UpdateNotice } from './UpdateNotice';
 import { OptionCard } from '../../components/OptionCard';
 import { TutorialCoach } from '../tutorial/TutorialCoach';
 import { TUTORIAL_STEPS, type TutorialProgress, type TutorialTarget, type TutorialTool } from '../tutorial/steps';
@@ -1286,6 +1287,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
       <div className="editor-notices">
         <SaveProblemNotice />
+        {editing && !focusMode && tutorialStep === null && <UpdateNotice />}
         {notice && (
           <div className="editor-notice" role="alert">
             <span>{notice}</span>

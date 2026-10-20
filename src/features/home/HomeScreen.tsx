@@ -16,7 +16,7 @@ import { forgetBookPage } from '../../lib/bookPage';
 import { MicButton } from '../../components/MicButton';
 import { Mascot } from '../../components/Mascot';
 import { FullscreenButton } from '../../components/FullscreenButton';
-import { useUpdateReady } from '../../services/pwaUpdate';
+import { applyUpdate, useUpdateReady } from '../../services/pwaUpdate';
 
 /** One of the ways to start, with a line that says what it does. The line is the
  *  button's description (aria-describedby), not its name: the name stays the single word. */
@@ -283,7 +283,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
           <p role="status">
             <strong>È uscita una nuova versione di MappAmi.</strong>
           </p>
-          <BigButton icon="check" label="Aggiorna" variant="primary" onClick={() => window.location.reload()} />
+          <BigButton icon="check" label="Aggiorna" variant="primary" onClick={() => void applyUpdate()} />
         </section>
       )}
       {homeHint && (

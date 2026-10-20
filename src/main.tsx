@@ -14,7 +14,7 @@ import './styles/app.css';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { isNative } from './services/platform';
-import { updateReady } from './services/pwaUpdate';
+import { rememberRegistration, updateReady } from './services/pwaUpdate';
 import { flushAutosave } from './services/autosave';
 import { logError } from './services/errorLog';
 import { takeReload } from './services/preloadError';
@@ -36,6 +36,7 @@ if (!isNative()) {
     // for a new version for days. Look each time it comes back, and hourly.
     onRegisteredSW: (_url, registration) => {
       if (!registration) return;
+      rememberRegistration(registration);
       const check = () => void registration.update().catch(() => {});
       setInterval(check, 60 * 60 * 1000);
       document.addEventListener('visibilitychange', () => {

@@ -5,6 +5,7 @@ import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { Dialog } from '../../components/Dialog';
 import { CopyDetails } from '../../components/CopyDetails';
+import { UpdateCheck } from '../../components/UpdateCheck';
 
 const FONTS: { value: FontChoice; label: string }[] = [
   { value: 'lexend', label: 'Lexend' },
@@ -189,6 +190,7 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
       </div>
 
       <p className="muted small">Versione {__APP_VERSION__}</p>
+      <UpdateCheck />
       <CopyDetails />
     </Dialog>
   );

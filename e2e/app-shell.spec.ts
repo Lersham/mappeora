@@ -136,6 +136,49 @@ test.describe('Aspetto: versione e dettagli per chi aiuta', () => {
   });
 });
 
+test.describe('Aspetto: cerca aggiornamenti', () => {
+  test('senza internet dice che serve internet', async ({ page, context }) => {
+    const panel = await settings(page);
+    await context.setOffline(true);
+    await panel.getByRole('button', { name: 'Cerca aggiornamenti' }).click();
+    await expect(panel.getByRole('status').filter({ hasText: 'Serve internet per cercare una versione nuova.' })).toBeVisible();
+    await context.setOffline(false);
+  });
+
+  test('se non può chiedere al server, dice di riprovare più tardi', async ({ page }) => {
+    // The tests block service workers: there is nobody to ask.
+    const panel = await settings(page);
+    await panel.getByRole('button', { name: 'Cerca aggiornamenti' }).click();
+    await expect(panel.getByRole('status').filter({ hasText: 'Non riesco a cercare adesso. Riprova più tardi.' })).toBeVisible();
+  });
+});
+
+test.describe('Aggiorna con una mappa aperta', () => {
+  test('la versione nuova riapre la mappa che era aperta', async ({ page }) => {
+    await newMap(page, 'Vulcani');
+    const id = await page.evaluate(
+      () =>
+        new Promise<string>((resolve, reject) => {
+          const request = indexedDB.open('mappeora');
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => {
+            const db = request.result;
+            const all = db.transaction('summaries').objectStore('summaries').getAll();
+            all.onsuccess = () => (db.close(), resolve(all.result.find((m: { title: string }) => m.title === 'Vulcani').id));
+            all.onerror = () => reject(all.error);
+          };
+        }),
+    );
+    // What «Aggiorna» leaves behind (see applyUpdate), then the new page.
+    await page.evaluate((mapId) => sessionStorage.setItem('mappeora-reopen', mapId), id);
+    await page.reload();
+    await expect(page.locator('.title-input')).toHaveValue('Vulcani');
+    // Only once: the next reload starts on the list.
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Nuova mappa' })).toBeVisible();
+  });
+});
+
 test.describe('Se qualcosa si rompe', () => {
   test('la schermata di aiuto offre le tre strade e ricorda l’errore, solo sul dispositivo', async ({ page, context, consoleErrors }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);

@@ -13,7 +13,7 @@ import { useAutosave } from './hooks/useAutosave';
 import { useReadAloud } from './hooks/useReadAloud';
 import { embedMissingImages } from './services/embed';
 import { flushAutosave, recovered, showMap, useSaveStatus } from './services/autosave';
-import { reloadIfSafe } from './services/pwaUpdate';
+import { reloadIfSafe, takeReopen } from './services/pwaUpdate';
 import { isNative } from './services/platform';
 import { loadInBackground } from './services/preloadError';
 import { backIsHandled, handleBack, installWebBack } from './lib/backButton';
@@ -206,6 +206,13 @@ export default function App() {
     }
     showMap(null);
   };
+
+  // «Aggiorna» in a map: the new version opens that map again.
+  useEffect(() => {
+    const id = takeReopen();
+    if (id) void open(id);
+    // Only once, when the new version starts.
+  }, []);
 
   // A new version of the app loads by itself only while nobody is looking:
   // on the list, the page goes out of sight (see pwaUpdate; HomeScreen has «Aggiorna»).
