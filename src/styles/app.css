@@ -1377,13 +1377,13 @@ textarea {
     max-height: calc(100% - 48px);
     border-radius: 20px 20px 0 0;
     padding-bottom: calc(var(--card-pad) + env(safe-area-inset-bottom));
+    animation: sheet-up 0.18s ease-out;
   }
   .overlay.is-sheet > .dialog-card {
     padding-bottom: 0;
   }
   .overlay.is-sheet > .dialog-card > :last-child {
     padding-bottom: calc(var(--card-pad) + env(safe-area-inset-bottom));
-    animation: sheet-up 0.18s ease-out;
   }
 }
 @keyframes sheet-up {
