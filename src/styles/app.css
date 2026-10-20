@@ -1251,7 +1251,9 @@ textarea {
   outline-offset: 3px;
 }
 .concept-node.shape-ellisse {
-  border-radius: 999px;
+  /* Round ends that never reach the words: a fully round end on a tall
+     concept (a picture and two lines) cut across its last line. */
+  border-radius: 40px / 50%;
   padding-left: 28px;
   padding-right: 28px;
 }
