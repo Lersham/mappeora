@@ -16,10 +16,24 @@ export interface Example {
 
 export const EXAMPLES: Example[] = [
   {
+    file: 'civilta-egizia.mappeora',
+    title: 'La civiltà egizia',
+    subject: 'Storia',
+    description: 'Il Nilo, la società, gli dèi, le piramidi, i geroglifici e i faraoni più famosi.',
+    icon: '🏺',
+  },
+  {
+    file: 'nascita-di-roma.mappeora',
+    title: 'La nascita di Roma',
+    subject: 'Storia',
+    description: 'La leggenda di Romolo e Remo, che cosa dice la storia, i sette re e la fine della monarchia.',
+    icon: '🐺',
+  },
+  {
     file: 'rivoluzione-francese.mappeora',
     title: 'La Rivoluzione francese',
     subject: 'Storia',
-    description: 'Le cause, il 1789, le quattro fasi, le conseguenze e i protagonisti.',
+    description: 'Le cause, il 1789, le quattro fasi, le conseguenze e i protagonisti, con dipinti dell’epoca.',
     icon: '✊',
   },
 ];
