@@ -81,7 +81,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
                 </button>
               ))}
             </div>
-            <p className="muted">Fogli verticali. Con più fogli le scritte sono più grandi: si uniscono con lo scotch, uno sotto l’altro o uno accanto all’altro.</p>
+            <p className="muted">Con più fogli le scritte sono più grandi. Per unirli si taglia il margine bianco dove la mappa continua e si attaccano con lo scotch: i pezzi combaciano.</p>
           </fieldset>
         </>
       )}

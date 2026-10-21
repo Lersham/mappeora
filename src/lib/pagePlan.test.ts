@@ -61,6 +61,32 @@ describe('planPages', () => {
     expect(two.scale).toBeGreaterThan(one.scale * 1.3);
   });
 
+  it('two sheets side by side join exactly: the cut is the edge of both, nothing repeated', () => {
+    const plan = planPages(3000, 2000, 'a4', 2, layout);
+    const [a, b] = plan.tiles;
+    const boxW = (plan.orientation === 'portrait' ? 210 : 297) - 24;
+    expect(a.dx + a.w * plan.scale).toBeCloseTo(boxW); // the left piece reaches the right edge
+    expect(b.dx).toBeCloseTo(0); // the right one starts at the left edge
+    expect(b.x).toBeCloseTo(a.x + a.w);
+    expect(b.x + b.w).toBeCloseTo(3000);
+    expect(a.dy).toBe(b.dy); // and at the same height
+  });
+
+  it('on four sheets the rows go on where the sheet above ends', () => {
+    const plan = planPages(3000, 2000, 'a4', 4, layout);
+    const page = (n: number) => plan.tiles.find((t) => t.page === n)!;
+    const boxH = (plan.orientation === 'portrait' ? 297 : 210) - 24 - layout.header - layout.footer;
+    expect(page(0).h * plan.scale).toBeCloseTo(boxH);
+    expect(page(2).y).toBeCloseTo(page(0).y + page(0).h);
+    expect(page(3).x).toBeCloseTo(page(2).x + page(2).w);
+    expect(page(2).y + page(2).h).toBeCloseTo(2000);
+  });
+
+  it('a small map on two sheets leaves neither empty', () => {
+    const plan = planPages(320, 240, 'a4', 2, layout);
+    expect(new Set(plan.tiles.map((t) => t.page))).toEqual(new Set([0, 1]));
+  });
+
   it('does not blow up a tiny map', () => {
     expect(planPages(320, 240, 'a3', 1, layout).scale).toBeLessThanOrEqual(0.35);
   });
