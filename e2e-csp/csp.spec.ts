@@ -152,7 +152,7 @@ test.describe('Content-Security-Policy del sito vero', () => {
     await tool(page, 'Immagine');
     await expect(page.getByRole('button', { name: /Illustrazioni/ })).toHaveAttribute('aria-pressed', 'true');
     await page.getByRole('searchbox', { name: "Cerca un'immagine" }).fill('vulcano');
-    const tile = page.getByRole('button', { name: 'vulcano', exact: true });
+    const tile = page.locator('.illustration-tile[aria-label="vulcano"]');
     // The mocked picture really loaded (an image blocked by img-src would stay empty).
     await expect(tile.locator('img')).toBeVisible();
     await expect.poll(() => tile.locator('img').evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth)).toBeGreaterThan(0);
