@@ -3,7 +3,7 @@ import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { isNative } from './platform';
 import { MAP_FILE_EXTENSION, serializeMap, textToDataUrl } from '../lib/mapFile';
-import { planPages, type PageCount, type Paper } from '../lib/pagePlan';
+import { planPages, type Cut, type PageCount, type Paper, type PlacedTile, type Tile } from '../lib/pagePlan';
 import type { ConceptMap } from '../types/map';
 
 /** 1×1 transparent PNG. */
@@ -44,6 +44,8 @@ interface RenderedMap {
   height: number;
   /** Heights (CSS px of the image) where a page cut won't split a concept. */
   breaks: number[];
+  /** Concepts and linking words, in CSS px of the image: cuts between sheets go round them. */
+  boxes: Tile[];
 }
 
 /**
@@ -112,7 +114,8 @@ async function renderOnce(nodes: Node[], background: string, simple: boolean): P
   const [{ toPng }, { getNodesBounds }] = await Promise.all([import('html-to-image'), import('@xyflow/react')]);
   await document.fonts?.ready; // the reading font, not a stand-in
   const shown = nodes.filter((n) => !n.hidden);
-  const bounds = labelRects(flow, el).reduce(union, getNodesBounds(shown));
+  const labels = labelRects(flow, el);
+  const bounds = labels.reduce(union, getNodesBounds(shown));
   // Small minimums only: a narrow "scaletta" must stay narrow to fill a
   // portrait sheet instead of floating in a wide empty image.
   const width = Math.max(320, Math.ceil(bounds.width + PADDING * 2));
@@ -146,7 +149,11 @@ async function renderOnce(nodes: Node[], background: string, simple: boolean): P
         bottom: (n.position.y + (n.measured?.height ?? 0)) * viewport.zoom + viewport.y,
       })),
     );
-    return { dataUrl, width, height, breaks };
+    const boxes = [
+      ...shown.map((n) => ({ x: n.position.x, y: n.position.y, width: n.measured?.width ?? 0, height: n.measured?.height ?? 0 })),
+      ...labels,
+    ].map((r) => ({ x: r.x + viewport.x, y: r.y + viewport.y, w: r.width, h: r.height }));
+    return { dataUrl, width, height, breaks, boxes };
   } finally {
     flow.classList.remove('export-simple', 'exporting');
   }
@@ -161,13 +168,53 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Cuts one tile (in CSS px of the rendered map) out of the full image. */
-function crop(img: HTMLImageElement, cssWidth: number, tile: { x: number; y: number; w: number; h: number }): string {
+/** The side of `cut` that keeps the piece, out to `far` (past the map's edge), in CSS px. */
+function within(cut: Cut, vertical: boolean, far: number): Path2D {
+  const path = new Path2D();
+  const point = (along: number, at: number) => (vertical ? path.lineTo(at, along) : path.lineTo(along, at));
+  point(cut[0].from, far);
+  for (const s of cut) {
+    point(s.from, s.at);
+    point(s.to, s.at);
+  }
+  point(cut[cut.length - 1].to, far);
+  path.closePath();
+  return path;
+}
+
+/**
+ * Cuts one tile (in CSS px of the rendered map) out of the full image. With
+ * `line` (its width, in CSS px), it is outlined in grey: where it meets
+ * the next sheet, the line steps round the concepts, and is where to cut.
+ */
+function crop(img: HTMLImageElement, cssWidth: number, cssHeight: number, tile: PlacedTile, line = 0): string {
   const ratio = img.naturalWidth / cssWidth; // pixelRatio used by renderMap
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(tile.w * ratio);
   canvas.height = Math.round(tile.h * ratio);
-  canvas.getContext('2d')!.drawImage(img, tile.x * ratio, tile.y * ratio, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#ffffff'; // what belongs to the neighbours: blank paper
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(ratio, 0, 0, ratio, -tile.x * ratio, -tile.y * ratio); // map coordinates
+  const { left, right, top, bottom } = tile.cuts ?? {};
+  const outline = [
+    left && within(left, true, cssWidth + 1),
+    right && within(right, true, -1),
+    top && within(top, false, cssHeight + 1),
+    bottom && within(bottom, false, -1),
+  ].filter((p): p is Path2D => !!p);
+  const frame = new Path2D();
+  frame.rect(tile.x, tile.y, tile.w, tile.h);
+  outline.push(frame);
+  // The piece: inside every cut at once.
+  for (const p of outline) ctx.clip(p);
+  ctx.drawImage(img, 0, 0, cssWidth, cssHeight);
+  if (line) {
+    // Only the half of the stroke inside the piece shows: twice as wide.
+    ctx.strokeStyle = '#888888';
+    ctx.lineWidth = line * 2;
+    for (const p of outline) ctx.stroke(p);
+  }
   // JPEG: a long map as PNG would make a PDF of tens of megabytes.
   return canvas.toDataURL('image/jpeg', 0.88);
 }
@@ -325,7 +372,7 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
     write.width(t, TITLE.weight, TITLE.size),
   );
   const header = 12 + (title.length - 1) * TITLE_LINE;
-  const plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks);
+  const plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks, img.boxes);
   const doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper, compress: true });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -344,11 +391,8 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
       const h = tile.h * plan.scale;
       const x = margin + tile.dx;
       const y = margin + header + tile.dy;
-      doc.addImage(crop(full, img.width, tile), 'JPEG', x, y, w, h);
-      if (!whole) {
-        doc.setDrawColor(180);
-        doc.rect(x, y, w, h); // shows the pieces, in reading order
-      }
+      // The outline shows the pieces, in reading order, and where to cut them out.
+      doc.addImage(crop(full, img.width, img.height, tile, whole ? 0 : 0.35 / plan.scale), 'JPEG', x, y, w, h);
     }
 
     if (opts.usesPictograms) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planPages } from './pagePlan';
+import { planPages, stepCut, type Cut, type Tile } from './pagePlan';
 
 const layout = { margin: 12, header: 12, footer: 4 };
 
@@ -89,5 +89,39 @@ describe('planPages', () => {
 
   it('does not blow up a tiny map', () => {
     expect(planPages(320, 240, 'a3', 1, layout).scale).toBeLessThanOrEqual(0.35);
+  });
+
+  it('on more sheets the cuts step round the concepts, never through one', () => {
+    // a grid of concepts, one of them right where a straight cut would fall
+    const boxes: Tile[] = [];
+    for (let row = 0; row < 6; row++)
+      for (let col = 0; col < 8; col++) boxes.push({ x: 10 + col * 370 + (row % 2) * 185, y: 40 + row * 320, w: 220, h: 120 });
+    const crosses = (cut: Cut, vertical: boolean) =>
+      boxes.some((b) =>
+        cut.some((s) => {
+          const [from, to, lo, hi] = vertical ? [b.y, b.y + b.h, b.x, b.x + b.w] : [b.x, b.x + b.w, b.y, b.y + b.h];
+          return s.from < to && s.to > from && s.at > lo && s.at < hi;
+        }),
+      );
+    for (const pages of [2, 4] as const) {
+      const plan = planPages(3000, 2000, 'a4', pages, layout, [], boxes);
+      for (const t of plan.tiles) {
+        if (t.cuts?.left) expect(crosses(t.cuts.left, true)).toBe(false);
+        if (t.cuts?.right) expect(crosses(t.cuts.right, true)).toBe(false);
+        if (t.cuts?.top) expect(crosses(t.cuts.top, false)).toBe(false);
+        if (t.cuts?.bottom) expect(crosses(t.cuts.bottom, false)).toBe(false);
+      }
+      expect(plan.tiles.some((t) => (t.cuts?.right?.length ?? 0) > 1)).toBe(true); // a straight cut would split some
+    }
+  });
+
+  it('a cut steps aside round a concept on its line, and goes straight elsewhere', () => {
+    const cut = stepCut([{ x: 450, y: 300, w: 200, h: 100 }], true, 1000, 800, 500);
+    const at = (y: number) => cut.find((s) => y >= s.from && y < s.to)!.at;
+    expect(at(350)).toBeLessThanOrEqual(444); // passes left of the concept, with room to spare
+    expect(cut[0].from).toBe(0);
+    expect(cut[cut.length - 1].to).toBe(800);
+    // with nothing in the way the cut is a straight line where it was asked
+    expect(stepCut([], true, 1000, 800, 500)).toEqual([{ from: 0, to: 800, at: 500 }]);
   });
 });
