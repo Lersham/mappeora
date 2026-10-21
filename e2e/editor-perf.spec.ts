@@ -195,7 +195,7 @@ test.describe('Illustrazioni più leggere', () => {
     await node(page, 'Il vulcano').click();
     await toolbar(page, 'Immagine');
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('Vesuvio');
-    await page.getByRole('button', { name: 'vulcano', exact: true }).click();
+    await page.locator('.illustration-tile[aria-label="vulcano"]').click();
     const picture = node(page, 'Il vulcano').locator('.concept-illustration');
     await expect(picture).toHaveAttribute('src', /^data:image\/webp;base64,/);
     const saved = await picture.evaluate(async (img: HTMLImageElement) => {
@@ -231,7 +231,7 @@ test.describe('Illustrazioni più leggere', () => {
     await node(page, 'Il vulcano').click();
     await toolbar(page, 'Immagine');
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('Vesuvio');
-    await page.getByRole('button', { name: 'vulcano', exact: true }).click();
+    await page.locator('.illustration-tile[aria-label="vulcano"]').click();
     await expect(node(page, 'Il vulcano').locator('.concept-illustration')).toHaveAttribute('src', `data:image/png;base64,${PNG_1PX.toString('base64')}`);
   });
 });

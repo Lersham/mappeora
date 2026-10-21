@@ -602,6 +602,44 @@ test.describe('Editor: la barra del concetto scelto', () => {
     await expect(link(page, 'Precipitazione', 'Pioggia')).toHaveCount(1);
   });
 
+  test('«Accanto» aggiunge un concetto dopo l’altro sotto lo stesso concetto', async ({ page }) => {
+    await newMap(page, 'Lo Stato');
+    await addConcept(page, 'Lo Stato', 'Popolo');
+    const bar = page.getByRole('toolbar', { name: 'Concetto scelto' });
+    for (const label of ['Territorio', 'Governo', 'Leggi']) {
+      await bar.getByRole('button', { name: 'Concetto accanto' }).click();
+      const input = page.getByRole('textbox', { name: 'Testo del concetto' });
+      await expect(input).toBeFocused();
+      await input.fill(label);
+      await input.press('Enter');
+      await expect(node(page, label)).toBeVisible();
+      await settled(page);
+    }
+    for (const label of ['Popolo', 'Territorio', 'Governo', 'Leggi']) await expect(link(page, 'Lo Stato', label)).toHaveCount(1);
+    // The main concept has nothing to be next to.
+    await expect((await choose(page, 'Lo Stato')).getByRole('button', { name: 'Concetto accanto' })).toHaveCount(0);
+  });
+
+  test('«Collega» unisce due concetti di rami diversi: ognuno resta nel suo ramo', async ({ page }) => {
+    await sampleMap(page);
+    await (await choose(page, 'Nuvole')).getByRole('button', { name: 'Collega', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Tocca il concetto da collegare a «Nuvole»' })).toBeVisible();
+    await (await onScreen(page, node(page, 'Pioggia'))).click();
+    await expect(link(page, 'Nuvole', 'Pioggia')).toHaveCount(1);
+    await expect(link(page, 'Precipitazione', 'Pioggia')).toHaveCount(1);
+    await expect(page.getByRole('toolbar', { name: 'Concetto scelto' })).toBeVisible();
+
+    await (await choose(page, 'Pioggia')).getByRole('button', { name: 'Collega', exact: true }).click();
+    await (await onScreen(page, node(page, 'Nuvole'))).click();
+    await expect(page.getByRole('alert')).toContainText('«Pioggia» e «Nuvole» sono già collegati');
+
+    // The line is not a branch: the whole branch of «Condensazione» goes, «Pioggia» stays.
+    await (await choose(page, 'Condensazione')).getByRole('button', { name: 'Elimina', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Elimina «Condensazione»' }).getByRole('button', { name: /^Tutto il ramo/ }).click();
+    await expect(nodes(page)).toHaveCount(7);
+    await expect(link(page, 'Precipitazione', 'Pioggia')).toHaveCount(1);
+  });
+
   test('«Elimina» un concetto con altri sotto chiede: solo lui (i figli salgono) o tutto il ramo', async ({ page }) => {
     await sampleMap(page);
     await (await choose(page, 'Evaporazione')).getByRole('button', { name: 'Elimina', exact: true }).click();
@@ -650,6 +688,67 @@ test.describe('Editor: la barra del concetto scelto', () => {
     await page.keyboard.press('Delete');
     await expect(nodes(page)).toHaveCount(8);
     await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+});
+
+test.describe('Editor: colori del concetto e delle parole', () => {
+  /** Opens «Nome, colore e immagine» on a concept: one tap chooses it, the next one opens. */
+  async function styleDialog(page: Page, label: string) {
+    const target = await onScreen(page, node(page, label));
+    if (!(await target.evaluate((el) => el.classList.contains('is-selected')))) {
+      await target.click({ delay: 60 });
+      await page.waitForTimeout(600);
+    }
+    await target.click({ delay: 60 });
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
+    await expect(dialog).toBeVisible();
+    return dialog;
+  }
+
+  test('ci sono più colori tra cui scegliere', async ({ page }) => {
+    await newMap(page, 'Gli animali');
+    await settled(page);
+    const dialog = await styleDialog(page, 'Gli animali');
+    await expect(dialog.getByRole('group', { name: 'Colore', exact: true }).getByRole('button')).toHaveCount(14);
+    await dialog.getByRole('button', { name: 'Colore viola' }).click();
+    await dialog.getByRole('button', { name: 'Fatto' }).click();
+    await expect(node(page, 'Gli animali')).toHaveCSS('background-color', 'rgb(212, 184, 255)');
+  });
+
+  test('una sola parola del nome si colora, e resta colorata quando il nome cambia', async ({ page }) => {
+    await newMap(page, 'Il governo');
+    await settled(page);
+    const dialog = await styleDialog(page, 'Il governo');
+    const red = dialog.getByRole('button', { name: 'Colore della parola: rosso' });
+    // No word picked yet: nothing to colour.
+    await expect(red).toBeDisabled();
+    await dialog.getByRole('group', { name: 'Parole del nome' }).getByRole('button', { name: 'governo' }).click();
+    await red.click();
+    await expect(red).toHaveAttribute('aria-pressed', 'true');
+    const colored = node(page, 'Il governo').locator('.concept-label span[style]');
+    await expect(colored).toHaveText('governo');
+    await expect(colored).toHaveCSS('color', 'rgb(183, 28, 28)');
+
+    // A new word in the name: «governo» keeps its colour, the new one has none.
+    const name = dialog.getByRole('textbox', { name: 'Nome del concetto' });
+    await name.fill('Il nuovo governo');
+    await name.press('Enter');
+    await expect(node(page, 'Il nuovo governo').locator('.concept-label span[style]')).toHaveText('governo');
+
+    // «Nero» gives the word back its usual colour.
+    await dialog.getByRole('group', { name: 'Parole del nome' }).getByRole('button', { name: 'governo' }).click();
+    await dialog.getByRole('button', { name: 'Colore della parola: nero' }).click();
+    await dialog.getByRole('button', { name: 'Fatto' }).click();
+    await expect(node(page, 'Il nuovo governo').locator('.concept-label span[style]')).toHaveCount(0);
+  });
+
+  test('un nome di una parola sola si colora con un tocco', async ({ page }) => {
+    await newMap(page, 'Governo');
+    await settled(page);
+    const dialog = await styleDialog(page, 'Governo');
+    await expect(dialog.getByRole('group', { name: 'Parole del nome' })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Colore della parola: blu' }).click();
+    await expect(node(page, 'Governo').locator('.concept-label span[style]')).toHaveCSS('color', 'rgb(13, 71, 161)');
   });
 });
 

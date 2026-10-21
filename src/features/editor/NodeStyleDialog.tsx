@@ -13,7 +13,8 @@ import {
   type Illustration,
 } from '../../services/illustrations';
 import { toIllustrationDataUrl } from '../../services/embed';
-import { COLOR_NAMES, DEFAULT_COLOR, NODE_COLORS } from '../../lib/palette';
+import { COLOR_NAMES, DEFAULT_COLOR, MORE_COLORS, NODE_COLORS, TEXT_COLOR, TEXT_COLORS, TEXT_COLOR_NAMES } from '../../lib/palette';
+import { labelWords } from '../../lib/wordColors';
 import { useMapStore } from '../../store/mapStore';
 import { photoToDataUrl, pickPhoto, type PhotoSource } from '../../services/photo';
 import { PasteError, fromPasteEvent, openGoogleImages, pastedToDataUrl, readClipboardImage } from '../../services/webImage';
@@ -269,7 +270,7 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
       <fieldset>
         <legend>Colore</legend>
         <div className="choice-row">
-          {[...NODE_COLORS, DEFAULT_COLOR].map((c) => (
+          {[...NODE_COLORS, ...MORE_COLORS, DEFAULT_COLOR].map((c) => (
             <button
               key={c}
               type="button"
@@ -283,6 +284,8 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
           ))}
         </div>
       </fieldset>
+
+      <WordColors node={node} />
 
       <fieldset>
         <legend>Forma</legend>
@@ -395,6 +398,71 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
         <BigButton icon="check" label="Fatto" variant="primary" onClick={close} />
       </div>
     </Dialog>
+  );
+}
+
+/**
+ * One word (or a few) of the name in its own colour: «governo» in red.
+ * The words are picked first, then the colour; «Nero» gives them back the
+ * usual one.
+ */
+function WordColors({ node }: { node: MapNode }) {
+  const updateNode = useMapStore((s) => s.updateNode);
+  const words = labelWords(node.label);
+  // The words picked belong to one name: a new name starts again.
+  const [picked, setPicked] = useState<{ label: string; at: number[] }>({ label: node.label, at: [] });
+  const at = picked.label === node.label ? picked.at : [];
+  // A one-word name: that is the word to colour.
+  const chosen = words.length === 1 ? [0] : at;
+  const colors = node.wordColors ?? {};
+  const toggle = (i: number) => setPicked({ label: node.label, at: at.includes(i) ? at.filter((j) => j !== i) : [...at, i] });
+  const paint = (color: string) => {
+    const next = { ...colors };
+    for (const i of chosen) {
+      if (color === TEXT_COLOR) delete next[i];
+      else next[i] = color;
+    }
+    updateNode(node.id, { wordColors: Object.keys(next).length > 0 ? next : undefined });
+  };
+  if (words.length === 0) return null;
+  return (
+    <fieldset>
+      <legend>Colore delle parole</legend>
+      {words.length > 1 && (
+        <>
+          <p className="muted small">Tocca una o più parole, poi un colore.</p>
+          <div className="choice-row word-picks" role="group" aria-label="Parole del nome">
+            {words.map((w, i) => (
+              <button
+                key={`${i}-${w.text}`}
+                type="button"
+                className="choice word-pick"
+                style={{ background: node.color ?? DEFAULT_COLOR, color: colors[i] ?? TEXT_COLOR }}
+                aria-pressed={at.includes(i)}
+                onClick={() => toggle(i)}
+              >
+                {w.text}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      <div className="choice-row">
+        {[...TEXT_COLORS, TEXT_COLOR].map((c) => (
+          <button
+            key={c}
+            type="button"
+            className="color-swatch"
+            style={{ background: c }}
+            aria-label={`Colore della parola: ${TEXT_COLOR_NAMES[c]}`}
+            title={TEXT_COLOR_NAMES[c]}
+            disabled={chosen.length === 0}
+            aria-pressed={chosen.length > 0 && chosen.every((i) => (colors[i] ?? TEXT_COLOR) === c)}
+            onClick={() => paint(c)}
+          />
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

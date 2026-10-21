@@ -9,7 +9,7 @@ test.describe('Immagini nei concetti', () => {
     await expect(page.getByRole('button', { name: /Illustrazioni/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('group', { name: 'Scegli da dove' }).getByRole('button')).toHaveCount(2); // illustrations, photos and Google: no CAA symbols
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('Vesuvio');
-    await page.getByRole('button', { name: 'vulcano', exact: true }).click();
+    await page.locator('.illustration-tile[aria-label="vulcano"]').click();
     await expect(node(page, 'Il vulcano').locator('.concept-illustration')).toHaveAttribute('src', /^data:image\/png;base64,/);
   });
 
@@ -19,7 +19,7 @@ test.describe('Immagini nei concetti', () => {
     await node(page, 'Il vulcano').click();
     await toolbar(page, 'Immagine');
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('vulcano');
-    const tile = page.getByRole('button', { name: 'vulcano', exact: true });
+    const tile = page.locator('.illustration-tile[aria-label="vulcano"]');
     await expect(tile).toHaveText('🌋'); // the preview could not load
     await tile.click();
     await expect(node(page, 'Il vulcano').locator('.concept-emoji')).toHaveText('🌋');
