@@ -46,8 +46,10 @@ function HighlightedLabel({ id, label }: { id: string; label: string }) {
   // Renamed while being read: the spoken range belongs to the old text, so no highlight.
   const word = useReading((s) => (s.nodeId === id && s.label === label ? s.word : null));
   const offset = useReading((s) => (s.nodeId === id ? s.offset : 0));
-  if (!word || word.start < offset) return <>{label}</>;
-  const start = word.start - offset;
+  // A word of the linking words lights up only there, but an article at their
+  // end belongs to the concept's first word («con il» + «sole»).
+  if (!word || word.end <= offset) return <>{label}</>;
+  const start = Math.max(0, word.start - offset);
   const end = word.end - offset;
   return (
     <>
