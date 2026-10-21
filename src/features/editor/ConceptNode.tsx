@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { Fragment, memo, useEffect, useRef, useState } from 'react';
 import { Handle, Position, useStoreApi, type Node, type NodeProps } from '@xyflow/react';
 import type { MapNode } from '../../types/map';
 import type { MapLayout } from '../../lib/templates';
@@ -12,6 +12,7 @@ import { reviewVisibility, useReview } from '../../store/reviewStore';
 import { illustrationUrl } from '../../services/illustrations';
 import { Icon } from '../../components/Icon';
 import { BRANCH_COLORS } from './branchColor';
+import { labelPieces } from '../../lib/wordColors';
 
 /** Holding a concept this long (ms), then letting go, opens it for renaming. */
 const HOLD_MS = 500;
@@ -26,7 +27,7 @@ export interface ConceptActions {
   addNear(id: string, where: 'child' | 'sibling'): void;
 }
 
-export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'collapsed' | 'width'> & {
+export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image' | 'collapsed' | 'width' | 'wordColors'> & {
   layout: MapLayout;
   /** "Foglio" maps: which lines the concept has (see NodeRole). */
   role?: NodeRole;
@@ -41,24 +42,28 @@ export type ConceptNodeData = Pick<MapNode, 'label' | 'color' | 'shape' | 'image
 };
 export type ConceptFlowNode = Node<ConceptNodeData, 'concept'>;
 
-/** Splits the label so the word being spoken can be highlighted ("karaoke"). */
-function HighlightedLabel({ id, label }: { id: string; label: string }) {
+/** The label with its coloured words, and the word being spoken highlighted ("karaoke"). */
+function HighlightedLabel({ id, label, wordColors }: { id: string; label: string; wordColors?: MapNode['wordColors'] }) {
   // Renamed while being read: the spoken range belongs to the old text, so no highlight.
   const word = useReading((s) => (s.nodeId === id && s.label === label ? s.word : null));
   const offset = useReading((s) => (s.nodeId === id ? s.offset : 0));
   // A word of the linking words lights up only there, but an article at their
   // end belongs to the concept's first word («con il» + «sole»).
-  if (!word || word.end <= offset) return <>{label}</>;
-  const start = Math.max(0, word.start - offset);
-  const end = word.end - offset;
+  const spoken = word && word.end > offset ? { start: Math.max(0, word.start - offset), end: word.end - offset } : null;
+  if (!spoken && !wordColors) return <>{label}</>;
   return (
     <>
-      {label.slice(0, start)}
-      {/* Its padding must not widen the concept: that moves the whole sheet at every word. */}
-      <mark className="spoken-word" style={{ margin: '0 -2px' }}>
-        {label.slice(start, end)}
-      </mark>
-      {label.slice(end)}
+      {labelPieces(label, wordColors, spoken).map((p, i) => {
+        const text = p.color ? <span style={{ color: p.color }}>{p.text}</span> : p.text;
+        return p.spoken ? (
+          // Its padding must not widen the concept: that moves the whole sheet at every word.
+          <mark key={i} className="spoken-word" style={{ margin: '0 -2px' }}>
+            {text}
+          </mark>
+        ) : (
+          <Fragment key={i}>{text}</Fragment>
+        );
+      })}
     </>
   );
 }
@@ -309,7 +314,7 @@ function ConceptNodeView({ id, data, selected }: NodeProps<ConceptFlowNode>) {
             />
           ) : (
             <span className="concept-label">
-              <HighlightedLabel id={id} label={data.label} />
+              <HighlightedLabel id={id} label={data.label} wordColors={data.wordColors} />
             </span>
           )}
           {/* Only on the concept in hand: on every one they cluttered the map. */}

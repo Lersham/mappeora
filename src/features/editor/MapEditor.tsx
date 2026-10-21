@@ -315,6 +315,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         data: {
           label: n.label,
           color: n.color,
+          wordColors: n.wordColors,
           shape: n.shape,
           image: n.image,
           width: n.width,

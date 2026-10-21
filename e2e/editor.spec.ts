@@ -653,6 +653,67 @@ test.describe('Editor: la barra del concetto scelto', () => {
   });
 });
 
+test.describe('Editor: colori del concetto e delle parole', () => {
+  /** Opens «Nome, colore e immagine» on a concept: one tap chooses it, the next one opens. */
+  async function styleDialog(page: Page, label: string) {
+    const target = await onScreen(page, node(page, label));
+    if (!(await target.evaluate((el) => el.classList.contains('is-selected')))) {
+      await target.click({ delay: 60 });
+      await page.waitForTimeout(600);
+    }
+    await target.click({ delay: 60 });
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
+    await expect(dialog).toBeVisible();
+    return dialog;
+  }
+
+  test('ci sono più colori tra cui scegliere', async ({ page }) => {
+    await newMap(page, 'Gli animali');
+    await settled(page);
+    const dialog = await styleDialog(page, 'Gli animali');
+    await expect(dialog.getByRole('group', { name: 'Colore', exact: true }).getByRole('button')).toHaveCount(14);
+    await dialog.getByRole('button', { name: 'Colore viola' }).click();
+    await dialog.getByRole('button', { name: 'Fatto' }).click();
+    await expect(node(page, 'Gli animali')).toHaveCSS('background-color', 'rgb(212, 184, 255)');
+  });
+
+  test('una sola parola del nome si colora, e resta colorata quando il nome cambia', async ({ page }) => {
+    await newMap(page, 'Il governo');
+    await settled(page);
+    const dialog = await styleDialog(page, 'Il governo');
+    const red = dialog.getByRole('button', { name: 'Colore della parola: rosso' });
+    // No word picked yet: nothing to colour.
+    await expect(red).toBeDisabled();
+    await dialog.getByRole('group', { name: 'Parole del nome' }).getByRole('button', { name: 'governo' }).click();
+    await red.click();
+    await expect(red).toHaveAttribute('aria-pressed', 'true');
+    const colored = node(page, 'Il governo').locator('.concept-label span[style]');
+    await expect(colored).toHaveText('governo');
+    await expect(colored).toHaveCSS('color', 'rgb(183, 28, 28)');
+
+    // A new word in the name: «governo» keeps its colour, the new one has none.
+    const name = dialog.getByRole('textbox', { name: 'Nome del concetto' });
+    await name.fill('Il nuovo governo');
+    await name.press('Enter');
+    await expect(node(page, 'Il nuovo governo').locator('.concept-label span[style]')).toHaveText('governo');
+
+    // «Nero» gives the word back its usual colour.
+    await dialog.getByRole('group', { name: 'Parole del nome' }).getByRole('button', { name: 'governo' }).click();
+    await dialog.getByRole('button', { name: 'Colore della parola: nero' }).click();
+    await dialog.getByRole('button', { name: 'Fatto' }).click();
+    await expect(node(page, 'Il nuovo governo').locator('.concept-label span[style]')).toHaveCount(0);
+  });
+
+  test('un nome di una parola sola si colora con un tocco', async ({ page }) => {
+    await newMap(page, 'Governo');
+    await settled(page);
+    const dialog = await styleDialog(page, 'Governo');
+    await expect(dialog.getByRole('group', { name: 'Parole del nome' })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Colore della parola: blu' }).click();
+    await expect(node(page, 'Governo').locator('.concept-label span[style]')).toHaveCSS('color', 'rgb(13, 71, 161)');
+  });
+});
+
 test.describe('Editor: un tocco per immagine e colore, tenere premuto per rinominare', () => {
   test('il primo tocco seleziona; un secondo tocco apre «Nome, colore e immagine» subito', async ({ page }) => {
     await newMap(page, 'Gli animali');

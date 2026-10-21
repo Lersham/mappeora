@@ -2458,3 +2458,11 @@ textarea {
   text-align: center;
 }
 
+/* A word of the name, in the concept's colours: how it will look. */
+.word-pick {
+  font-weight: 600;
+}
+.color-swatch:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

@@ -7,6 +7,7 @@ import { collapseInfo } from '../lib/collapse';
 import { moveUnder, removeBranch, removeLiftingChildren } from '../lib/branch';
 import { DEFAULT_SIZE } from '../lib/ladder';
 import { NEW_CONCEPT_LABEL } from '../lib/mapFactory';
+import { remapWordColors } from '../lib/wordColors';
 
 type Size = { width: number; height: number };
 
@@ -81,6 +82,14 @@ function changes<T extends object>(item: T, patch: Partial<T>): boolean {
   });
 }
 
+/** A renamed concept keeps its coloured words on the same words. */
+function patched(node: MapNode, patch: Partial<Omit<MapNode, 'id'>>): MapNode {
+  const next = { ...node, ...patch };
+  if (patch.label !== undefined && !('wordColors' in patch)) next.wordColors = remapWordColors(node.label, patch.label, node.wordColors);
+  if (!next.wordColors) delete next.wordColors;
+  return next;
+}
+
 function edit(state: MapState, fn: (map: ConceptMap) => Partial<ConceptMap>, opts: { touch?: boolean } = {}): Partial<MapState> {
   if (!state.map) return {};
   const patch = fn(state.map);
@@ -150,7 +159,7 @@ export const useMapStore = create<MapState>()(
 
       updateNode: (id, patch) =>
         set((s) =>
-          edit(s, (map) => (map.nodes.some((n) => n.id === id && changes(n, patch)) ? { nodes: map.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) } : {})),
+          edit(s, (map) => (map.nodes.some((n) => n.id === id && changes(n, patch)) ? { nodes: map.nodes.map((n) => (n.id === id ? patched(n, patch) : n)) } : {})),
         ),
 
       toggleCollapsed: (id) => {

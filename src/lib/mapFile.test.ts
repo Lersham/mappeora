@@ -22,6 +22,14 @@ describe('mapFile', () => {
     expect(parseMapFile(serializeMap(map)).freeLayout).toBe(true);
   });
 
+  it('keeps the coloured words, drops anything that is not a word colour', () => {
+    const map = createMap('Il governo');
+    map.nodes[0].wordColors = { 1: '#b71c1c' };
+    expect(parseMapFile(serializeMap(map)).nodes[0].wordColors).toEqual({ 1: '#b71c1c' });
+    (map.nodes[0] as { wordColors: unknown }).wordColors = { 1: 'red; background:url(x)', x: '#000000' };
+    expect(parseMapFile(serializeMap(map)).nodes[0].wordColors).toBeUndefined();
+  });
+
   it('drops widths out of range', () => {
     const map = createMap('Le stagioni');
     map.nodes[0].width = 5000;
