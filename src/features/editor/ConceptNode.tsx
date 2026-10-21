@@ -94,9 +94,9 @@ function NodeImageView({ image }: { image: NonNullable<ConceptNodeData['image']>
 
 /**
  * "Foglio" maps: lines reach a concept from above and leave from the bottom
- * centre. Two more, never seen: an extra line leaves from the bottom-left,
- * or from the left towards a concept higher up (from the bottom it would
- * loop behind its own box), and reaches the other concept from the left.
+ * centre. More, never seen, for a cross-link («Collega»): from side to
+ * side towards a concept beside it, else from the bottom-left (or the left,
+ * towards a concept higher up) to the other's left.
  */
 function SheetHandles({ role, kind }: { role: NodeRole; kind: 'source' | 'target' }) {
   const hidden = (shown: boolean) => (shown ? undefined : 'handle-hidden');
@@ -104,12 +104,14 @@ function SheetHandles({ role, kind }: { role: NodeRole; kind: 'source' | 'target
     <>
       <Handle id="t-top" type="target" position={Position.Top} className={hidden(role !== 'root')} />
       <Handle id="t-left" type="target" position={Position.Left} className="handle-hidden" />
+      <Handle id="t-right" type="target" position={Position.Right} className="handle-hidden" />
     </>
   ) : (
     <>
       <Handle id="s-bottom" type="source" position={Position.Bottom} className={hidden(role !== 'item')} />
       <Handle id="s-spine" type="source" position={Position.Bottom} style={{ left: LADDER.spine }} className="handle-hidden" />
       <Handle id="s-left" type="source" position={Position.Left} className="handle-hidden" />
+      <Handle id="s-right" type="source" position={Position.Right} className="handle-hidden" />
     </>
   );
 }

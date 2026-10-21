@@ -13,6 +13,7 @@ import {
   type Edge,
   type EdgeChange,
   type NodeChange,
+  type XYPosition,
 } from '@xyflow/react';
 import { useStore } from 'zustand';
 import { beginStep, endStep, mapHistory, untracked, useMapStore } from '../../store/mapStore';
@@ -22,7 +23,7 @@ import { FreeEdge } from './FreeEdge';
 import { BusEdge } from './BusEdge';
 import { TreeEdge } from './TreeEdge';
 import { sheetLayout, type SheetResult } from '../../lib/sheetLayout';
-import { labelScale } from '../../lib/ladder';
+import { DEFAULT_SIZE, labelScale } from '../../lib/ladder';
 import { useSettings } from '../../store/settingsStore';
 import { NodeStyleDialog } from './NodeStyleDialog';
 import { LinkWordDialog } from './LinkWordDialog';
@@ -79,6 +80,36 @@ function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined 
 /** A failed share sheet the child closed is not an error. */
 const isCancel = (e: unknown) => e instanceof Error && /cancel/i.test(e.message);
 const edgeTypes: EdgeTypes = { bus: BusEdge, free: FreeEdge, tree: TreeEdge };
+
+/**
+ * How a cross-link («Collega») is drawn on a sheet. To a concept wholly
+ * beside it, from side to side. Otherwise from the bottom-left to the
+ * other's left; towards a concept higher up from the left too: from the
+ * bottom it would loop behind its own box. A line that crosses other
+ * concepts goes over them: behind, its pieces would seem to link those.
+ */
+function crossLink(positions: Record<string, XYPosition>, sizes: Record<string, { width: number; height: number }>, source: string, target: string) {
+  const from = positions[source];
+  const to = positions[target];
+  if (!from || !to) return { sourceHandle: 's-spine', targetHandle: 't-left' };
+  const size = (id: string) => sizes[id] ?? DEFAULT_SIZE;
+  const centre = (p: XYPosition, id: string) => ({ x: p.x + size(id).width / 2, y: p.y + size(id).height / 2 });
+  const [a, b] = [centre(from, source), centre(to, target)];
+  const crosses = Object.entries(positions).some(([id, p]) => {
+    if (id === source || id === target) return false;
+    const { width, height } = size(id);
+    for (let t = 0; t <= 1; t += 1 / 32) {
+      const x = a.x + (b.x - a.x) * t;
+      const y = a.y + (b.y - a.y) * t;
+      if (x > p.x && x < p.x + width && y > p.y && y < p.y + height) return true;
+    }
+    return false;
+  });
+  const over = crosses ? { zIndex: 1001 } : {};
+  if (to.x >= from.x + size(source).width) return { sourceHandle: 's-right', targetHandle: 't-left', ...over };
+  if (to.x + size(target).width <= from.x) return { sourceHandle: 's-left', targetHandle: 't-right', ...over };
+  return { sourceHandle: to.y < from.y ? 's-left' : 's-spine', targetHandle: 't-left', ...over };
+}
 
 /** Class names, leaving out the empty ones. */
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
@@ -174,8 +205,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     window.clearTimeout(noticeTimer.current);
     noticeTimer.current = window.setTimeout(() => setNotice((now) => (now === text ? null : now)), 5000);
   };
-  /** «Cambia ramo»: the next concept tapped is the one to put it under. */
-  const [picking, setPicking] = useState<{ from: string } | null>(null);
+  /**
+   * «Cambia ramo» and «Collega»: the next concept tapped is the one to put
+   * it under, or to draw a line to.
+   */
+  const [picking, setPicking] = useState<{ from: string; mode: 'ramo' | 'collega' } | null>(null);
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
   const [tutorialStep, setTutorialStep] = useState<number | null>(tutorial ? 0 : null);
   /** The tutorial coloured the map only to show how: it ends white, as it began («Annulla» brings the colours back). */
@@ -210,7 +244,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // Only a concept on screen can be the one in hand.
   const selectedNode = map.nodes.find((n) => n.id === selectedId && !collapse.hidden.has(n.id));
   // A link back to the main concept doesn't give a «−» that would hide nothing.
-  const parents = useMemo(() => new Set(spanningTree(map).forward.map((e) => e.source)), [map.nodes, map.edges]);
+  const tree = useMemo(() => spanningTree(map), [map.nodes, map.edges]);
+  const parents = useMemo(() => new Set(tree.forward.map((e) => e.source)), [tree]);
 
   const dragging = useRef(false);
   // While a concept is in hand the lines stay as they were: the new sheet
@@ -362,16 +397,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       if (sheetTemplate && !shown) return { ...base, type: 'free', data: { onEdit: onEdit(e.id), near } }; // placed by hand
       return {
         ...base,
+        ...(shown && { className: 'concept-edge cross-link', ...crossLink(shown.positions, sizes, e.source, e.target) }),
         type: 'tree',
         data: { onEdit: onEdit(e.id), near },
-        // A cross-link on a sheet. Towards a concept higher up it leaves from
-        // the left too: from the bottom it would loop behind its own box.
-        ...(shown && { sourceHandle: shown.positions[e.target]?.y < shown.positions[e.source]?.y ? 's-left' : 's-spine', targetHandle: 't-left' }),
         labelBgPadding: [8, 4] as [number, number],
         labelBgBorderRadius: 6,
       };
     });
-  }, [map.edges, nodeNames, shown, painted, sheetTemplate, review.active, secret, selectedId, locked]);
+  }, [map.edges, nodeNames, shown, painted, sheetTemplate, review.active, secret, selectedId, locked, sizes]);
 
   const onNodesChange = useCallback((changes: NodeChange<ConceptFlowNode>[]) => {
     const s = useMapStore.getState();
@@ -635,7 +668,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const addNear = (id: string, where: 'child' | 'sibling') => {
     const current = useMapStore.getState().map;
     if (!current) return;
-    const parent = where === 'sibling' ? spanningTree(current).forward.find((e) => e.target === id)?.source : undefined;
+    const parent = where === 'sibling' ? spanningTree(current).parent.get(id) : undefined;
     addConcept(undefined, parent ?? id);
   };
 
@@ -914,13 +947,21 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const editing = !review.active;
 
   const labelOf = (id: string) => useMapStore.getState().map?.nodes.find((n) => n.id === id)?.label ?? '';
-  /** Where «Cambia ramo» puts the concept: the one tapped on the map. */
+  /** Where «Cambia ramo» puts the concept, or what «Collega» links it to: the one tapped on the map. */
   const pickTarget = (id: string) => {
     const pick = picking;
     setPicking(null);
     if (!pick || id === pick.from) return;
     const current = useMapStore.getState().map;
     if (!current) return;
+    if (pick.mode === 'collega') {
+      const linked = current.edges.some((e) => (e.source === pick.from && e.target === id) || (e.source === id && e.target === pick.from));
+      if (linked) return showNotice(`«${labelOf(pick.from)}» e «${labelOf(id)}» sono già collegati.`);
+      // A line only: each concept stays in its own branch.
+      actions.connect(pick.from, id);
+      setTimeout(() => actions.select(pick.from));
+      return;
+    }
     const why = cannotMoveUnder(current, pick.from, id);
     if (why === 'below') return showNotice(`«${labelOf(id)}» è nel ramo di «${labelOf(pick.from)}»: scegli un concetto fuori dal ramo.`);
     if (why === 'already') return showNotice(`«${labelOf(pick.from)}» è già sotto «${labelOf(id)}».`);
@@ -930,7 +971,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     setTimeout(() => actions.select(pick.from));
     reveal(pick.from);
   };
-  // Esc, or the back button, puts «Cambia ramo» away.
+  // Esc, or the back button, puts «Cambia ramo» and «Collega» away.
   useBackHandler(() => setPicking(null), picking !== null);
   useEffect(() => {
     if (!picking) return;
@@ -1126,7 +1167,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           }}
           onPaneClick={() => {
             cancelCloser();
-            // Tapping the empty map puts «Cambia ramo» away, nothing else.
+            // Tapping the empty map puts «Cambia ramo» or «Collega» away, nothing else.
             if (picking) return setPicking(null);
             actions.select(null);
           }}
@@ -1200,8 +1241,10 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           // Everything about the concept in hand, in one place.
           <div className="selection-bar" role="toolbar" aria-label="Concetto scelto">
             <BigButton icon="edit" label="Nome" onClick={() => useMapStore.getState().startEditing(selectedNode.id)} />
+            {tree.parent.has(selectedNode.id) && <BigButton icon="plus" label="Accanto" aria-label="Concetto accanto" onClick={() => addNear(selectedNode.id, 'sibling')} />}
             <BigButton icon="image" label="Immagine" className={target('immagine')} onClick={() => setDialog({ kind: 'style' })} />
-            <BigButton icon="branch" label="Cambia ramo" className={target('cambia-ramo')} onClick={() => setPicking({ from: selectedNode.id })} />
+            <BigButton icon="join" label="Collega" onClick={() => setPicking({ from: selectedNode.id, mode: 'collega' })} />
+            <BigButton icon="branch" label="Cambia ramo" className={target('cambia-ramo')} onClick={() => setPicking({ from: selectedNode.id, mode: 'ramo' })} />
             <BigButton icon="trash" label="Elimina" variant="danger" className={target('elimina')} onClick={() => deleteConcept(selectedNode.id)} />
           </div>
         )}
@@ -1225,7 +1268,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         )}
         {picking && (
           <div className="pick-banner" role="status">
-            <p>{`Tocca il concetto sotto cui mettere «${labelOf(picking.from)}».`}</p>
+            <p>
+              {picking.mode === 'collega'
+                ? `Tocca il concetto da collegare a «${labelOf(picking.from)}».`
+                : `Tocca il concetto sotto cui mettere «${labelOf(picking.from)}».`}
+            </p>
             <button type="button" className="pick-banner-close" aria-label="Esci" title="Esci" onClick={() => setPicking(null)}>
               <Icon name="close" />
             </button>

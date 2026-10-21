@@ -602,6 +602,44 @@ test.describe('Editor: la barra del concetto scelto', () => {
     await expect(link(page, 'Precipitazione', 'Pioggia')).toHaveCount(1);
   });
 
+  test('«Accanto» aggiunge un concetto dopo l’altro sotto lo stesso concetto', async ({ page }) => {
+    await newMap(page, 'Lo Stato');
+    await addConcept(page, 'Lo Stato', 'Popolo');
+    const bar = page.getByRole('toolbar', { name: 'Concetto scelto' });
+    for (const label of ['Territorio', 'Governo', 'Leggi']) {
+      await bar.getByRole('button', { name: 'Concetto accanto' }).click();
+      const input = page.getByRole('textbox', { name: 'Testo del concetto' });
+      await expect(input).toBeFocused();
+      await input.fill(label);
+      await input.press('Enter');
+      await expect(node(page, label)).toBeVisible();
+      await settled(page);
+    }
+    for (const label of ['Popolo', 'Territorio', 'Governo', 'Leggi']) await expect(link(page, 'Lo Stato', label)).toHaveCount(1);
+    // The main concept has nothing to be next to.
+    await expect((await choose(page, 'Lo Stato')).getByRole('button', { name: 'Concetto accanto' })).toHaveCount(0);
+  });
+
+  test('«Collega» unisce due concetti di rami diversi: ognuno resta nel suo ramo', async ({ page }) => {
+    await sampleMap(page);
+    await (await choose(page, 'Nuvole')).getByRole('button', { name: 'Collega', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Tocca il concetto da collegare a «Nuvole»' })).toBeVisible();
+    await (await onScreen(page, node(page, 'Pioggia'))).click();
+    await expect(link(page, 'Nuvole', 'Pioggia')).toHaveCount(1);
+    await expect(link(page, 'Precipitazione', 'Pioggia')).toHaveCount(1);
+    await expect(page.getByRole('toolbar', { name: 'Concetto scelto' })).toBeVisible();
+
+    await (await choose(page, 'Pioggia')).getByRole('button', { name: 'Collega', exact: true }).click();
+    await (await onScreen(page, node(page, 'Nuvole'))).click();
+    await expect(page.getByRole('alert')).toContainText('«Pioggia» e «Nuvole» sono già collegati');
+
+    // The line is not a branch: the whole branch of «Condensazione» goes, «Pioggia» stays.
+    await (await choose(page, 'Condensazione')).getByRole('button', { name: 'Elimina', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Elimina «Condensazione»' }).getByRole('button', { name: /^Tutto il ramo/ }).click();
+    await expect(nodes(page)).toHaveCount(7);
+    await expect(link(page, 'Precipitazione', 'Pioggia')).toHaveCount(1);
+  });
+
   test('«Elimina» un concetto con altri sotto chiede: solo lui (i figli salgono) o tutto il ramo', async ({ page }) => {
     await sampleMap(page);
     await (await choose(page, 'Evaporazione')).getByRole('button', { name: 'Elimina', exact: true }).click();

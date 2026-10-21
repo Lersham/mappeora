@@ -953,7 +953,7 @@ textarea {
   font-size: 0.85rem;
   white-space: nowrap;
 }
-/* Phones: the five tools share the width, each word under its icon, like the
+/* Phones: the tools share the width, each word under its icon, like the
    toolbar below; the zoom buttons go up out of their way. */
 @media (max-width: 699px) {
   .selection-bar {
@@ -1181,6 +1181,10 @@ textarea {
 .react-flow__edge-path.branch-line.branch-3 { stroke: var(--branch-3); }
 .react-flow__edge-path.branch-line.branch-4 { stroke: var(--branch-4); }
 .react-flow__edge-path.branch-line.branch-5 { stroke: var(--branch-5); }
+/* A cross-link («Collega») is not a branch: dashed, so the tree still reads. */
+.react-flow__edge.cross-link .react-flow__edge-path {
+  stroke-dasharray: 8 6;
+}
 /* The points lines start and end at: never seen, new lines come from the
    tree («Cambia ramo»), not from dragging a dot. Stronger than React Flow's
    own .connectionindicator, or the hidden dots would still catch a finger. */
