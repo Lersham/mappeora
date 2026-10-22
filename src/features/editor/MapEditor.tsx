@@ -222,11 +222,21 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const layout = layoutOf(map);
   const sheetMode = layout === 'foglio';
   /**
-   * On a touch screen the concepts on the A4 sheet stay where the sheet puts
-   * them: a finger moves and zooms the map, a tap selects. Only the concept
-   * in hand can be dragged, to change its place in the branch. «Sposta» frees them.
+   * «Sposta» is on: every concept can be dragged where the child wants. Off
+   * again, they stay where they were put (only «Riordina» puts them back on
+   * the sheet). Not saved with the map: it opens with the concepts still.
    */
-  const locked = TOUCH && sheetMode;
+  const [movingOn, setMoving] = useState(false);
+  // «Annulla» may have put the map back on the sheet: nothing is being moved then.
+  const moving = movingOn && !sheetMode;
+  /**
+   * On a touch screen the concepts stay where they are, on the A4 sheet or
+   * where the child put them: a finger moves and zooms the map, a tap
+   * selects. Only the concept in hand can be dragged (on the sheet, to change
+   * its place in the branch). «Sposta» frees them all. Maps not made for the
+   * sheet have no «Sposta»: there the concepts are always free.
+   */
+  const locked = TOUCH && sheetTemplate && !moving;
   /** The concept a finger went down on, if any: when the map moves instead, it may have meant to drag it. */
   const grabbed = useRef<string | null>(null);
   /** Where «Sposta» is, said once per map at most (see spostaHint.ts). */
@@ -612,6 +622,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     // A "foglio" map is always in order: just show all of it. One placed by
     // hand goes back on the sheet.
     if (sheetTemplate) {
+      setMoving(false);
       if (!sheetMode) actions.setFreeLayout(false);
       return void showMap(150);
     }
@@ -922,22 +933,24 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // then where it stays on the sheet.
   const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
     { key: 'photo', icon: 'camera', label: 'Dal libro', className: 'group-start', onClick: () => setDialog({ kind: 'photo' }) },
-    // It stays on screen, lit up while the concepts are free: pressed again,
-    // it puts them back on the sheet, as «Riordina» does.
+    // Lit up while the concepts can be dragged: pressed again, they stay
+    // where they were put. «Riordina» puts them back on the sheet.
     ...(sheetTemplate
       ? [
           {
             key: 'layout',
             icon: 'hand' as const,
             label: 'Sposta',
-            title: sheetMode
-              ? 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.'
-              : 'Stai mettendo i concetti dove vuoi. Premi di nuovo per rimetterli sul foglio A4.',
-            'aria-pressed': !sheetMode,
+            title: moving
+              ? 'Hai finito? Premi di nuovo: i concetti restano dove li hai messi.'
+              : 'Metti i concetti dove vuoi. «Riordina» li rimette a misura di foglio A4.',
+            'aria-pressed': moving,
             className: 'group-start',
             onClick: () => {
-              if (sheetMode) spostaUsed();
-              actions.setFreeLayout(sheetMode);
+              if (moving) return setMoving(false);
+              spostaUsed();
+              if (sheetMode) actions.setFreeLayout(true);
+              setMoving(true);
             },
           },
         ]

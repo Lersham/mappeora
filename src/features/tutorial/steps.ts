@@ -174,7 +174,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Metti i concetti dove vuoi',
-    text: `I concetti si mettono in fila da soli, uno sotto l’altro come un albero. Per cambiare l’ordine di due fratelli, trascina un concetto a destra o a sinistra. Per metterli proprio dove vuoi tu, premi «Sposta», in basso, e poi trascinali. «Sposta» resta acceso: premilo di nuovo per rimetterli sul foglio. ${IN_ALTRO}`,
+    text: `I concetti si mettono in fila da soli, uno sotto l’altro come un albero. Per cambiare l’ordine di due fratelli, trascina un concetto a destra o a sinistra. Per metterli proprio dove vuoi tu, premi «Sposta», in basso, e poi trascinali. Quando hai finito premilo di nuovo: i concetti restano dove li hai messi. Per rimetterli sul foglio c’è «Riordina». ${IN_ALTRO}`,
     target: 'sposta',
     first: (map) =>
       map.freeLayout
