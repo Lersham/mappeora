@@ -456,18 +456,14 @@ textarea {
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr); /* a long title must not widen the page */
+  /* Side by side only where a card stays wide enough for its words: with
+     large text one per row, never «Rivolu-zione». min(): a long title must
+     not widen the page. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(300px * var(--text-scale) / 1.15)), 1fr));
   gap: 10px;
 }
-@media (min-width: 640px) {
-  .map-list {
-    /* Two columns, or one when the text is so large that a word of the
-       title would not fit in half the list (16rem grows with --text-scale). */
-    grid-template-columns: repeat(auto-fill, minmax(max(calc(50% - 5px), min(16rem, 100%)), 1fr));
-  }
-  .map-card.is-latest {
-    grid-column: 1 / -1;
-  }
+.map-card.is-latest {
+  grid-column: 1 / -1;
 }
 .map-card {
   display: flex;
@@ -894,24 +890,14 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Narrow screens, or words too big for the bar (large text, OpenDyslexic,
-   wide spacing: measured by useCrowded, not guessed from the width): one
-   row, the map gets the height. The buttons show only their icon (the most
-   familiar ones there are), their word stays for screen readers (hidden as
-   .sr-only, not removed: not every button has an aria-label); a long title
-   ends with «…». */
+/* Narrow screens: one row, the map gets the height. «Mappe», «Annulla» and
+   «Ripeti» show only their icon (the most familiar ones there are), their
+   word stays for screen readers (hidden as .sr-only, not removed: not every
+   button has an aria-label); a long title ends with «…». The same on a
+   tablet whose large text does not fit (measured: see useCrowded). */
 .topbar.is-crowded .big-button {
   min-width: 44px;
   padding: 2px 8px;
-}
-.topbar.is-crowded .big-button-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 @media (max-width: 760px) {
   .topbar .big-button {
@@ -2308,6 +2294,7 @@ textarea {
 /* Read by screen readers, not shown. In the top bar «Schermo intero» is only
    its icon: with big text its word pushed «Mappe» off the screen. */
 .sr-only,
+.topbar.is-crowded .big-button-label,
 .topbar .icon-only .big-button-label {
   position: absolute;
   width: 1px;

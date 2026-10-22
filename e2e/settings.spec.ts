@@ -1,6 +1,6 @@
 import type { Locator } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { drawnBadly, newMap, node, openCopy, rename, toolbar } from './helpers';
+import { drawnBadly, newMap, node, openCopy, rename, sampleMap, toolbar } from './helpers';
 
 test('Aspetto: carattere, sfondo e maiuscolo si applicano e restano dopo aver ricaricato', async ({ page }) => {
   await page.goto('/');
@@ -53,6 +53,27 @@ test('Testo grande in stampatello: le parole lunghe di un concetto non vanno a c
       return new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top))).size;
     });
   expect(words).toBe(1);
+});
+
+test('iPad verticale con il testo più grande: le barre restano dentro lo schermo, senza bloccare l’app', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'la larghezza di un iPad si prova sul computer');
+  // 834 px: the full toolbar floats and is narrower than the crowded one.
+  // Measured on the bar itself, it flipped between the two for ever (React error #185).
+  await page.setViewportSize({ width: 834, height: 1194 });
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('mappeora-settings')) {
+      const state = { font: 'lexend', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
+      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+    }
+  });
+  await sampleMap(page);
+  await page.evaluate(() => document.fonts.ready);
+  const outside = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>('.topbar button, .toolbar button')]
+      .filter((b) => b.offsetParent && b.getBoundingClientRect().right > innerWidth + 1)
+      .map((b) => b.getAttribute('aria-label') || b.textContent?.trim()),
+  );
+  expect(outside).toEqual([]);
 });
 
 test('Testo grande, OpenDyslexic e spaziatura ampia: le finestre di scelta restano dentro lo schermo', async ({ page }) => {
