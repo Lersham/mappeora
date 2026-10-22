@@ -173,20 +173,57 @@ export function sheetLayout(
   return result;
 }
 
+/** Without repeated points: they break the corners. */
+const distinct = (points: Point[]) => points.filter((p, i) => i === 0 || p.x !== points[i - 1].x || p.y !== points[i - 1].y);
+
+/** Where the rounded corner at `b` starts and ends, on the way from `a` to `c`. */
+function corner(a: Point, b: Point, c: Point, radius: number): [Point, Point] {
+  const r = Math.min(radius, Math.hypot(b.x - a.x, b.y - a.y) / 2, Math.hypot(c.x - b.x, c.y - b.y) / 2);
+  return [
+    { x: b.x - Math.sign(b.x - a.x) * r, y: b.y - Math.sign(b.y - a.y) * r },
+    { x: b.x + Math.sign(c.x - b.x) * r, y: b.y + Math.sign(c.y - b.y) * r },
+  ];
+}
+
 /** SVG path through the points, with rounded corners. */
 export function roundedPath(points: Point[], radius = 10): string {
-  // Drop repeated points and straight-line middles: they break the corners.
-  const pts = points.filter((p, i) => i === 0 || p.x !== points[i - 1].x || p.y !== points[i - 1].y);
+  const pts = distinct(points);
   let d = `M ${pts[0].x},${pts[0].y}`;
   for (let i = 1; i < pts.length - 1; i++) {
-    const [a, b, c] = [pts[i - 1], pts[i], pts[i + 1]];
-    const r = Math.min(radius, Math.hypot(b.x - a.x, b.y - a.y) / 2, Math.hypot(c.x - b.x, c.y - b.y) / 2);
-    const inX = b.x - Math.sign(b.x - a.x) * r;
-    const inY = b.y - Math.sign(b.y - a.y) * r;
-    const outX = b.x + Math.sign(c.x - b.x) * r;
-    const outY = b.y + Math.sign(c.y - b.y) * r;
-    d += ` L ${inX},${inY} Q ${b.x},${b.y} ${outX},${outY}`;
+    const [from, to] = corner(pts[i - 1], pts[i], pts[i + 1], radius);
+    d += ` L ${from.x},${from.y} Q ${pts[i].x},${pts[i].y} ${to.x},${to.y}`;
   }
   const last = pts[pts.length - 1];
   return `${d} L ${last.x},${last.y}`;
+}
+
+/**
+ * The same rounded path in two pieces, so a stretch can have its own colour
+ * without a seam: the colour starts where the corner at `points[at]` starts
+ * (at the point itself where the line goes straight on) and runs to the end;
+ * the shared piece goes from the start to the end of that corner, so the
+ * colour covers the curve and no grey shows beside it.
+ */
+export function splitRoundedPath(points: Point[], at: number, radius = 10): { shared: string; own: string } {
+  // Where `at` ends up once repeated points are gone: a repeat is the same corner.
+  const kept = points.map((p, i) => i === 0 || p.x !== points[i - 1].x || p.y !== points[i - 1].y);
+  const k = kept.slice(0, at + 1).filter(Boolean).length - 1;
+  const pts = distinct(points);
+  if (k <= 0) return { shared: '', own: roundedPath(pts, radius) };
+  if (k >= pts.length - 1) return { shared: roundedPath(pts, radius), own: '' };
+  let shared = `M ${pts[0].x},${pts[0].y}`;
+  let own = '';
+  for (let i = 1; i < pts.length - 1; i++) {
+    const b = pts[i];
+    const straight = (b.x - pts[i - 1].x) * (pts[i + 1].y - b.y) === (b.y - pts[i - 1].y) * (pts[i + 1].x - b.x);
+    const [from, to] = straight ? [b, b] : corner(pts[i - 1], b, pts[i + 1], radius);
+    const curve = straight ? ` L ${b.x},${b.y}` : ` L ${from.x},${from.y} Q ${b.x},${b.y} ${to.x},${to.y}`;
+    if (i < k) shared += curve;
+    else if (i === k) {
+      shared += curve;
+      own = `M ${from.x},${from.y}${straight ? '' : ` Q ${b.x},${b.y} ${to.x},${to.y}`}`;
+    } else own += curve;
+  }
+  const last = pts[pts.length - 1];
+  return { shared, own: `${own} L ${last.x},${last.y}` };
 }

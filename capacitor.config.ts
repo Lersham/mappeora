@@ -17,6 +17,12 @@ const config: CapacitorConfig = {
       '@capgo/capacitor-speech-recognition',
     ],
   },
+  android: {
+    // The build targets Chrome 111 (Vite's default). Below it Capacitor only
+    // logs «System WebView is not supported»; a page for the child would also
+    // need server.errorPath (a bundled HTML file).
+    minWebViewVersion: 111,
+  },
   plugins: {
     CapacitorSQLite: {
       iosDatabaseLocation: 'Library/CapacitorDatabase',

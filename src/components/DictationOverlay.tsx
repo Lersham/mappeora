@@ -2,11 +2,14 @@ import { DICTATION_ERRORS, type DictationError } from '../hooks/useDictation';
 import { VOICE_COMMAND_HINTS } from '../lib/voiceCommands';
 import { useModal } from './Dialog';
 import { Icon } from './Icon';
+import { SpokenError } from './SpokenError';
 
 interface Props {
   listening: boolean;
   partial: string;
   error: DictationError | null;
+  /** What can be said besides the text itself (the editor's commands by default). */
+  hints?: string[];
   onStop(): void;
   onClose(): void;
 }
@@ -17,7 +20,7 @@ export function DictationOverlay(props: Props) {
   return <DictationCard key={props.listening ? 'listening' : 'error'} {...props} />;
 }
 
-function DictationCard({ listening, partial, error, onStop, onClose }: Props) {
+function DictationCard({ listening, partial, error, hints = VOICE_COMMAND_HINTS, onStop, onClose }: Props) {
   // Esc and Back stop listening (keeping what was said), or close the message.
   const { ref, onKeyDown, tabIndex } = useModal(listening ? onStop : onClose);
   return (
@@ -33,7 +36,7 @@ function DictationCard({ listening, partial, error, onStop, onClose }: Props) {
               {partial || '…'}
             </p>
             <p className="dictation-commands">
-              Puoi anche dire: {VOICE_COMMAND_HINTS.map((h) => `«${h}»`).join(', ')}
+              Puoi anche dire: {hints.map((h) => `«${h}»`).join(', ')}
             </p>
             <button type="button" className="big-button primary" onClick={onStop} autoFocus>
               <Icon name="check" className="big-button-icon" />
@@ -42,9 +45,7 @@ function DictationCard({ listening, partial, error, onStop, onClose }: Props) {
           </>
         ) : (
           <>
-            <p className="dictation-hint" role="alert">
-              {error && DICTATION_ERRORS[error]}
-            </p>
+            {error && <SpokenError className="dictation-hint">{DICTATION_ERRORS[error]}</SpokenError>}
             <button type="button" className="big-button" onClick={onClose} autoFocus>
               <span className="big-button-label">Ok</span>
             </button>

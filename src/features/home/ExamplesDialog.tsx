@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
 import { OptionCard } from '../../components/OptionCard';
+import { SpokenError } from '../../components/SpokenError';
 import { EXAMPLES, loadExample, type Example } from '../../services/examples';
 import { storage } from '../../services/storage';
 
@@ -41,11 +42,7 @@ export function ExamplesDialog({ onOpen, onClose }: Props) {
           onClick={() => void open(e)}
         />
       ))}
-      {error && (
-        <p className="field-error" role="alert">
-          Non riesco ad aprire l’esempio. Controlla la connessione a internet.
-        </p>
-      )}
+      {error && <SpokenError>Non riesco ad aprire l’esempio. Controlla la connessione a internet.</SpokenError>}
       <div className="dialog-actions">
         <BigButton icon="close" label="Chiudi" onClick={onClose} />
       </div>

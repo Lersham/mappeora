@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
 import { OptionCard } from '../../components/OptionCard';
+import { SpokenError } from '../../components/SpokenError';
 import { isNative } from '../../services/platform';
 import { TOUCH } from '../../lib/touch';
 import type { PageCount, Paper } from '../../lib/pagePlan';
@@ -42,12 +43,19 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
   const [pages, setPages] = useState<PageCount>(1);
   const [simple, setSimple] = useState(false);
   const run = (print: boolean) => onExport({ kind, paper, pages, simple, print });
-
   return (
     <Dialog title="Salva e manda" onClose={onClose} className="export-dialog">
       <div className="export-kinds">
         {KINDS.map((k) => (
-          <OptionCard key={k.value} icon={k.icon} name={k.label} description={k.desc} pressed={kind === k.value} onClick={() => setKind(k.value)} />
+          <OptionCard
+            key={k.value}
+            icon={k.icon}
+            name={k.label}
+            description={k.desc}
+            pressed={kind === k.value}
+            disabled={busy}
+            onClick={() => setKind(k.value)}
+          />
         ))}
       </div>
 
@@ -73,7 +81,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
                 </button>
               ))}
             </div>
-            <p className="muted">Fogli verticali. Con più fogli le scritte sono più grandi: si uniscono con lo scotch, uno sotto l’altro o uno accanto all’altro.</p>
+            <p className="muted">Con più fogli le scritte sono più grandi. Per unirli si ritaglia lungo la linea grigia e si attaccano con lo scotch: i pezzi si incastrano e nessun concetto resta diviso.</p>
           </fieldset>
         </>
       )}
@@ -96,11 +104,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
         {kind === 'pdf' && !isNative() && !TOUCH && ' «Stampa» la manda alla stampante.'}
       </p>
 
-      {error && (
-        <p className="field-error" role="alert">
-          Non sono riuscito a preparare il file. Riprova.
-        </p>
-      )}
+      {error && <SpokenError>Non sono riuscito a preparare il file. Riprova.</SpokenError>}
 
       <div className="dialog-actions">
         <BigButton icon="close" label="Annulla" onClick={onClose} />

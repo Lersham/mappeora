@@ -1,6 +1,7 @@
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { SpeechRecognition } from '@capgo/capacitor-speech-recognition';
 import type { PluginListenerHandle } from '@capacitor/core';
+import { spokenWordAt } from '../../lib/spokenWords';
 import { platform } from '../platform';
 import { DEFAULT_LANG, SpeakError, type ListenOptions, type SpeakOptions, type SpeechService, type Voice } from './types';
 
@@ -49,7 +50,10 @@ export class NativeSpeechService implements SpeechService {
     let handle: PluginListenerHandle | undefined;
     if (options.onWord) {
       const onWord = options.onWord;
-      handle = await TextToSpeech.addListener('onRangeStart', ({ start, end }) => onWord(start, end));
+      handle = await TextToSpeech.addListener('onRangeStart', ({ start, end }) => {
+        const word = spokenWordAt(text, start, end);
+        onWord(word.start, word.end);
+      });
     }
     let interrupted!: () => void;
     const stopped = new Promise<void>((resolve) => (interrupted = resolve));

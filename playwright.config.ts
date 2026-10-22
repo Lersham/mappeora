@@ -6,6 +6,9 @@ import { defineConfig, devices } from '@playwright/test';
  * (e2e/fixtures.ts): the suite works offline and gives the same results
  * every time. Voice (speech synthesis and recognition) is simulated too.
  */
+// Cloud sessions have Chromium preinstalled here; elsewhere Playwright's own is used.
+const chromiumLaunch = process.env.PLAYWRIGHT_CHROMIUM_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } : {};
+
 export default defineConfig({
   testDir: 'e2e',
   outputDir: 'e2e/results',
@@ -24,17 +27,21 @@ export default defineConfig({
     serviceWorkers: 'block',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    // Cloud sessions have Chromium preinstalled here; elsewhere Playwright's own is used.
-    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } : {},
   },
   projects: [
     {
       name: 'desktop',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 860 }, permissions: ['clipboard-read', 'clipboard-write'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 860 },
+        permissions: ['clipboard-read', 'clipboard-write'],
+        launchOptions: chromiumLaunch,
+      },
     },
-    { name: 'telefono', use: { ...devices['Pixel 7'] } },
-    // Safari's engine (WebKit) on a tablet: what the iPad runs.
-    { name: 'safari', use: { ...devices['iPad Pro 11'] } },
+    { name: 'telefono', use: { ...devices['Pixel 7'], launchOptions: chromiumLaunch } },
+    // Safari's engine (WebKit): iPad is what schools use, iPhone the small screen.
+    { name: 'ipad', use: { ...devices['iPad (gen 7)'] } },
+    { name: 'iphone', use: { ...devices['iPhone 15'] } },
   ],
   webServer: {
     command: 'npm run build && npx vite preview --port 4173 --strictPort',

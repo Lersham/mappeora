@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { test, expect, spoken } from './fixtures';
 import { addConcept, boxes, holdOn, newMap, node, nodes, onScreen, overlapping, rename, sampleMap, settled, showAll, tapLink, tidyUp, toolbar } from './helpers';
 
@@ -14,7 +14,7 @@ test.describe('Editor', () => {
     await page.getByRole('button', { name: 'Ripeti' }).click();
     await expect(node(page, 'Invertebrati')).toBeVisible();
 
-    // A concept just named is the one in hand: another tap on it would open «Immagine e colore».
+    // A concept just named is the one in hand: another tap on it would open «Nome, colore e immagine».
     await expect(node(page, 'Invertebrati')).toHaveClass(/is-selected/);
     await toolbar(page, 'Elimina');
     await expect(nodes(page)).toHaveCount(2);
@@ -74,12 +74,47 @@ test.describe('Editor', () => {
     expect((await node(page, 'Vapore').boundingBox())!.x).toBeGreaterThan((await node(page, 'Calore del sole').boundingBox())!.x);
   });
 
+  test('col mouse: una manina grande sulla mappa, chiusa mentre la sposti; il doppio clic apre «Nome, colore e immagine», col nome in cima', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'il mouse si prova sul computer');
+    await sampleMap(page);
+    const cursor = (target: Locator) => target.evaluate((el) => getComputedStyle(el).cursor);
+    const pane = page.locator('.react-flow__pane');
+    expect(await cursor(pane)).toMatch(/^url\(.*\) 16 16, grab$/);
+    expect(await cursor(page.locator('.react-flow__node', { has: node(page, 'Vapore') }))).toMatch(/, grab$/);
+    // Moving the map: the hand stays closed, also over the concepts and the lines it passes.
+    const box = (await pane.boundingBox())!;
+    await page.mouse.move(box.x + box.width - 40, box.y + box.height - 40);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width - 140, box.y + box.height - 90, { steps: 5 });
+    expect(await cursor(pane)).toMatch(/, grabbing$/);
+    expect(await cursor(node(page, 'Vapore'))).toMatch(/, grabbing$/);
+    await page.mouse.up();
+    expect(await cursor(pane)).toMatch(/, grab$/);
+
+    await node(page, 'Vapore').dblclick();
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('legend').first()).toHaveText('Nome');
+    const legends = await dialog.locator('legend').allTextContents();
+    expect(legends.indexOf('Nome')).toBeLessThan(legends.indexOf('Colore'));
+    const name = dialog.getByRole('textbox', { name: 'Nome del concetto' });
+    await expect(name).toHaveValue('Vapore');
+    await name.fill('Vapore acqueo');
+    await dialog.getByRole('button', { name: 'Fatto' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(node(page, 'Vapore acqueo')).toBeVisible();
+    // one undo gives the old name back
+    await page.getByRole('button', { name: 'Annulla' }).click();
+    await expect(node(page, /^Vapore$/)).toBeVisible();
+  });
+
   test('«Sposta» lascia i concetti dove li metti, «Riordina» rimette la mappa sul foglio A4', async ({ page, isMobile }) => {
     test.skip(isMobile, 'il trascinamento con il mouse si prova sul computer');
     await sampleMap(page);
     const onSheet = await boxes(page);
     await toolbar(page, 'Sposta');
-    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toHaveCount(0);
+    // it stays on screen, lit up, while the concepts are free
+    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toHaveAttribute('aria-pressed', 'true');
 
     // far to the right of its branch: on the sheet it would snap back
     const neve = (await node(page, 'Neve').boundingBox())!;
@@ -93,7 +128,7 @@ test.describe('Editor', () => {
     expect(moved.x - neve.x).toBeGreaterThan(80);
 
     await tidyUp(page);
-    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toHaveAttribute('aria-pressed', 'false');
     await showAll(page);
     await settled(page);
     const tidy = await boxes(page);
@@ -248,7 +283,7 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Esempi', exact: true }).click();
     await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-    await expect(nodes(page)).toHaveCount(37);
+    await expect(nodes(page)).toHaveCount(39);
     await showAll(page);
     const onScreenPx = (label: string) =>
       node(page, label)
@@ -265,7 +300,7 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Esempi', exact: true }).click();
     await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-    await expect(nodes(page)).toHaveCount(37);
+    await expect(nodes(page)).toHaveCount(39);
     await settled(page);
     const canvas = (await page.locator('.react-flow').boundingBox())!;
     for (const b of await boxes(page)) {
@@ -282,7 +317,7 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Esempi', exact: true }).click();
     await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-    await expect(nodes(page)).toHaveCount(37);
+    await expect(nodes(page)).toHaveCount(39);
     await settled(page);
     const onScreenPx = (label: string) =>
       node(page, label)
@@ -324,7 +359,7 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Esempi', exact: true }).click();
     await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-    await expect(nodes(page)).toHaveCount(37);
+    await expect(nodes(page)).toHaveCount(39);
     await settled(page);
     // Not centred and cut at both ends: the main concept, whole, under the bar.
     const main = node(page, 'La Rivoluzione francese');
@@ -350,9 +385,18 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
 });
 
 test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
+  /** A real finger (CDP, Chromium only) and the zoom of the view. */
+  async function finger(page: Page) {
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', points: { x: number; y: number }[]) =>
+      cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+    const zoom = () => page.locator('.react-flow__viewport').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).a);
+    return { touch, zoom };
+  }
+
   test('sul foglio il dito su un concetto muove la mappa, quello scelto si trascina; «Sposta» libera i concetti', async ({ page, isMobile, browserName }) => {
     test.skip(!isMobile, 'vale per i touch screen');
-    test.skip(browserName === 'webkit', 'il dito passa da CDP, che WebKit non ha');
+    test.skip(browserName !== 'chromium', 'il dito vero (CDP) si simula solo in Chromium: qui lo prova il telefono');
     await sampleMap(page);
     await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
     // No lock to find: on the A4 sheet the concepts stay where the sheet puts them.
@@ -364,9 +408,7 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
     const at = (b: typeof before, label: string) => b.find((x) => x.label === label)!;
     const start = at(before, 'Calore del sole');
     const [x, y] = [start.x + start.w / 2, start.y + start.h / 2];
-    const cdp = await page.context().newCDPSession(page);
-    const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', points: { x: number; y: number }[]) =>
-      cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+    const { touch, zoom } = await finger(page);
     await touch('touchStart', [{ x, y }]);
     for (let i = 1; i <= 8; i++) await touch('touchMove', [{ x: x + i * 5, y: y + i * 12 }]);
     await touch('touchEnd', []);
@@ -379,7 +421,12 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
     }
 
     // The concept in hand, and only it, goes where the finger takes it: before «Calore del sole», in its row.
-    await (await onScreen(page, node(page, 'Vapore'))).click();
+    const tap = await onScreen(page, node(page, 'Vapore'));
+    const far = await zoom();
+    await tap.click();
+    // The map is seen from afar, so a tap brings the branch close, after a short wait: the view
+    // has not moved yet when it looks settled. Let it glide in before measuring (and before the finger goes down).
+    await expect.poll(zoom).toBeGreaterThan(far * 1.5);
     await settled(page);
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(1);
     const [vapore, calore] = [(await node(page, 'Vapore').boundingBox())!, (await node(page, 'Calore del sole').boundingBox())!];
@@ -389,16 +436,93 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
     await touch('touchEnd', []);
     await settled(page);
     expect((await node(page, 'Vapore').boundingBox())!.x).toBeLessThan((await node(page, 'Calore del sole').boundingBox())!.x);
-    // A drag is not a tap on the concept in hand: «Immagine e colore» stays closed.
+    // A drag is not a tap on the concept in hand: «Nome, colore e immagine» stays closed.
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await toolbar(page, 'Sposta');
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(9);
+    // Pressed again, it puts the concepts back on the sheet: only the one in hand moves.
+    await toolbar(page, 'Sposta');
+    await expect.poll(() => page.locator('.react-flow__node.draggable').count()).toBeLessThan(2);
+    // On the phone «Sposta» is in «Altro»: there it is no longer lit.
+    await page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Altro', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Altro' }).getByRole('button', { name: 'Sposta', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('un concetto toccato e subito ripreso per trascinarlo ferma l’avvicinamento del ramo', async ({ page, isMobile, browserName }) => {
+    test.skip(!isMobile, 'vale per i touch screen');
+    test.skip(browserName !== 'chromium', 'il dito vero (CDP) si simula solo in Chromium: qui lo prova il telefono');
+    await sampleMap(page);
+    const { touch, zoom } = await finger(page);
+    const far = await zoom();
+    const vapore = (await (await onScreen(page, node(page, 'Vapore'))).boundingBox())!;
+    const calore = (await node(page, 'Calore del sole').boundingBox())!;
+    const [vx, vy] = [vapore.x + vapore.width / 2, vapore.y + vapore.height / 2];
+
+    // A tap on a map seen from afar starts the branch coming closer after a short wait. The finger
+    // goes back down at once and rests longer than that wait (but less than a hold): the view stays put.
+    await touch('touchStart', [{ x: vx, y: vy }]);
+    await touch('touchEnd', []);
+    await touch('touchStart', [{ x: vx, y: vy }]);
+    await page.waitForTimeout(400);
+    for (let i = 1; i <= 10; i++) await touch('touchMove', [{ x: vx + ((calore.x - 20 - vx) * i) / 10, y: vy }]);
+    expect(await zoom()).toBeCloseTo(far, 3);
+    await touch('touchEnd', []);
+    await settled(page);
+    expect((await node(page, 'Vapore').boundingBox())!.x).toBeLessThan((await node(page, 'Calore del sole').boundingBox())!.x);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('un dito su un concetto mentre il ramo si avvicina ferma la mappa dov’è', async ({ page, isMobile, browserName }) => {
+    test.skip(!isMobile, 'vale per i touch screen');
+    test.skip(browserName !== 'chromium', 'il dito vero (CDP) si simula solo in Chromium: qui lo prova il telefono');
+    // The glide lasts 0.4 s. Its clock (d3-timer reads performance.now) can be slowed down,
+    // so that the finger lands on the way however busy the machine running the test is.
+    await page.addInitScript(() => {
+      const real = performance.now.bind(performance);
+      let [base, from, rate] = [0, 0, 1];
+      performance.now = () => base + (real() - from) * rate;
+      Object.assign(window, { slowMotion: (r: number) => ([base, from, rate] = [performance.now(), real(), r]) });
+    });
+    await sampleMap(page);
+    const { touch, zoom } = await finger(page);
+    const far = await zoom();
+    const vapore = (await (await onScreen(page, node(page, 'Vapore'))).boundingBox())!;
+    const [vx, vy] = [vapore.x + vapore.width / 2, vapore.y + vapore.height / 2];
+
+    // A tap on a map seen from afar: after a short wait the branch starts coming closer, 8 times slower than usual.
+    await page.evaluate(() => (window as unknown as { slowMotion: (r: number) => void }).slowMotion(1 / 8));
+    await touch('touchStart', [{ x: vx, y: vy }]);
+    await touch('touchEnd', []);
+    // As soon as the view moves, the finger goes back down on «Vapore», now in hand, wherever it has got to.
+    const at = await page.waitForFunction(
+      (f) => {
+        if (new DOMMatrix(getComputedStyle(document.querySelector('.react-flow__viewport')!).transform).a <= f * 1.02) return null;
+        const label = [...document.querySelectorAll('.concept-label')].find((el) => el.textContent?.trim() === 'Vapore')!;
+        const b = label.closest('.concept-node')!.getBoundingClientRect();
+        return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+      },
+      far,
+      { polling: 'raf' },
+    );
+    const p = (await at.jsonValue())!;
+    await touch('touchStart', [p]);
+    await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+    const held = await zoom();
+    expect(held).toBeLessThan(far * 1.4);
+    // The view stays where it was stopped, with the finger resting (less than a hold) and dragging.
+    await page.waitForTimeout(300);
+    expect(await zoom()).toBeCloseTo(held, 3);
+    for (let i = 1; i <= 5; i++) await touch('touchMove', [{ x: p.x + i * 8, y: p.y }]);
+    expect(await zoom()).toBeCloseTo(held, 3);
+    await touch('touchEnd', []);
+    await settled(page);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 });
 
 test.describe('Editor: la barra del concetto scelto', () => {
-  /** Chooses a concept that is not the one in hand (a tap on that one opens «Immagine e colore»). */
+  /** Chooses a concept that is not the one in hand (a tap on that one opens «Nome, colore e immagine»). */
   const choose = async (page: Page, label: string) => {
     await page.locator('.react-flow__pane').click({ position: { x: 4, y: 4 } });
     await (await onScreen(page, node(page, label))).click();
@@ -419,6 +543,9 @@ test.describe('Editor: la barra del concetto scelto', () => {
   test('la maniglia ↔ allarga o stringe un concetto; «Annulla» e «Automatica» lo rimettono com’era', async ({ page }) => {
     await sampleMap(page);
     await choose(page, 'Evaporazione');
+    // A map seen from afar (the phone) brings the branch closer a moment after the tap: let the
+    // glide start, so that the grip is measured where it stops and not under a view still moving.
+    await page.waitForTimeout(400);
     const concept = node(page, 'Evaporazione');
     const width = () => concept.evaluate((el) => (el as HTMLElement).offsetWidth); // not on screen: the map may be zoomed
     const before = await width();
@@ -432,10 +559,11 @@ test.describe('Editor: la barra del concetto scelto', () => {
     // The words go on more lines when it is narrower: the height follows.
     await grip.focus();
     const wide = await width();
-    for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowLeft');
-    await expect.poll(width).toBe(wide - 120);
+    // Two steps only: it never gets narrower than its longest word, which is never broken.
+    for (let i = 0; i < 2; i++) await page.keyboard.press('ArrowLeft');
+    await expect.poll(width).toBe(wide - 40);
 
-    for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Annulla' }).click(); // the keys, one step each
+    for (let i = 0; i < 2; i++) await page.getByRole('button', { name: 'Annulla' }).click(); // the keys, one step each
     await expect.poll(width).toBe(wide);
     await page.getByRole('button', { name: 'Annulla' }).click(); // the whole drag at once
     await expect.poll(width).toBeCloseTo(before, 0);
@@ -471,6 +599,44 @@ test.describe('Editor: la barra del concetto scelto', () => {
     await (await choose(page, 'Precipitazione')).getByRole('button', { name: 'Cambia ramo', exact: true }).click();
     await (await onScreen(page, node(page, 'Pioggia'))).click();
     await expect(page.getByRole('alert')).toContainText('è nel ramo di «Precipitazione»');
+    await expect(link(page, 'Precipitazione', 'Pioggia')).toHaveCount(1);
+  });
+
+  test('«Accanto» aggiunge un concetto dopo l’altro sotto lo stesso concetto', async ({ page }) => {
+    await newMap(page, 'Lo Stato');
+    await addConcept(page, 'Lo Stato', 'Popolo');
+    const bar = page.getByRole('toolbar', { name: 'Concetto scelto' });
+    for (const label of ['Territorio', 'Governo', 'Leggi']) {
+      await bar.getByRole('button', { name: 'Concetto accanto' }).click();
+      const input = page.getByRole('textbox', { name: 'Testo del concetto' });
+      await expect(input).toBeFocused();
+      await input.fill(label);
+      await input.press('Enter');
+      await expect(node(page, label)).toBeVisible();
+      await settled(page);
+    }
+    for (const label of ['Popolo', 'Territorio', 'Governo', 'Leggi']) await expect(link(page, 'Lo Stato', label)).toHaveCount(1);
+    // The main concept has nothing to be next to.
+    await expect((await choose(page, 'Lo Stato')).getByRole('button', { name: 'Concetto accanto' })).toHaveCount(0);
+  });
+
+  test('«Collega» unisce due concetti di rami diversi: ognuno resta nel suo ramo', async ({ page }) => {
+    await sampleMap(page);
+    await (await choose(page, 'Nuvole')).getByRole('button', { name: 'Collega', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Tocca il concetto da collegare a «Nuvole»' })).toBeVisible();
+    await (await onScreen(page, node(page, 'Pioggia'))).click();
+    await expect(link(page, 'Nuvole', 'Pioggia')).toHaveCount(1);
+    await expect(link(page, 'Precipitazione', 'Pioggia')).toHaveCount(1);
+    await expect(page.getByRole('toolbar', { name: 'Concetto scelto' })).toBeVisible();
+
+    await (await choose(page, 'Pioggia')).getByRole('button', { name: 'Collega', exact: true }).click();
+    await (await onScreen(page, node(page, 'Nuvole'))).click();
+    await expect(page.getByRole('alert')).toContainText('«Pioggia» e «Nuvole» sono già collegati');
+
+    // The line is not a branch: the whole branch of «Condensazione» goes, «Pioggia» stays.
+    await (await choose(page, 'Condensazione')).getByRole('button', { name: 'Elimina', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Elimina «Condensazione»' }).getByRole('button', { name: /^Tutto il ramo/ }).click();
+    await expect(nodes(page)).toHaveCount(7);
     await expect(link(page, 'Precipitazione', 'Pioggia')).toHaveCount(1);
   });
 
@@ -525,12 +691,73 @@ test.describe('Editor: la barra del concetto scelto', () => {
   });
 });
 
+test.describe('Editor: colori del concetto e delle parole', () => {
+  /** Opens «Nome, colore e immagine» on a concept: one tap chooses it, the next one opens. */
+  async function styleDialog(page: Page, label: string) {
+    const target = await onScreen(page, node(page, label));
+    if (!(await target.evaluate((el) => el.classList.contains('is-selected')))) {
+      await target.click({ delay: 60 });
+      await page.waitForTimeout(600);
+    }
+    await target.click({ delay: 60 });
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
+    await expect(dialog).toBeVisible();
+    return dialog;
+  }
+
+  test('ci sono più colori tra cui scegliere', async ({ page }) => {
+    await newMap(page, 'Gli animali');
+    await settled(page);
+    const dialog = await styleDialog(page, 'Gli animali');
+    await expect(dialog.getByRole('group', { name: 'Colore', exact: true }).getByRole('button')).toHaveCount(14);
+    await dialog.getByRole('button', { name: 'Colore viola' }).click();
+    await dialog.getByRole('button', { name: 'Fatto' }).click();
+    await expect(node(page, 'Gli animali')).toHaveCSS('background-color', 'rgb(212, 184, 255)');
+  });
+
+  test('una sola parola del nome si colora, e resta colorata quando il nome cambia', async ({ page }) => {
+    await newMap(page, 'Il governo');
+    await settled(page);
+    const dialog = await styleDialog(page, 'Il governo');
+    const red = dialog.getByRole('button', { name: 'Colore della parola: rosso' });
+    // No word picked yet: nothing to colour.
+    await expect(red).toBeDisabled();
+    await dialog.getByRole('group', { name: 'Parole del nome' }).getByRole('button', { name: 'governo' }).click();
+    await red.click();
+    await expect(red).toHaveAttribute('aria-pressed', 'true');
+    const colored = node(page, 'Il governo').locator('.concept-label span[style]');
+    await expect(colored).toHaveText('governo');
+    await expect(colored).toHaveCSS('color', 'rgb(183, 28, 28)');
+
+    // A new word in the name: «governo» keeps its colour, the new one has none.
+    const name = dialog.getByRole('textbox', { name: 'Nome del concetto' });
+    await name.fill('Il nuovo governo');
+    await name.press('Enter');
+    await expect(node(page, 'Il nuovo governo').locator('.concept-label span[style]')).toHaveText('governo');
+
+    // «Nero» gives the word back its usual colour.
+    await dialog.getByRole('group', { name: 'Parole del nome' }).getByRole('button', { name: 'governo' }).click();
+    await dialog.getByRole('button', { name: 'Colore della parola: nero' }).click();
+    await dialog.getByRole('button', { name: 'Fatto' }).click();
+    await expect(node(page, 'Il nuovo governo').locator('.concept-label span[style]')).toHaveCount(0);
+  });
+
+  test('un nome di una parola sola si colora con un tocco', async ({ page }) => {
+    await newMap(page, 'Governo');
+    await settled(page);
+    const dialog = await styleDialog(page, 'Governo');
+    await expect(dialog.getByRole('group', { name: 'Parole del nome' })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Colore della parola: blu' }).click();
+    await expect(node(page, 'Governo').locator('.concept-label span[style]')).toHaveCSS('color', 'rgb(13, 71, 161)');
+  });
+});
+
 test.describe('Editor: un tocco per immagine e colore, tenere premuto per rinominare', () => {
-  test('il primo tocco seleziona; un secondo tocco apre «Immagine e colore» subito', async ({ page }) => {
+  test('il primo tocco seleziona; un secondo tocco apre «Nome, colore e immagine» subito', async ({ page }) => {
     await newMap(page, 'Gli animali');
     await settled(page);
     const target = await onScreen(page, node(page, 'Gli animali'));
-    const dialog = page.getByRole('dialog', { name: 'Immagine e colore' });
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
 
     await target.click({ delay: 60 }); // selects
     await page.waitForTimeout(600);
@@ -548,7 +775,7 @@ test.describe('Editor: un tocco per immagine e colore, tenere premuto per rinomi
     await settled(page);
     await rename(page, 'Gli animali', 'I mammiferi');
     await page.waitForTimeout(600);
-    await expect(page.getByRole('dialog', { name: 'Immagine e colore' })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: 'Nome, colore e immagine' })).toHaveCount(0);
     await expect(page.getByRole('textbox', { name: 'Testo del concetto' })).toHaveCount(0);
     // Chosen by the hold itself: «Elimina» is now enabled.
     await expect(node(page, 'I mammiferi')).toHaveClass(/is-selected/);
@@ -575,7 +802,7 @@ test.describe('Editor: un tocco per immagine e colore, tenere premuto per rinomi
     test.skip(!isMobile, 'il tocco vero si prova sul telefono');
     await newMap(page, 'Gli animali');
     await settled(page);
-    const dialog = page.getByRole('dialog', { name: 'Immagine e colore' });
+    const dialog = page.getByRole('dialog', { name: 'Nome, colore e immagine' });
     const field = page.getByRole('textbox', { name: 'Testo del concetto' });
     const target = await onScreen(page, node(page, 'Gli animali'));
 

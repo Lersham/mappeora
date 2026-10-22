@@ -84,6 +84,13 @@ function readImage(v: unknown): MapNode['image'] {
   return undefined;
 }
 
+/** Only word positions and colour codes: nothing else gets into the concept's style. */
+function readWordColors(v: unknown): MapNode['wordColors'] {
+  if (!isObj(v)) return undefined;
+  const colors = Object.entries(v).filter(([at, c]) => /^\d{1,3}$/.test(at) && typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c));
+  return colors.length > 0 ? (Object.fromEntries(colors) as Record<string, string>) : undefined;
+}
+
 function readNode(v: unknown): MapNode | undefined {
   if (!isObj(v) || !isObj(v.position)) return undefined;
   const id = str(v.id, 100);
@@ -99,6 +106,8 @@ function readNode(v: unknown): MapNode | undefined {
   if (image) node.image = image;
   if (v.collapsed === true) node.collapsed = true;
   if (typeof v.width === 'number' && v.width >= NODE_WIDTH.min && v.width <= NODE_WIDTH.max) node.width = Math.round(v.width);
+  const words = readWordColors(v.wordColors);
+  if (words) node.wordColors = words;
   return node;
 }
 
