@@ -58,6 +58,19 @@ export async function onScreen(page: Page, target: Locator): Promise<Locator> {
   return target;
 }
 
+/** Taps the map where there is nothing (no concept, no arrow): what is in hand is let go. */
+export async function tapEmpty(page: Page) {
+  const spot = await page.locator('.react-flow__pane').evaluate((pane) => {
+    const r = pane.getBoundingClientRect();
+    for (let y = 4; y < r.height; y += 12)
+      for (let x = 4; x < r.width; x += 12)
+        if (document.elementFromPoint(r.x + x, r.y + y) === pane) return { x, y };
+    return null;
+  });
+  if (!spot) throw new Error('no empty spot on the map');
+  await page.locator('.react-flow__pane').click({ position: spot });
+}
+
 export const node = (page: Page, text: string | RegExp): Locator =>
   page.locator('.concept-node').filter({ has: page.locator('.concept-label', { hasText: text }) });
 

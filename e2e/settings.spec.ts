@@ -43,13 +43,14 @@ test('Testo grande in stampatello: le parole lunghe di un concetto non vanno a c
   const words = await node(page, 'La precipitazione')
     .locator('.concept-label')
     .evaluate((label) => {
-      // One box per line the word is drawn on.
+      // One box per line the word is drawn on (WebKit adds an empty one where
+      // the line before ends, at the space before the word: not drawn).
       const text = label.firstChild!;
       const at = (label.textContent ?? '').indexOf('precipitazione');
       const range = document.createRange();
       range.setStart(text, at);
       range.setEnd(text, at + 'precipitazione'.length);
-      return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+      return new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top))).size;
     });
   expect(words).toBe(1);
 });
