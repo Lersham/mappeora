@@ -24,7 +24,7 @@ export function parentForNew(map: Graph, selectedId: string | null): string | nu
 
 /** Tab while writing a concept: one under it. Maiusc+Tab: one next to it (under its parent, if it has one). */
 export function parentForNear(map: Graph, id: string, where: 'child' | 'sibling'): string {
-  const parent = where === 'sibling' ? spanningTree(map).forward.find((e) => e.target === id)?.source : undefined;
+  const parent = where === 'sibling' ? spanningTree(map).parent.get(id) : undefined;
   return parent ?? id;
 }
 

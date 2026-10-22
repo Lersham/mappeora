@@ -91,6 +91,15 @@ describe('parentForNear', () => {
     expect(parentForNear(water, 'acqua', 'sibling')).toBe('acqua');
   });
 
+  it('Maiusc+Tab stays in the branch, whatever «Collega» drew later', () => {
+    // concetto is under stato; a cross-link from governo, made later, does not move it
+    const g = {
+      nodes: ['paese', 'governo', 'stato', 'concetto'].map((id) => node(id)),
+      edges: [edge('paese', 'governo'), edge('paese', 'stato'), edge('stato', 'concetto'), edge('governo', 'concetto')],
+    };
+    expect(parentForNear(g, 'concetto', 'sibling')).toBe('stato');
+  });
+
   it('a link back to the main concept does not make it anyone’s sibling', () => {
     const cycle = { nodes: [node('a'), node('b')], edges: [edge('a', 'b'), edge('b', 'a')] };
     expect(parentForNear(cycle, 'a', 'sibling')).toBe('a');

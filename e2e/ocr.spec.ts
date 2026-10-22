@@ -93,10 +93,15 @@ test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', as
   await expect(dialog.locator('.concept-preview .chip')).toHaveText(['Hanno radici robuste']);
 
   // a finger that goes down from a word scrolls back up: the words cover almost all the text
+  // A word in the upper part of the text, on screen (a fixed point may fall in the space between two words).
   const from = await text.evaluate((e) => {
     const r = e.getBoundingClientRect();
-    const word = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 3)?.closest<HTMLElement>('[data-word]')!.getBoundingClientRect();
-    return { x: word!.x + word!.width / 2, y: word!.y + word!.height / 2 };
+    for (const w of e.querySelectorAll<HTMLElement>('[data-word]')) {
+      const b = w.getBoundingClientRect();
+      const p = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+      if (p.y > r.y + r.height / 4 && p.y < r.y + r.height / 2 && document.elementFromPoint(p.x, p.y) === w) return p;
+    }
+    throw new Error('no word on screen');
   });
   const scrolled = await text.evaluate((e) => e.scrollTop);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });

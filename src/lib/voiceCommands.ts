@@ -39,3 +39,30 @@ export function parseVoiceCommand(transcript: string): VoiceCommand | null {
 function capitalize(text: string): string {
   return text.charAt(0).toLocaleUpperCase('it-IT') + text.slice(1);
 }
+
+/** Indovina: what the child can say once the concept is shown. Shown in the dictation card. */
+export const QUIZ_VOICE_HINTS = ['lo sapevo', 'non lo sapevo'];
+
+export type QuizAnswer = 'knew' | 'missed';
+
+// Whole sentences only, matched as written: «sapevo» sits inside «non sapevo»,
+// so a looser match (a word, a prefix) would turn a «no» into a «sì».
+const QUIZ_ANSWERS: Record<string, QuizAnswer> = {
+  'lo sapevo': 'knew',
+  sapevo: 'knew',
+  'non lo sapevo': 'missed',
+  'non sapevo': 'missed',
+};
+
+/**
+ * «Lo sapevo» / «non lo sapevo» said aloud after a concept is shown. Kept apart
+ * from parseVoiceCommand: in the editor those words are just a concept.
+ */
+export function parseQuizAnswer(transcript: string): QuizAnswer | null {
+  const key = transcript
+    .toLowerCase()
+    .replace(/[.!?,;:]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return Object.hasOwn(QUIZ_ANSWERS, key) ? QUIZ_ANSWERS[key] : null;
+}

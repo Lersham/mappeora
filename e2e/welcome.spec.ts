@@ -27,6 +27,47 @@ test.describe('Benvenuto', () => {
     await expect(welcome).toHaveCount(0);
   });
 
+  test('con la tastiera il fuoco resta nel dialogo a ogni pagina, in avanti e indietro', async ({ page }) => {
+    await freshInstall(page);
+    const welcome = page.getByRole('dialog', { name: 'Come funziona' });
+    // The focus is always on a button of the dialog, never dropped on the page.
+    const inside = () => expect(welcome.locator(':focus')).toHaveCount(1);
+    const next = welcome.getByRole('button', { name: /^(Avanti|Inizia)$/ });
+    const back = welcome.getByRole('button', { name: 'Indietro' });
+
+    await welcome.getByRole('button', { name: 'Avanti' }).focus();
+    for (const title of ['Dal libro alla mappa', 'Scrivi o detta', 'Ascolta la mappa', 'Ripassa e personalizza']) {
+      await page.keyboard.press('Enter');
+      await expect(welcome.getByRole('heading', { name: title })).toBeVisible();
+      await inside();
+      // «Avanti» is «Inizia» on the last page: one button, it keeps the focus
+      await expect(next).toBeFocused();
+    }
+    await expect(next).toHaveText('Inizia');
+
+    // «Indietro» is two buttons before «Inizia» («Guarda un esempio» is between)
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Shift+Tab');
+    await expect(back).toBeFocused();
+    for (const title of ['Ascolta la mappa', 'Scrivi o detta', 'Dal libro alla mappa']) {
+      await page.keyboard.press('Enter');
+      await expect(welcome.getByRole('heading', { name: title })).toBeVisible();
+      await inside();
+      await expect(back).toBeFocused();
+    }
+    // back to the first page, «Indietro» is gone: the focus goes to «Avanti», not to the page
+    await page.keyboard.press('Enter');
+    await expect(welcome.getByRole('heading', { name: 'Benvenuto in MappAmi' })).toBeVisible();
+    await expect(back).toHaveCount(0);
+    await inside();
+    await expect(next).toBeFocused();
+    await expect(next).toHaveText('Avanti');
+
+    // and Esc still closes it from there
+    await page.keyboard.press('Escape');
+    await expect(welcome).toHaveCount(0);
+  });
+
   test('si può saltare e riaprire da «Come funziona»', async ({ page }) => {
     await freshInstall(page);
     const welcome = page.getByRole('dialog', { name: 'Come funziona' });

@@ -28,13 +28,24 @@ describe('spanningTree', () => {
     expect(parent.has('solo')).toBe(false);
   });
 
-  it('hangs a concept reached twice from the nearer parent, and keeps the cross-link', () => {
-    // a → b → c, and a shortcut a → c
+  it('hangs a concept reached twice from its first link, as drawn, and keeps the cross-link', () => {
+    // a → b → c, and later a cross-link a → c («Collega»)
     const g = graph(['a', 'b', 'c'], [['a', 'b'], ['b', 'c'], ['a', 'c']]);
     const { depth, parent } = spanningTree(g);
-    expect(depth.get('c')).toBe(1);
-    expect(parent.get('c')).toBe('a');
+    expect(depth.get('c')).toBe(2);
+    expect(parent.get('c')).toBe('b');
     expect(forward(g)).toEqual(['a>b', 'a>c', 'b>c']);
+  });
+
+  it('a cross-link between two branches leaves both where they are', () => {
+    // governo and stato under paese; a cross-link governo → concetto, which is under stato
+    const g = graph(
+      ['paese', 'governo', 'stato', 'concetto'],
+      [['paese', 'governo'], ['paese', 'stato'], ['stato', 'concetto'], ['governo', 'concetto']],
+    );
+    const { depth, parent } = spanningTree(g);
+    expect(parent.get('concetto')).toBe('stato');
+    expect(depth.get('concetto')).toBe(2);
   });
 
   it('leaves out a link back to an ancestor, so the main concept stays on top', () => {

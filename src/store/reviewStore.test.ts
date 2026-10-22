@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { reviewVisibility, ripetimiSummary, useReview } from './reviewStore';
+import { quizSummary, reviewVisibility, ripetimiSummary, useReview } from './reviewStore';
 
 const steps = [
   { nodeId: 'a', text: 'A' },
@@ -71,5 +71,146 @@ describe('review mode', () => {
 
   it('shows every node normally when not reviewing', () => {
     expect(vis('a')).toBe('normal');
+  });
+});
+
+describe('Indovina: knew / did not know', () => {
+  const state = () => useReview.getState();
+  const ids = (r: Record<string, true>) => Object.keys(r);
+
+  it('marks a concept as known or missed, and an answer given again replaces the first', () => {
+    state().start(steps, 'quiz');
+    state().mark('a', true);
+    state().mark('b', false);
+    expect([ids(state().known), ids(state().missed)]).toEqual([['a'], ['b']]);
+    state().mark('b', true);
+    state().mark('a', false);
+    expect([ids(state().known), ids(state().missed)]).toEqual([['b'], ['a']]);
+    // a concept that is not in the review is not counted
+    state().mark('zzz', true);
+    expect(ids(state().known)).toEqual(['b']);
+  });
+
+  it('answer() records the concept in view and goes on to the next one, hidden again', () => {
+    state().start(steps, 'quiz');
+    state().reveal();
+    state().answer(true);
+    expect(state().index).toBe(1);
+    expect(state().revealed).toBe(false);
+    expect([vis('a'), vis('b'), vis('c')]).toEqual(['normal', 'mystery', 'hidden']);
+    state().reveal();
+    state().answer(false);
+    expect([ids(state().known), ids(state().missed)]).toEqual([['a'], ['b']]);
+  });
+
+  it('answer() does nothing until the concept is revealed, or outside Indovina', () => {
+    state().start(steps, 'quiz');
+    state().answer(true);
+    expect([state().index, ids(state().known)]).toEqual([0, []]);
+    state().start(steps, 'passo');
+    state().answer(true);
+    expect([state().index, ids(state().known)]).toEqual([0, []]);
+  });
+
+  it('after the last concept the summary is shown: the whole map, the missed ones ringed', () => {
+    state().start(steps, 'quiz');
+    for (const knew of [true, false, true]) {
+      state().reveal();
+      state().answer(knew);
+    }
+    expect(state().done).toBe(true);
+    expect(state().index).toBe(2);
+    expect([vis('a'), vis('b'), vis('c')]).toEqual(['normal', 'current', 'normal']);
+    // «Indietro» takes the child back to the last concept to answer it again
+    state().prev();
+    expect([state().done, state().index, state().revealed]).toEqual([false, 2, true]);
+    expect(vis('c')).toBe('current');
+  });
+
+  it('a concept skipped with «Avanti» is neither known nor missed', () => {
+    state().start(steps, 'quiz');
+    state().reveal();
+    state().answer(true);
+    state().next();
+    state().reveal();
+    state().answer(false);
+    expect([ids(state().known), ids(state().missed)]).toEqual([['a'], ['c']]);
+    const summary = quizSummary(state());
+    expect(summary).toBe('Ne sapevi 1 su 2. Da rivedere: C.');
+  });
+
+  it('sums up what the child knew, kindly', () => {
+    const base = { steps, known: {}, missed: {} };
+    expect(quizSummary({ ...base, known: { a: true, b: true }, missed: { c: true } })).toBe('Ne sapevi 2 su 3. Da rivedere: C.');
+    expect(quizSummary({ ...base, known: { a: true }, missed: { b: true, c: true } })).toBe('Ne sapevi 1 su 3. Da rivedere: B, C.');
+    expect(quizSummary({ ...base, known: { a: true, b: true, c: true } })).toBe('Perfetto! Li sapevi tutti: 3 su 3.');
+    // never «0 su 3», never a judgement
+    const none = quizSummary({ ...base, missed: { a: true, b: true, c: true } });
+    expect(none).toBe('Nessun problema, ripassando si impara! Da rivedere: A, B, C.');
+    expect(none).not.toMatch(/sbagliat|0 su/i);
+    expect(quizSummary(base)).not.toMatch(/Da rivedere|su 3/);
+    // the words shown can be the concept's name instead of the sentence read aloud
+    expect(quizSummary({ steps: [{ nodeId: 'a', text: 'A è formato da B' }], known: {}, missed: { a: true } }, () => 'B')).toBe(
+      'Nessun problema, ripassando si impara! Da rivedere: B.',
+    );
+  });
+
+  it('a long list of concepts to look at again is cut short, never «e altri 1»', () => {
+    const many = Array.from({ length: 14 }, (_, i) => ({ nodeId: `n${i}`, text: `Concetto ${i + 1}` }));
+    const flags = (from: number, to: number) => Object.fromEntries(many.slice(from, to).map((m) => [m.nodeId, true as const]));
+    // the first n concepts are missed, the rest known
+    const sum = (n: number) => quizSummary({ steps: many, known: flags(n, 14), missed: flags(0, n) });
+    // up to six names are all said: one more name is shorter than «e altri 1»
+    expect(sum(6)).toBe('Ne sapevi 8 su 14. Da rivedere: Concetto 1, Concetto 2, Concetto 3, Concetto 4, Concetto 5, Concetto 6.');
+    expect(sum(7)).toBe('Ne sapevi 7 su 14. Da rivedere: Concetto 1, Concetto 2, Concetto 3, Concetto 4, Concetto 5 e altri 2.');
+    expect(sum(14)).toBe('Nessun problema, ripassando si impara! Da rivedere: Concetto 1, Concetto 2, Concetto 3, Concetto 4, Concetto 5 e altri 9.');
+  });
+
+  it('«Ripassa solo questi» asks again only the missed concepts, the others stay as clues', () => {
+    state().start(steps, 'quiz');
+    for (const knew of [true, false, false]) {
+      state().reveal();
+      state().answer(knew);
+    }
+    state().retryMissed();
+    expect(state().steps.map((st) => st.nodeId)).toEqual(['b', 'c']);
+    expect([state().index, state().revealed, state().done, state().active]).toEqual([0, false, false, true]);
+    expect([ids(state().known), ids(state().missed)]).toEqual([[], []]);
+    expect([vis('a'), vis('b'), vis('c')]).toEqual(['normal', 'mystery', 'hidden']);
+    state().reveal();
+    state().answer(true);
+    state().reveal();
+    state().answer(false);
+    expect(quizSummary(state())).toBe('Ne sapevi 1 su 2. Da rivedere: C.');
+    // and again, with only what is still missed
+    state().retryMissed();
+    expect(state().steps.map((st) => st.nodeId)).toEqual(['c']);
+  });
+
+  it('there is nothing to ask again when nothing was missed', () => {
+    state().start(steps, 'quiz');
+    for (let i = 0; i < 3; i++) {
+      state().reveal();
+      state().answer(true);
+    }
+    state().retryMissed();
+    expect(state().steps).toHaveLength(3);
+    expect(state().done).toBe(true);
+  });
+
+  it('a new review, or leaving it, forgets the answers', () => {
+    state().start(steps, 'quiz');
+    state().mark('a', true);
+    state().mark('b', false);
+    state().start(steps, 'quiz');
+    expect([ids(state().known), ids(state().missed), state().scoped]).toEqual([[], [], false]);
+    state().mark('a', false);
+    state().retryMissed();
+    expect(state().scoped).toBe(true);
+    state().exit();
+    expect([ids(state().known), ids(state().missed), state().scoped, state().done]).toEqual([[], [], false, false]);
+    // a plain start after «Ripassa solo questi» hides the concepts again, as in a first round
+    state().start(steps.slice(0, 1), 'quiz');
+    expect(vis('b')).toBe('hidden');
   });
 });

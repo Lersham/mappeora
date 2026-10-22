@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { roundedPath, sheetLayout } from './sheetLayout';
+import { roundedPath, sheetLayout, splitRoundedPath } from './sheetLayout';
 
 const size = { width: 200, height: 70 };
 
@@ -169,5 +169,43 @@ describe('sheetLayout', () => {
 
   it('draws rounded corners only where the line turns', () => {
     expect(roundedPath([{ x: 0, y: 0 }, { x: 0, y: 50 }, { x: 100, y: 50 }])).toBe('M 0,0 L 0,40 Q 0,50 10,50 L 100,50');
+  });
+
+  describe('splitRoundedPath', () => {
+    // From the parent down to the row line, along it, down into the concept.
+    const line = [{ x: 50, y: 0 }, { x: 50, y: 30 }, { x: 100, y: 30 }, { x: 100, y: 80 }];
+
+    it('il tratto del ramo parte dove inizia la sua curva, con la stessa curva del tronco', () => {
+      const { shared, own } = splitRoundedPath(line, 2);
+      expect(own).toBe('M 90,30 Q 100,30 100,40 L 100,80');
+      // the shared piece reaches the end of that curve, under the colour
+      expect(shared).toBe('M 50,0 L 50,20 Q 50,30 60,30 L 90,30 Q 100,30 100,40');
+      // together they are the plain rounded path
+      expect(roundedPath(line)).toBe('M 50,0 L 50,20 Q 50,30 60,30 L 90,30 Q 100,30 100,40 L 100,80');
+    });
+
+    it('con la curva stretta dal poco spazio, il tratto del ramo e il tronco restano uguali', () => {
+      const near = [{ x: 50, y: 0 }, { x: 50, y: 30 }, { x: 56, y: 30 }, { x: 56, y: 80 }];
+      const { shared, own } = splitRoundedPath(near, 2);
+      expect(own).toBe('M 53,30 Q 56,30 56,33 L 56,80');
+      expect(shared.endsWith('L 53,30 Q 56,30 56,33')).toBe(true);
+    });
+
+    it('sotto il concetto centrale, dove il tronco va dritto, il colore parte dalla linea e non dal tronco comune', () => {
+      // the corner under the parent is a repeat: the line goes straight down
+      const straight = [{ x: 50, y: 0 }, { x: 50, y: 30 }, { x: 50, y: 30 }, { x: 50, y: 80 }];
+      const { shared, own } = splitRoundedPath(straight, 2);
+      expect(own).toBe('M 50,30 L 50,80');
+      expect(shared).toBe('M 50,0 L 50,30');
+    });
+
+    it('in colonna il colore è tutta la linea, senza tronco', () => {
+      const column = [{ x: 50, y: 0 }, { x: 50, y: 40 }];
+      expect(splitRoundedPath(column, 0)).toEqual({ shared: '', own: 'M 50,0 L 50,40' });
+    });
+
+    it('senza un tratto proprio il tronco è tutta la linea', () => {
+      expect(splitRoundedPath(line, line.length)).toEqual({ shared: roundedPath(line), own: '' });
+    });
   });
 });
