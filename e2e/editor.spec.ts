@@ -108,7 +108,7 @@ test.describe('Editor', () => {
     await expect(node(page, /^Vapore$/)).toBeVisible();
   });
 
-  test('«Sposta» lascia i concetti dove li metti, «Riordina» rimette la mappa sul foglio A4', async ({ page, isMobile }) => {
+  test('«Sposta» lascia i concetti dove li metti, anche spento; «Riordina» rimette la mappa sul foglio A4', async ({ page, isMobile }) => {
     test.skip(isMobile, 'il trascinamento con il mouse si prova sul computer');
     await sampleMap(page);
     const onSheet = await boxes(page);
@@ -127,6 +127,16 @@ test.describe('Editor', () => {
     const moved = (await node(page, 'Neve').boundingBox())!;
     expect(moved.x - neve.x).toBeGreaterThan(80);
 
+    // Pressed again, it goes off and «Neve» stays where it was put (measured from «Pioggia»: the view may move).
+    const pioggia = (await node(page, 'Pioggia').boundingBox())!;
+    await toolbar(page, 'Sposta');
+    await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toHaveAttribute('aria-pressed', 'false');
+    await settled(page);
+    const [neveOff, pioggiaOff] = [(await node(page, 'Neve').boundingBox())!, (await node(page, 'Pioggia').boundingBox())!];
+    expect(neveOff.x - pioggiaOff.x).toBeCloseTo(moved.x - pioggia.x, 0);
+    expect(neveOff.y - pioggiaOff.y).toBeCloseTo(moved.y - pioggia.y, 0);
+
+    // Only «Riordina» puts it back on the sheet.
     await tidyUp(page);
     await expect(page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Sposta' })).toHaveAttribute('aria-pressed', 'false');
     await showAll(page);
@@ -447,7 +457,7 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(9);
     // «Sposta» found: the hint is not shown again on this device.
     expect(await page.evaluate(() => localStorage.getItem('mappeora-sposta-hint'))).toBe('3');
-    // Pressed again, it puts the concepts back on the sheet: only the one in hand moves.
+    // Pressed again, the concepts stay where they are and a finger moves the map again: only the one in hand moves.
     await toolbar(page, 'Sposta');
     await expect.poll(() => page.locator('.react-flow__node.draggable').count()).toBeLessThan(2);
     // On the phone «Sposta» is in «Altro»: there it is no longer lit.
