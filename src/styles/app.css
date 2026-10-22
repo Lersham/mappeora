@@ -456,16 +456,14 @@ textarea {
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr); /* a long title must not widen the page */
+  /* Side by side only where a card stays wide enough for its words: with
+     large text one per row, never «Rivolu-zione». min(): a long title must
+     not widen the page. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(300px * var(--text-scale) / 1.15)), 1fr));
   gap: 10px;
 }
-@media (min-width: 640px) {
-  .map-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .map-card.is-latest {
-    grid-column: 1 / -1;
-  }
+.map-card.is-latest {
+  grid-column: 1 / -1;
 }
 .map-card {
   display: flex;
@@ -891,7 +889,12 @@ textarea {
 /* Narrow screens: one row, the map gets the height. «Mappe», «Annulla» and
    «Ripeti» show only their icon (the most familiar ones there are), their
    word stays for screen readers (hidden as .sr-only, not removed: not every
-   button has an aria-label); a long title ends with «…». */
+   button has an aria-label); a long title ends with «…». The same on a
+   tablet whose large text does not fit (measured: see useCrowded). */
+.topbar.is-crowded .big-button {
+  min-width: 44px;
+  padding: 2px 8px;
+}
 @media (max-width: 760px) {
   .topbar .big-button {
     min-width: 44px;
@@ -2287,6 +2290,7 @@ textarea {
 /* Read by screen readers, not shown. In the top bar «Schermo intero» is only
    its icon: with big text its word pushed «Mappe» off the screen. */
 .sr-only,
+.topbar.is-crowded .big-button-label,
 .topbar .icon-only .big-button-label {
   position: absolute;
   width: 1px;

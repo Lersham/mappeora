@@ -5,8 +5,10 @@ import { useSettings } from '../store/settingsStore';
  * Whether a bar's buttons do not all fit on one row. How wide they are
  * depends on the text size, the font and the spacing the child chose, so the
  * bar is measured, not guessed from the screen width. While crowded, the
- * width they needed is remembered: the bar goes back to full only when there
- * is that much room (turning the tablet, a smaller text), never flickering.
+ * window width they needed is remembered: the bar goes back to full only when
+ * the window is that wide (turning the tablet, a smaller text), never
+ * flickering. The window, not the bar: on a tablet the full bar floats and is
+ * narrower than the crowded one, so the bar's own width would flip-flop.
  *
  * Returns the ref for the bar (it may come and go, as during review).
  */
@@ -24,9 +26,9 @@ export function useCrowded(): [(el: HTMLElement | null) => void, boolean] {
     if (!bar) return;
     const check = () => {
       if (!crowded && bar.scrollWidth > bar.clientWidth + 1) {
-        needed.current = bar.scrollWidth;
+        needed.current = bar.scrollWidth + window.innerWidth - bar.clientWidth;
         setCrowded(true);
-      } else if (crowded && bar.clientWidth >= needed.current) setCrowded(false);
+      } else if (crowded && window.innerWidth >= needed.current) setCrowded(false);
     };
     check();
     // The bar when the window changes, its buttons when a font arrives.
