@@ -132,6 +132,9 @@ export function PhotoTextDialog({ mapId, onAdd, onClose }: Props) {
         // Shown small, so an adult can report what went wrong.
         detail: errorDetail(e),
       });
+    } finally {
+      // The reading is over (or cancelled): the photo is no longer shown.
+      if (photo.webPath.startsWith('blob:')) URL.revokeObjectURL(photo.webPath);
     }
   };
 
