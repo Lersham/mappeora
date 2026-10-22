@@ -1,10 +1,12 @@
+import { memo } from 'react';
 import { BaseEdge, type Edge, type EdgeProps } from '@xyflow/react';
 import { EdgeLabel } from './EdgeLabel';
 import { LADDER, labelScale } from '../../lib/ladder';
 import { useSettings } from '../../store/settingsStore';
-import { roundedPath } from '../../lib/sheetLayout';
+import { roundedPath, splitRoundedPath } from '../../lib/sheetLayout';
 import { LinkAdd } from './LinkAdd';
 import { branchClass } from './branchColor';
+import { sameEdgeProps } from './edgeMemo';
 
 export type BusEdgeData = { points: { x: number; y: number }[]; own?: number; branch?: number; column?: boolean; onEdit?: () => void; near?: boolean };
 export type BusFlowEdge = Edge<BusEdgeData, 'bus'>;
@@ -16,7 +18,7 @@ export type BusFlowEdge = Edge<BusEdgeData, 'bus'>;
  * the top of the column runs behind the ones in between). Linking words
  * sit just above the concept.
  */
-export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, interactionWidth }: EdgeProps<BusFlowEdge>) {
+function BusEdgeView({ id, sourceX, sourceY, targetX, targetY, label, data, interactionWidth }: EdgeProps<BusFlowEdge>) {
   const scale = labelScale(useSettings((s) => s.textScale));
   // The first and last bends follow the real connection points, which can
   // be a few pixels off the planned ones while concepts are being measured.
@@ -25,18 +27,20 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
     points[0].x = sourceX;
     points[points.length - 1].x = targetX;
   }
-  const path = roundedPath([...(data?.column ? [] : [{ x: sourceX, y: sourceY }]), ...points, { x: targetX, y: targetY }]);
+  const head = data?.column ? [] : [{ x: sourceX, y: sourceY }];
+  const line = [...head, ...points, { x: targetX, y: targetY }];
   // Several branches share the line along the top: only the last stretch,
   // down into this branch, is a wide target for a tap (linking words).
   const last = points[points.length - 1] ?? { x: sourceX, y: sourceY };
-  // The stretch that belongs to this branch only, in the branch's colour.
-  const own = points.slice(Math.min(data?.own ?? points.length, points.length));
+  // The stretch that belongs to this branch only is in the branch's colour.
+  // It is cut from the very same rounded line, from where its corner starts:
+  // drawn apart it would run straight past the grey curve.
+  const ownFrom = Math.min(data?.own ?? points.length, points.length);
+  const split = ownFrom < points.length && data?.branch !== undefined ? splitRoundedPath(line, head.length + ownFrom) : undefined;
   return (
     <>
-      <BaseEdge id={id} path={path} interactionWidth={0} />
-      {own.length > 0 && data?.branch !== undefined && (
-        <path d={roundedPath([...own, { x: targetX, y: targetY }])} className={`react-flow__edge-path ${branchClass(data.branch)}`} fill="none" />
-      )}
+      {(!split || split.shared) && <BaseEdge id={id} path={split ? split.shared : roundedPath(line)} interactionWidth={0} />}
+      {split && <path d={split.own} className={`react-flow__edge-path ${branchClass(data!.branch)}`} fill="none" />}
       <path
         d={`M ${last.x},${last.y} L ${targetX},${targetY}`}
         className="react-flow__edge-interaction"
@@ -61,3 +65,5 @@ export function BusEdge({ id, sourceX, sourceY, targetX, targetY, label, data, i
     </>
   );
 }
+
+export const BusEdge = memo(BusEdgeView, sameEdgeProps);

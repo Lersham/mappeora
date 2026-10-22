@@ -13,6 +13,7 @@ import {
   type Edge,
   type EdgeChange,
   type NodeChange,
+  type XYPosition,
 } from '@xyflow/react';
 import { useStore } from 'zustand';
 import { beginStep, endStep, mapHistory, untracked, useMapStore } from '../../store/mapStore';
@@ -22,7 +23,7 @@ import { FreeEdge } from './FreeEdge';
 import { BusEdge } from './BusEdge';
 import { TreeEdge } from './TreeEdge';
 import { sheetLayout, type SheetResult } from '../../lib/sheetLayout';
-import { labelScale } from '../../lib/ladder';
+import { DEFAULT_SIZE, labelScale } from '../../lib/ladder';
 import { useSettings } from '../../store/settingsStore';
 import { NodeStyleDialog } from './NodeStyleDialog';
 import { LinkWordDialog } from './LinkWordDialog';
@@ -46,13 +47,15 @@ import { branchOf as branchIds, cannotMoveUnder, childrenOf } from '../../lib/br
 import { layoutOf, templateInfo } from '../../lib/templates';
 import { NEW_MAP_TITLE } from '../../lib/mapFactory';
 import { DEFAULT_COLOR, branchColors } from '../../lib/palette';
-import type { ConceptMap, MapNode } from '../../types/map';
+import { closeUpView, MAX_READ_ZOOM, MIN_ZOOM, pageView as pageViewOf, READABLE_PX, revealView } from './camera';
+import { closeUpGroup, isUntouchedNewMap, movedPositions, paintedBranches, parentForNear, parentForNew as parentFor, sheetAnchor, stillInPlace } from './concepts';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 import { useBackHandler } from '../../lib/backButton';
 import { motion } from '../../lib/motion';
 import { TOUCH } from '../../lib/touch';
 import { MAP_ARIA_LABELS, edgeAriaLabel, spokenLabel } from './a11yLabels';
 import { SaveProblemNotice } from './SaveProblemNotice';
+import { UpdateNotice } from './UpdateNotice';
 import { OptionCard } from '../../components/OptionCard';
 import { TutorialCoach } from '../tutorial/TutorialCoach';
 import { TUTORIAL_STEPS, type TutorialProgress, type TutorialTarget, type TutorialTool } from '../tutorial/steps';
@@ -60,24 +63,39 @@ import { Icon } from '../../components/Icon';
 
 const nodeTypes = { concept: ConceptNode };
 
-/** Names smaller than this on screen (px) are brought closer when tapped. */
-const READABLE_PX = 12;
-/** …to this size, comfortable to read on a phone. */
-const COMFORT_PX = 16;
-const MAX_READ_ZOOM = 1.2;
-/** The farthest the map can be seen from. */
-const MIN_ZOOM = 0.05;
-
-/** Where a new concept goes when none is selected: under the main one. */
-function mainConcept(map: ConceptMap, hidden: Set<string>): MapNode | undefined {
-  const visible = map.nodes.filter((n) => !hidden.has(n.id));
-  const targets = new Set(map.edges.map((e) => e.target));
-  return visible.find((n) => n.shape === 'ellisse') ?? visible.find((n) => !targets.has(n.id)) ?? visible[0];
-}
-
 /** A failed share sheet the child closed is not an error. */
 const isCancel = (e: unknown) => e instanceof Error && /cancel/i.test(e.message);
 const edgeTypes: EdgeTypes = { bus: BusEdge, free: FreeEdge, tree: TreeEdge };
+
+/**
+ * How a cross-link («Collega») is drawn on a sheet. To a concept wholly
+ * beside it, from side to side. Otherwise from the bottom-left to the
+ * other's left; towards a concept higher up from the left too: from the
+ * bottom it would loop behind its own box. A line that crosses other
+ * concepts goes over them: behind, its pieces would seem to link those.
+ */
+function crossLink(positions: Record<string, XYPosition>, sizes: Record<string, { width: number; height: number }>, source: string, target: string) {
+  const from = positions[source];
+  const to = positions[target];
+  if (!from || !to) return { sourceHandle: 's-spine', targetHandle: 't-left' };
+  const size = (id: string) => sizes[id] ?? DEFAULT_SIZE;
+  const centre = (p: XYPosition, id: string) => ({ x: p.x + size(id).width / 2, y: p.y + size(id).height / 2 });
+  const [a, b] = [centre(from, source), centre(to, target)];
+  const crosses = Object.entries(positions).some(([id, p]) => {
+    if (id === source || id === target) return false;
+    const { width, height } = size(id);
+    for (let t = 0; t <= 1; t += 1 / 32) {
+      const x = a.x + (b.x - a.x) * t;
+      const y = a.y + (b.y - a.y) * t;
+      if (x > p.x && x < p.x + width && y > p.y && y < p.y + height) return true;
+    }
+    return false;
+  });
+  const over = crosses ? { zIndex: 1001 } : {};
+  if (to.x >= from.x + size(source).width) return { sourceHandle: 's-right', targetHandle: 't-left', ...over };
+  if (to.x + size(target).width <= from.x) return { sourceHandle: 's-left', targetHandle: 't-right', ...over };
+  return { sourceHandle: to.y < from.y ? 's-left' : 's-spine', targetHandle: 't-left', ...over };
+}
 
 /** Class names, leaving out the empty ones. */
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
@@ -173,8 +191,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     window.clearTimeout(noticeTimer.current);
     noticeTimer.current = window.setTimeout(() => setNotice((now) => (now === text ? null : now)), 5000);
   };
-  /** «Cambia ramo»: the next concept tapped is the one to put it under. */
-  const [picking, setPicking] = useState<{ from: string } | null>(null);
+  /**
+   * «Cambia ramo» and «Collega»: the next concept tapped is the one to put
+   * it under, or to draw a line to.
+   */
+  const [picking, setPicking] = useState<{ from: string; mode: 'ramo' | 'collega' } | null>(null);
   const [dialog, setDialog] = useState<DialogState>(initialDialog ? { kind: initialDialog } : null);
   const [tutorialStep, setTutorialStep] = useState<number | null>(tutorial ? 0 : null);
   /** The tutorial coloured the map only to show how: it ends white, as it began («Annulla» brings the colours back). */
@@ -209,7 +230,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // Only a concept on screen can be the one in hand.
   const selectedNode = map.nodes.find((n) => n.id === selectedId && !collapse.hidden.has(n.id));
   // A link back to the main concept doesn't give a «−» that would hide nothing.
-  const parents = useMemo(() => new Set(spanningTree(map).forward.map((e) => e.source)), [map.nodes, map.edges]);
+  const tree = useMemo(() => spanningTree(map), [map.nodes, map.edges]);
+  const parents = useMemo(() => new Set(tree.forward.map((e) => e.source)), [tree]);
 
   const dragging = useRef(false);
   // While a concept is in hand the lines stay as they were: the new sheet
@@ -225,25 +247,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     // Not worked out again at every frame of a drag: nothing would show it.
     if (dragging.current && held.current) return held.current;
     const part = visiblePart(map);
-    const targets = new Set(part.edges.map((e) => e.target));
-    const roots = part.nodes.filter((n) => !targets.has(n.id));
-    const first = (roots.length ? roots : part.nodes).reduce<MapNode | undefined>(
-      (best, n) => (!best || n.position.y < best.position.y || (n.position.y === best.position.y && n.position.x < best.position.x) ? n : best),
-      undefined,
-    );
-    return sheetLayout(part.nodes, part.edges, sizes, first?.position, scale);
+    return sheetLayout(part.nodes, part.edges, sizes, sheetAnchor(part), scale);
   }, [sheetMode, map, sizes, scale, dragTick]);
 
   // Keep the sheet in order after every change (adding, deleting,
   // collapsing, dropping a dragged concept). Not an edit by the child, so
   // it stays out of the undo history.
   const shown = held.current ?? sheet;
-  // A white map is white all over: a branch's line and border take its colour
-  // only once its first concept has one («Colora i rami», or by hand).
-  const painted = useMemo(() => {
-    const colors = new Map(map.nodes.map((n) => [n.id, n.color ?? DEFAULT_COLOR]));
-    return new Set(Object.entries(shown?.heads ?? {}).filter(([id]) => colors.get(id) !== DEFAULT_COLOR).map(([, b]) => b));
-  }, [map.nodes, shown]);
+  const painted = useMemo(() => paintedBranches(map.nodes, shown?.heads ?? {}), [map.nodes, shown]);
   const paint = (branch?: number) => (branch !== undefined && painted.has(branch) ? branch : undefined);
   // A drop on a sheet is recorded once the sheet has put the concept in its
   // place: a concept that snaps back leaves no empty undo step.
@@ -256,11 +267,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       endStep();
     };
     if (!sheet || review.active) return finishDrop();
-    const moved = Object.entries(sheet.positions).filter(([id, p]) => {
-      const n = map.nodes.find((x) => x.id === id);
-      return n && (Math.abs(n.position.x - p.x) > 0.5 || Math.abs(n.position.y - p.y) > 0.5);
-    });
-    if (moved.length > 0) untracked(() => actions.applyPositions(Object.fromEntries(moved), { auto: true }));
+    const moved = movedPositions(map.nodes, sheet.positions);
+    if (Object.keys(moved).length > 0) untracked(() => actions.applyPositions(moved, { auto: true }));
     finishDrop();
   }, [sheet, dragTick, review.active]);
 
@@ -314,6 +322,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         data: {
           label: n.label,
           color: n.color,
+          wordColors: n.wordColors,
           shape: n.shape,
           image: n.image,
           width: n.width,
@@ -360,16 +369,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       if (sheetTemplate && !shown) return { ...base, type: 'free', data: { onEdit: onEdit(e.id), near } }; // placed by hand
       return {
         ...base,
+        ...(shown && { className: 'concept-edge cross-link', ...crossLink(shown.positions, sizes, e.source, e.target) }),
         type: 'tree',
         data: { onEdit: onEdit(e.id), near },
-        // A cross-link on a sheet. Towards a concept higher up it leaves from
-        // the left too: from the bottom it would loop behind its own box.
-        ...(shown && { sourceHandle: shown.positions[e.target]?.y < shown.positions[e.source]?.y ? 's-left' : 's-spine', targetHandle: 't-left' }),
         labelBgPadding: [8, 4] as [number, number],
         labelBgBorderRadius: 6,
       };
     });
-  }, [map.edges, nodeNames, shown, painted, sheetTemplate, review.active, secret, selectedId, locked]);
+  }, [map.edges, nodeNames, shown, painted, sheetTemplate, review.active, secret, selectedId, locked, sizes]);
 
   const onNodesChange = useCallback((changes: NodeChange<ConceptFlowNode>[]) => {
     const s = useMapStore.getState();
@@ -397,10 +404,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
   const parentForNew = () => {
     const { map: current, selectedId: selected } = useMapStore.getState();
-    if (!current) return null;
-    const hidden = collapseInfo(current).hidden;
-    if (selected && current.nodes.some((n) => n.id === selected) && !hidden.has(selected)) return selected;
-    return mainConcept(current, hidden)?.id ?? null;
+    return current ? parentFor(current, selected) : null;
   };
 
   /** Size on screen (px) of a concept's name at the current zoom, and at zoom 1. */
@@ -429,42 +433,19 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     return { x: p, top: p, bottom: `${Math.max(p * box.height, hidden)}px` as const };
   };
 
-  /**
-   * A sheet is tall. On a screen wider than it is tall (a computer, a
-   * Chromebook, a tablet held sideways) the whole map fits the height: two
-   * empty bands at its sides and names too small to read. Then the map is
-   * shown as wide as the screen, from the top, like a page: the rest is a
-   * scroll away. Null when the whole map reads fine, or when the screen is
-   * no wider than the sheet (a phone, a tablet held upright: no bands, and
-   * a tap brings a branch close). `mustFit`: only when the whole map cannot
-   * be seen even from afar.
-   */
+  /** The map seen like a page, when it needs it (see camera.ts). */
   const pageView = (mustFit = false) => {
     const box = document.querySelector('.react-flow')?.getBoundingClientRect();
     const visible = getNodes().filter((n) => !n.hidden);
     if (!box || visible.length === 0) return null;
-    const b = getNodesBounds(visible);
-    const px = Math.min(...visible.map((n) => textOnScreen(n.id).px));
-    const pad = 32;
-    const whole = Math.min(MAX_READ_ZOOM, (box.width - pad * 2) / b.width, (box.height - pad * 2) / b.height);
-    const wide = Math.min(MAX_READ_ZOOM, (box.width - pad * 2) / b.width);
-    const top = (zoom: number) => ({ x: (box.width - b.width * zoom) / 2 - b.x * zoom, y: pad - b.y * zoom, zoom });
-    // Too big to be seen whole even from afar (large text on a phone): from
-    // the top, where the main concept is, not centred and cut at both ends.
-    if (whole < MIN_ZOOM) return top(Math.max(MIN_ZOOM, wide));
-    if (mustFit || px * whole >= READABLE_PX) return null;
-    // The screen, not the map's area: on a phone the guide takes the lower
-    // half and leaves the map a strip wider than it is tall, and a page view
-    // there hid the branches under the tools of the concept in hand.
-    if (window.innerWidth <= window.innerHeight) return null;
-    if (wide >= whole * 1.5) return top(wide);
-    // A map wider than the screen (a sheet spread in rows): names that can
-    // be read, from the top and around the main concept; the rest is a
-    // scroll away. A phone sees all of it, and a tap brings a branch close.
-    const zoom = Math.min(MAX_READ_ZOOM, COMFORT_PX / px);
-    const head = visible.reduce((a, n) => (n.position.y < a.position.y ? n : a));
-    const centre = head.position.x + (head.measured?.width ?? 0) / 2;
-    return { x: box.width / 2 - centre * zoom, y: pad - b.y * zoom, zoom };
+    return pageViewOf({
+      area: box,
+      bounds: getNodesBounds(visible),
+      concepts: visible,
+      textPx: Math.min(...visible.map((n) => textOnScreen(n.id).px)),
+      landscape: window.innerWidth > window.innerHeight,
+      mustFit,
+    });
   };
 
   const fromTopIfTooBig = () => {
@@ -472,40 +453,14 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     if (page) void setViewport(page);
   };
 
-  /** True while the view is the one `showMap` chose: nothing has moved it since. */
-  const shownWhole = useRef(false);
-  /** How many of the views `showMap` chose are still on their way. */
-  const fitting = useRef(0);
-
   /** After «Riordina», a review: the page view if the map needs it, else all of it. */
   const showMap = (delay: number) =>
     setTimeout(() => {
+      following.current = true;
       const page = pageView();
-      fitting.current++;
-      const shown = page ? setViewport(page, { duration: motion(400) }) : fitView({ padding: fitPadding(0.2), duration: motion(400) });
-      void shown.then(() => {
-        fitting.current--;
-        shownWhole.current = true;
-      });
+      if (page) void setViewport(page, { duration: motion(400) });
+      else void fitView({ padding: fitPadding(0.2), duration: motion(400) });
     }, delay);
-
-  // The map's area gets shorter under a view just chosen (on a phone the
-  // guide below grows by a line, «Ben fatto!»): the concepts at the bottom
-  // went under the tools of the one in hand. The same view, chosen again.
-  useEffect(() => {
-    const flow = document.querySelector('.react-flow');
-    if (!flow) return;
-    let height = flow.getBoundingClientRect().height;
-    const observer = new ResizeObserver(() => {
-      const now = flow.getBoundingClientRect().height;
-      if (Math.abs(now - height) < 1) return;
-      height = now;
-      // Also while the view is still on its way: it was aimed at the old height.
-      if (shownWhole.current || fitting.current > 0) showMap(0);
-    });
-    observer.observe(flow);
-    return () => observer.disconnect();
-  }, []);
 
   // Opening a map: its concepts take their final size bit by bit (pictures
   // load, the sheet makes room for them), and a view worked out at the
@@ -526,6 +481,34 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   }, [measured, sizes, map.nodes]);
   const touch = () => void (touched.current = true);
 
+  // The map's area can change size after the view was made for it: in the
+  // guide «Ben fatto!» adds a line below the map, and the last branch ended
+  // up under the tools of the concept in hand. Until the child moves the map
+  // or adds to it, that view follows the area.
+  const following = useRef(false);
+  const showMapNow = useRef(showMap);
+  showMapNow.current = showMap;
+  useEffect(() => void (following.current = false), [map.nodes.length]);
+  useEffect(() => {
+    const flow = document.querySelector('.editor .react-flow');
+    if (!flow) return;
+    let last = flow.getBoundingClientRect();
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver(() => {
+      const box = flow.getBoundingClientRect();
+      if (Math.abs(box.width - last.width) < 1 && Math.abs(box.height - last.height) < 1) return;
+      last = box;
+      if (!following.current) return;
+      clearTimeout(t);
+      t = showMapNow.current(100);
+    });
+    observer.observe(flow);
+    return () => {
+      observer.disconnect();
+      clearTimeout(t);
+    };
+  }, []);
+
   /**
    * A new concept can land outside the visible part of the map: once the
    * layout has placed it, move the view just enough to show it. One about
@@ -536,51 +519,17 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       const n = getInternalNode(id);
       const box = document.querySelector('.react-flow')?.getBoundingClientRect();
       if (!n || n.hidden || !box) return;
-      const { x, y, zoom } = getViewport();
       const { width = 180, height = 72 } = n.measured;
-      const p = n.internals.positionAbsolute;
-      const text = textOnScreen(id);
-      const tooSmall = readable && text.onScreen < READABLE_PX;
-      const [left, top] = [p.x * zoom + x, p.y * zoom + y];
-      const m = 24;
       // The bars floating over the map (on a wide screen, the toolbar; the
       // tools of the concept in hand) hide what is under them.
       const bottom = Math.min(
         box.height,
         ...[...document.querySelectorAll('.editor.has-dock .dock, .selection-bar')].map((el) => el.getBoundingClientRect().top - box.top),
       );
-      if (!tooSmall && left >= m && top >= m && left + width * zoom <= box.width - m && top + height * zoom <= bottom - m) return;
-      const z = tooSmall ? Math.min(MAX_READ_ZOOM, COMFORT_PX / text.px) : zoom;
-      void setCenter(p.x + width / 2, p.y + height / 2, { zoom: z, duration: motion(300) });
+      const concept = { ...n.internals.positionAbsolute, width, height };
+      const to = revealView(concept, getViewport(), { width: box.width, bottom }, textOnScreen(id).px, readable);
+      if (to) void setCenter(to.x, to.y, { zoom: to.zoom, duration: motion(300) });
     }, 150);
-
-  /** The concepts of `id`'s branch: on a sheet, from the branch's first concept down. */
-  const branchOf = (id: string): string[] => {
-    const current = useMapStore.getState().map;
-    if (!current) return [id];
-    const below = new Map<string, string[]>();
-    const above = new Map<string, string>();
-    for (const e of spanningTree(current).forward) {
-      if (above.has(e.target)) continue;
-      above.set(e.target, e.source);
-      below.set(e.source, [...(below.get(e.source) ?? []), e.target]);
-    }
-    let head = id;
-    if (shown) {
-      while (shown.roles[head] === 'item' && !(head in shown.heads) && above.has(head)) head = above.get(head)!;
-      if (shown.roles[head] === 'root') return [head];
-    }
-    const out: string[] = [];
-    const visit = (n: string) => {
-      if (out.includes(n)) return;
-      out.push(n);
-      // Without a sheet: the concept and the ones right under it.
-      if (!shown && n !== id) return;
-      for (const c of below.get(n) ?? []) visit(c);
-    };
-    visit(head);
-    return out;
-  };
 
   /**
    * On a map seen from afar (a phone, a long map) the names are too small
@@ -599,23 +548,16 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       const text = textOnScreen(id);
       const box = document.querySelector('.react-flow')?.getBoundingClientRect();
       if (text.onScreen >= READABLE_PX || !box) return;
-      const want = Math.min(MAX_READ_ZOOM, COMFORT_PX / text.px);
-      const boxes = branchOf(id).flatMap((b) => {
+      const current = useMapStore.getState().map;
+      const group = current ? closeUpGroup(current, id, shown) : [id];
+      const boxes = group.flatMap((b) => {
         const n = getInternalNode(b);
         if (!n || n.hidden) return [];
         const { width = 180, height = 72 } = n.measured;
         return [{ id: b, x: n.internals.positionAbsolute.x, y: n.internals.positionAbsolute.y, width, height }];
       });
-      const self = boxes.find((b) => b.id === id);
-      if (!self) return;
-      const left = Math.min(...boxes.map((b) => b.x));
-      const top = Math.min(...boxes.map((b) => b.y));
-      const right = Math.max(...boxes.map((b) => b.x + b.width));
-      const bottom = Math.max(...boxes.map((b) => b.y + b.height));
-      const pad = 24;
-      const fit = Math.min(MAX_READ_ZOOM, (box.width - pad * 2) / (right - left), (box.height - pad * 2) / (bottom - top));
-      if (fit >= want) void setCenter((left + right) / 2, (top + bottom) / 2, { zoom: fit, duration: motion(400) });
-      else void setCenter(self.x + self.width / 2, self.y + self.height / 2, { zoom: want, duration: motion(400) });
+      const to = closeUpView(boxes, id, box, text.px);
+      if (to) void setCenter(to.x, to.y, { zoom: to.zoom, duration: motion(400) });
     }, 350);
   };
 
@@ -630,9 +572,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   /** Tab while writing a concept: one under it. Maiusc+Tab: one next to it. */
   const addNear = (id: string, where: 'child' | 'sibling') => {
     const current = useMapStore.getState().map;
-    if (!current) return;
-    const parent = where === 'sibling' ? spanningTree(current).forward.find((e) => e.target === id)?.source : undefined;
-    addConcept(undefined, parent ?? id);
+    if (current) addConcept(undefined, parentForNear(current, id, where));
   };
 
   /**
@@ -689,8 +629,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       // any concept moved since.
       const now = useMapStore.getState().map;
       if (!now || now.id !== current.id) return;
-      const before = new Map(current.nodes.map((n) => [n.id, n.position]));
-      const fresh = Object.fromEntries(Object.entries(carryHidden(current, positions)).filter(([id]) => now.nodes.find((n) => n.id === id)?.position === before.get(id)));
+      const fresh = stillInPlace(carryHidden(current, positions), current, now);
       if (followUp) untracked(() => actions.applyPositions(fresh));
       else actions.applyPositions(fresh);
       // Give React Flow a frame to render the new positions before fitting.
@@ -722,9 +661,8 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     beginStep();
     // A map just made and still empty: the first word chosen is its main
     // concept and its title, the others hang from it.
-    const [root] = map.nodes;
-    if (map.nodes.length === 1 && map.title === NEW_MAP_TITLE && root.label === NEW_MAP_TITLE && concepts.length > 0) {
-      actions.updateNode(root.id, { label: concepts[0] });
+    if (isUntouchedNewMap(map) && concepts.length > 0) {
+      actions.updateNode(map.nodes[0].id, { label: concepts[0] });
       actions.setTitle(concepts[0]);
       rest = concepts.slice(1);
     }
@@ -910,13 +848,21 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   const editing = !review.active;
 
   const labelOf = (id: string) => useMapStore.getState().map?.nodes.find((n) => n.id === id)?.label ?? '';
-  /** Where «Cambia ramo» puts the concept: the one tapped on the map. */
+  /** Where «Cambia ramo» puts the concept, or what «Collega» links it to: the one tapped on the map. */
   const pickTarget = (id: string) => {
     const pick = picking;
     setPicking(null);
     if (!pick || id === pick.from) return;
     const current = useMapStore.getState().map;
     if (!current) return;
+    if (pick.mode === 'collega') {
+      const linked = current.edges.some((e) => (e.source === pick.from && e.target === id) || (e.source === id && e.target === pick.from));
+      if (linked) return showNotice(`«${labelOf(pick.from)}» e «${labelOf(id)}» sono già collegati.`);
+      // A line only: each concept stays in its own branch.
+      actions.connect(pick.from, id);
+      setTimeout(() => actions.select(pick.from));
+      return;
+    }
     const why = cannotMoveUnder(current, pick.from, id);
     if (why === 'below') return showNotice(`«${labelOf(id)}» è nel ramo di «${labelOf(pick.from)}»: scegli un concetto fuori dal ramo.`);
     if (why === 'already') return showNotice(`«${labelOf(pick.from)}» è già sotto «${labelOf(id)}».`);
@@ -926,7 +872,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     setTimeout(() => actions.select(pick.from));
     reveal(pick.from);
   };
-  // Esc, or the back button, puts «Cambia ramo» away.
+  // Esc, or the back button, puts «Cambia ramo» and «Collega» away.
   useBackHandler(() => setPicking(null), picking !== null);
   useEffect(() => {
     if (!picking) return;
@@ -969,17 +915,20 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   // then where it stays on the sheet.
   const moreTools: (ComponentProps<typeof BigButton> & { key: string })[] = [
     { key: 'photo', icon: 'camera', label: 'Dal libro', className: 'group-start', onClick: () => setDialog({ kind: 'photo' }) },
-    ...(sheetMode
+    // It stays on screen, lit up while the concepts are free: pressed again,
+    // it puts them back on the sheet, as «Riordina» does.
+    ...(sheetTemplate
       ? [
           {
             key: 'layout',
             icon: 'hand' as const,
             label: 'Sposta',
-            title: 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.',
+            title: sheetMode
+              ? 'Metti i concetti dove vuoi. «Riordina» rimette la mappa a misura di foglio A4.'
+              : 'Stai mettendo i concetti dove vuoi. Premi di nuovo per rimetterli sul foglio A4.',
+            'aria-pressed': !sheetMode,
             className: 'group-start',
-            onClick: () => {
-              actions.setFreeLayout(true);
-            },
+            onClick: () => actions.setFreeLayout(sheetMode),
           },
         ]
       : []),
@@ -988,7 +937,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       icon: 'tidy',
       label: 'Riordina',
       title: sheetTemplate ? 'Rimetti la mappa in ordine, a misura di foglio A4. I colori restano come sono.' : 'Rimetti la mappa in ordine. I colori restano come sono.',
-      className: sheetMode ? undefined : 'group-start',
+      className: sheetTemplate ? undefined : 'group-start',
       onClick: tidyAndOffer,
       disabled: arranging,
     },
@@ -1036,12 +985,20 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       className={`editor${picking ? ' is-picking' : ''}${review.active ? ' is-reviewing' : ''}${locked ? ' is-locked' : ''}${focusMode ? ' is-focus' : ''}${crowded || tutorialStep !== null ? '' : ' has-dock'}`}
       onPointerDownCapture={(e) => {
         touch();
-        // A press anywhere but on a concept (a button, the map) is something
-        // else: the branch tapped a moment ago no longer comes closer.
-        if (!(e.target as Element).closest('.react-flow__node')) cancelCloser();
+        if ((e.target as Element).closest('.react-flow')) following.current = false;
+        // Any press, on a concept too, stops the branch tapped a moment ago from
+        // coming closer: the view must not glide under a finger that may be about
+        // to drag. If the press turns out to be a tap, onNodeClick starts it again.
+        cancelCloser();
+        // A glide already under way stops where it is. On the empty map d3-zoom
+        // does it, but a concept that can be dragged is out of its reach (nopan).
+        if ((e.target as Element).closest('.react-flow__node.draggable')) void setViewport(getViewport());
       }}
       onKeyDownCapture={touch}
-      onWheelCapture={touch}
+      onWheelCapture={() => {
+        touch();
+        following.current = false;
+      }}
     >
       <header ref={topbarRef} className={cx('topbar', topbarCrowded && 'is-crowded')}>
         <BigButton icon="back" label="Mappe" aria-label="Mappe" title="Mappe" onClick={onBack} />
@@ -1112,7 +1069,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           }}
           onPaneClick={() => {
             cancelCloser();
-            // Tapping the empty map puts «Cambia ramo» away, nothing else.
+            // Tapping the empty map puts «Cambia ramo» or «Collega» away, nothing else.
             if (picking) return setPicking(null);
             actions.select(null);
           }}
@@ -1130,6 +1087,15 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
             const i = review.order[node.id];
             if (i !== undefined) review.goTo(i);
           }}
+          // With a mouse, a double click opens the concept's window (the second
+          // click usually does already, but not when the first one was still
+          // being turned into a selection).
+          onNodeDoubleClick={(e, node) => {
+            if (!editing || picking || (e.target as Element).closest('button, textarea, input')) return;
+            cancelCloser();
+            actions.select(node.id);
+            setDialog({ kind: 'style' });
+          }}
           onEdgeClick={(_, edge) => editing && setDialog({ kind: 'link', edgeId: edge.id })}
           nodesDraggable={editing && !locked}
           // Lines come from the tree itself («Cambia ramo»): no dots to drag new ones.
@@ -1146,7 +1112,6 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           nodeDragThreshold={6}
           fitView
           fitViewOptions={{ padding: 0.3, maxZoom: MAX_READ_ZOOM }}
-          onMoveStart={() => void (shownWhole.current = false)}
           minZoom={MIN_ZOOM}
           // The wheel and two fingers on a touchpad scroll the sheet, like a
           // page; Ctrl + wheel, a pinch and the buttons zoom.
@@ -1178,8 +1143,10 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           // Everything about the concept in hand, in one place.
           <div className="selection-bar" role="toolbar" aria-label="Concetto scelto">
             <BigButton icon="edit" label="Nome" onClick={() => useMapStore.getState().startEditing(selectedNode.id)} />
+            {tree.parent.has(selectedNode.id) && <BigButton icon="plus" label="Accanto" aria-label="Concetto accanto" onClick={() => addNear(selectedNode.id, 'sibling')} />}
             <BigButton icon="image" label="Immagine" className={target('immagine')} onClick={() => setDialog({ kind: 'style' })} />
-            <BigButton icon="branch" label="Cambia ramo" className={target('cambia-ramo')} onClick={() => setPicking({ from: selectedNode.id })} />
+            <BigButton icon="join" label="Collega" onClick={() => setPicking({ from: selectedNode.id, mode: 'collega' })} />
+            <BigButton icon="branch" label="Cambia ramo" className={target('cambia-ramo')} onClick={() => setPicking({ from: selectedNode.id, mode: 'ramo' })} />
             <BigButton icon="trash" label="Elimina" variant="danger" className={target('elimina')} onClick={() => deleteConcept(selectedNode.id)} />
           </div>
         )}
@@ -1203,7 +1170,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         )}
         {picking && (
           <div className="pick-banner" role="status">
-            <p>{`Tocca il concetto sotto cui mettere «${labelOf(picking.from)}».`}</p>
+            <p>
+              {picking.mode === 'collega'
+                ? `Tocca il concetto da collegare a «${labelOf(picking.from)}».`
+                : `Tocca il concetto sotto cui mettere «${labelOf(picking.from)}».`}
+            </p>
             <button type="button" className="pick-banner-close" aria-label="Esci" title="Esci" onClick={() => setPicking(null)}>
               <Icon name="close" />
             </button>
@@ -1269,6 +1240,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
 
       <div className="editor-notices">
         <SaveProblemNotice />
+        {editing && !focusMode && tutorialStep === null && <UpdateNotice />}
         {notice && (
           <div className="editor-notice" role="alert">
             <span>{notice}</span>

@@ -37,7 +37,25 @@ test.describe('Lettura, ripasso e voce', () => {
     await node(page, 'La fotosintesi avviene nelle foglie verdi').getByRole('button', { name: /^Leggi:/ }).click();
     await expect
       .poll(() => page.evaluate(() => (window as unknown as { __lit: string[] }).__lit), { timeout: 15_000 })
-      .toEqual(['La', 'fotosintesi', 'avviene', 'nelle', 'foglie', 'verdi']);
+      .toEqual(['La fotosintesi', 'avviene', 'nelle foglie', 'verdi']);
+  });
+
+  test('gli articoli si illuminano insieme alla parola che accompagnano, anche se la voce li dice a parte', async ({ page }) => {
+    await newMap(page, 'Il governo approva le leggi');
+    await page.evaluate(() => ((window as unknown as { __wordMs: number }).__wordMs = 600));
+    await node(page, 'Il governo approva le leggi').click();
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as { __lit: string[] }).__lit = seen;
+      new MutationObserver(() => {
+        const text = document.querySelector('.spoken-word')?.textContent;
+        if (text && seen[seen.length - 1] !== text) seen.push(text);
+      }).observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
+    await node(page, 'Il governo approva le leggi').getByRole('button', { name: /^Leggi:/ }).click();
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __lit: string[] }).__lit), { timeout: 15_000 })
+      .toEqual(['Il governo', 'approva', 'le leggi']);
   });
 
   test('ripasso «Un passo alla volta»: i concetti compaiono uno per volta', async ({ page }) => {

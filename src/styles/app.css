@@ -70,10 +70,11 @@ textarea {
   touch-action: manipulation;
   transition: background-color 0.12s;
 }
-.big-button:hover:not(:disabled) {
+.big-button:hover:not(:disabled, [aria-disabled='true']) {
   background: var(--tint-strong);
 }
-.big-button:disabled {
+.big-button:disabled,
+.big-button[aria-disabled='true'] {
   opacity: 0.4;
   cursor: default;
 }
@@ -81,7 +82,7 @@ textarea {
   background: var(--primary);
   color: var(--primary-text);
 }
-.big-button.primary:hover:not(:disabled) {
+.big-button.primary:hover:not(:disabled, [aria-disabled='true']) {
   background: color-mix(in srgb, var(--primary) 85%, #000);
 }
 .big-button.danger {
@@ -156,9 +157,9 @@ textarea {
 .home-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap; /* large text: the buttons go under the name */
-  gap: 8px 12px;
+  justify-content: flex-start; /* the buttons sit right after the name, not pushed to the far edge */
+  flex-wrap: wrap; /* phone, large text: the whole group goes under the name */
+  gap: 0 12px;
 }
 .home-brand {
   display: flex;
@@ -194,7 +195,7 @@ textarea {
   gap: 8px;
   min-width: 0;
   min-height: 44px;
-  padding: 4px 14px;
+  padding: 4px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
@@ -210,6 +211,12 @@ textarea {
   line-height: 1.3;
 }
 @media (max-width: 520px) {
+  .home-header {
+    column-gap: 12px;
+  }
+  .home-brand {
+    font-size: 1.2rem; /* «MappAmi» in big text must still fit a 320 px screen */
+  }
   .home-brand img {
     width: 38px;
     height: 38px;
@@ -638,6 +645,36 @@ textarea {
   transform: translateX(-50%);
   width: min(560px, calc(100% - 32px));
 }
+.update-check {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+.update-check p {
+  margin: 0;
+}
+/* Good news, not a problem: the colours of the list's «Nuova versione». */
+.update-notice {
+  flex-wrap: wrap;
+  border-color: var(--focus);
+  border-left-width: 6px;
+  background: color-mix(in srgb, var(--highlight) 22%, var(--surface));
+  color: var(--text);
+}
+.update-notice p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.update-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.update-notice .big-button {
+  flex-direction: row;
+  min-height: 48px;
+  padding: 6px 16px;
+}
 .save-problem {
   flex-wrap: wrap;
 }
@@ -685,6 +722,20 @@ textarea {
 .toolbar .big-button:not(.primary),
 .review-bar .big-button:not(.primary) {
   background: transparent;
+}
+/* A tool that stays on («Sposta»): lit up, so the child sees it is working. */
+.toolbar .big-button[aria-pressed='true'],
+.more-grid .big-button[aria-pressed='true'] {
+  border: 2px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface));
+  font-weight: 700;
+}
+@media (forced-colors: active) {
+  .toolbar .big-button[aria-pressed='true'],
+  .more-grid .big-button[aria-pressed='true'] {
+    border-color: Highlight;
+    outline: 3px solid Highlight;
+  }
 }
 /* The word beside its icon: the top bar is one thin row, and the height it
    leaves goes to the map (a tablet held sideways has little of it). */
@@ -923,7 +974,7 @@ textarea {
   font-size: 0.85rem;
   white-space: nowrap;
 }
-/* Phones: the five tools share the width, each word under its icon, like the
+/* Phones: the tools share the width, each word under its icon, like the
    toolbar below; the zoom buttons go up out of their way. */
 @media (max-width: 699px) {
   .selection-bar {
@@ -995,6 +1046,17 @@ textarea {
 }
 .is-picking .react-flow__node {
   cursor: crosshair;
+}
+/* With a mouse, a big hand with a white border (lucide «hand» and «grab»):
+   the system one is small and easy to lose while the map moves. While the
+   map or a concept is being moved it stays closed, whatever passes under it. */
+.editor .react-flow__pane.draggable,
+.editor:not(.is-picking) .react-flow__node.draggable {
+  cursor: url('../assets/cursor/grab.svg') 16 16, grab;
+}
+.editor .react-flow__pane.dragging,
+.editor .react-flow:has(.react-flow__pane.dragging, .react-flow__node.dragging) * {
+  cursor: url('../assets/cursor/grabbing.svg') 16 16, grabbing !important;
 }
 .is-picking .react-flow__node:hover .concept-node {
   outline: 3px dashed var(--primary);
@@ -1140,6 +1202,10 @@ textarea {
 .react-flow__edge-path.branch-line.branch-3 { stroke: var(--branch-3); }
 .react-flow__edge-path.branch-line.branch-4 { stroke: var(--branch-4); }
 .react-flow__edge-path.branch-line.branch-5 { stroke: var(--branch-5); }
+/* A cross-link («Collega») is not a branch: dashed, so the tree still reads. */
+.react-flow__edge.cross-link .react-flow__edge-path {
+  stroke-dasharray: 8 6;
+}
 /* The points lines start and end at: never seen, new lines come from the
    tree («Cambia ramo»), not from dragging a dot. Stronger than React Flow's
    own .connectionindicator, or the hidden dots would still catch a finger. */
@@ -1179,22 +1245,16 @@ textarea {
 
 /* ---------- Concept node ---------- */
 
-/* The smallest concept; set on React Flow's box, which the concept fills. */
-.react-flow__node-concept {
-  min-width: 140px;
-}
-
 .concept-node {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  /* Grows with the text size, so long words still fit on one line. */
-  max-width: min(calc(260px * var(--text-scale) / 1.15), 80vw);
-  /* Wins over max-width: on a phone with large text the box gets as wide
-     as its longest word (even past the screen) rather than breaking it. */
-  min-width: min-content;
+  min-width: 140px;
+  /* Grows with the text size: wide enough for a name of a few words on one
+     line, and for long words never to be cut. */
+  max-width: min(calc(320px * var(--text-scale) / 1.15), 80vw);
   padding: 14px 18px;
   --node-border: rgba(0, 0, 0, 0.25);
   border: 3px solid var(--node-border);
@@ -1216,7 +1276,9 @@ textarea {
   outline-offset: 3px;
 }
 .concept-node.shape-ellisse {
-  border-radius: 999px;
+  /* Round ends that never reach the words: a fully round end on a tall
+     concept (a picture and two lines) cut across its last line. */
+  border-radius: 40px / 50%;
   padding-left: 28px;
   padding-right: 28px;
 }
@@ -1227,7 +1289,7 @@ textarea {
    out, like a title and its headings; the branch's in the colour of its lines. */
 .concept-node.sheet-root {
   --node-border: #1f2430;
-  max-width: min(calc(340px * var(--text-scale) / 1.15), 80vw);
+  max-width: min(calc(400px * var(--text-scale) / 1.15), 80vw);
   padding: 16px 26px;
   border-width: 4px;
 }
@@ -1264,7 +1326,8 @@ textarea {
   font-weight: 600;
   white-space: pre-wrap;
   overflow-wrap: break-word;
-  hyphens: auto;
+  /* A word cut in two with a dash is hard to read: whole words only. */
+  hyphens: manual;
 }
 .concept-input {
   /* Its words have at least the room the name had (the frame goes into
@@ -1342,6 +1405,12 @@ textarea {
     border-radius: 20px 20px 0 0;
     padding-bottom: calc(var(--card-pad) + env(safe-area-inset-bottom));
     animation: sheet-up 0.18s ease-out;
+  }
+  .overlay.is-sheet > .dialog-card {
+    padding-bottom: 0;
+  }
+  .overlay.is-sheet > .dialog-card > :last-child {
+    padding-bottom: calc(var(--card-pad) + env(safe-area-inset-bottom));
   }
 }
 @keyframes sheet-up {
@@ -1518,22 +1587,45 @@ textarea {
   font-size: min(1.4rem, 6vw);
   overflow-wrap: break-word;
 }
-.overlay-card > .dialog-actions {
-  /* Keep "Crea" / "Fatto" reachable in long dialogs on small screens. */
-  position: sticky;
-  bottom: calc(-1 * var(--card-pad));
-  margin: 16px calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));
+/* Keep "Crea" / "Fatto" reachable in long dialogs on small screens: the
+   words scroll above them, and never slide under them. */
+.overlay-card.dialog-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+.dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--card-pad);
+}
+.dialog-card > .dialog-actions {
+  flex: none;
   padding: 12px var(--card-pad) var(--card-pad);
-  background: var(--surface);
+  border-top: 1px solid var(--line);
 }
 /* A phone on its side: kept at the bottom, the buttons would cover nearly
-   all the window. They come after the words instead. */
+   all the window. They come after the words instead, and all scrolls. */
 @media (max-height: 480px) {
-  .overlay-card > .dialog-actions {
-    position: static;
+  .overlay-card.dialog-card {
+    overflow-y: auto;
+  }
+  .dialog-card > .dialog-body {
+    flex: none;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+  .dialog-card > .dialog-actions {
+    border-top: none;
   }
 }
 .overlay-card fieldset {
+  /* A fieldset is as wide as its widest content by default: a text field
+     inside it would push the card sideways with large text. */
+  min-inline-size: 0;
   border: none;
   padding: 0;
   margin: 16px 0 0;
@@ -1764,8 +1856,19 @@ textarea {
 .listenable > div {
   flex: 1;
 }
-.export-kinds .option-card {
+/* Tablets and computers: a wider card, with the three kinds side by side
+   when they fit (the text scale makes them wrap sooner). */
+.overlay-card.export-dialog {
+  width: min(calc(820px * var(--text-scale) / 1.15), 100%);
+}
+.export-kinds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(calc(12rem * var(--text-scale) / 1.15), 100%), 1fr));
+  gap: 8px;
   margin-bottom: 8px;
+}
+.export-kinds .option-card {
+  margin: 0;
 }
 .print-frame {
   position: fixed;
@@ -1777,9 +1880,13 @@ textarea {
 
 /* ---------- Node images ---------- */
 
+/* A picture is never wider than its concept: made narrower by hand, the
+   concept shrinks it instead of letting it stick out of its border. */
 .concept-picto {
   width: 72px;
-  height: 72px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
   object-fit: contain;
   background: #ffffff;
   border-radius: 10px;
@@ -1788,7 +1895,9 @@ textarea {
 
 .concept-illustration {
   width: 72px;
-  height: 72px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
   object-fit: contain;
   pointer-events: none;
 }
@@ -1796,8 +1905,9 @@ textarea {
   /* The whole picture, also when taken upright (a page of the book). */
   width: auto;
   height: auto;
-  max-width: 140px;
+  max-width: min(140px, 100%);
   max-height: 160px;
+  object-fit: contain;
   border-radius: 10px;
   pointer-events: none;
 }
@@ -1870,8 +1980,28 @@ textarea {
   font-weight: 600;
   font-size: min(1.1rem, 4.5vw);
 }
+/* The yellow alone is 1.2:1 on the light papers (WCAG 1.4.11), and in the
+   Indovina summary the ring is the only cue for the concepts past «e altri N»:
+   the outer line is --primary, 3:1 or more on every paper. Not --focus: the
+   keyboard ring is that colour, and a concept in focus would look unringed. */
 .concept-node.review-current {
-  box-shadow: 0 0 0 6px var(--highlight);
+  box-shadow: 0 0 0 4px var(--highlight), 0 0 0 8px var(--primary);
+}
+/* The keyboard ring goes past the ring (8px, then a gap), not over it. */
+.react-flow__node:focus-visible > .concept-node.review-current {
+  outline-offset: 11px;
+}
+/* Forced colours drop shadows, and one outline is all a concept has: the ring
+   is a frame of its own, so the keyboard ring keeps the outline. */
+@media (forced-colors: active) {
+  .concept-node.review-current::before {
+    content: '';
+    position: absolute;
+    inset: -9px;
+    border: 4px solid Highlight;
+    border-radius: inherit;
+    pointer-events: none;
+  }
 }
 .concept-node.review-dim {
   opacity: 0.4;
@@ -2285,15 +2415,6 @@ textarea {
     padding: 4px 6px;
   }
 }
-/* A short phone (an iPhone is 659 px inside Safari): a long step would leave
-   the map a strip that the tools of the concept in hand cover whole. The
-   text scrolls instead, and «Ascolta» reads all of it. */
-@media (max-width: 900px) and (max-height: 720px) {
-  .tutorial-text {
-    max-height: 22vh;
-    overflow-y: auto;
-  }
-}
 /* The button the tutorial asks for. */
 .topbar .tutorial-target,
 .toolbar .tutorial-target,
@@ -2317,4 +2438,56 @@ textarea {
   .react-flow__controls .tutorial-target {
     animation: none;
   }
+}
+
+/* Indovina: «Lo sapevo» and «Non lo sapevo» are the two big buttons, side by
+   side and alike (a frame, no colour that judges), above the usual bar. */
+.quiz-answers {
+  justify-content: center;
+  padding-block: 8px;
+}
+.editor .review-bar.quiz-answers .big-button {
+  flex: 1 1 0;
+  max-width: 260px;
+  min-height: 64px;
+  padding-inline: 8px;
+  border: 2px solid var(--primary);
+}
+.editor .review-bar.quiz-answers .quiz-voice {
+  flex: 0 1 28%;
+  max-width: 140px;
+  border-color: var(--line);
+}
+.review-bar.quiz-answers .big-button-label {
+  font-size: min(1rem, 4.2vw);
+  white-space: normal;
+  text-align: center;
+}
+.quiz-text {
+  font-size: min(1.15rem, 5.5vw);
+}
+.quiz-summary {
+  max-height: 30vh;
+  overflow-y: auto;
+}
+/* The answers take the focus when they appear and the summary can be tabbed to (see QuizBar): the ring goes inside, as the bar's edge would clip it. */
+.quiz-answers:focus-visible,
+.quiz-summary:focus-visible {
+  outline-offset: -3px;
+}
+.review-bar .quiz-again {
+  flex: 2 1 0;
+}
+.review-bar .quiz-again .big-button-label {
+  white-space: normal;
+  text-align: center;
+}
+
+/* A word of the name, in the concept's colours: how it will look. */
+.word-pick {
+  font-weight: 600;
+}
+.color-swatch:disabled {
+  opacity: 0.35;
+  cursor: default;
 }

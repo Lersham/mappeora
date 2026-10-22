@@ -1,7 +1,8 @@
+import { memo } from 'react';
 import { BaseEdge, useInternalNode, type Edge, type EdgeProps, type InternalNode } from '@xyflow/react';
 import { EdgeLabel } from './EdgeLabel';
-
 import { LinkAdd } from './LinkAdd';
+import { sameEdgeProps } from './edgeMemo';
 
 export type FreeEdgeData = { onEdit?: () => void; near?: boolean };
 export type FreeFlowEdge = Edge<FreeEdgeData, 'free'>;
@@ -26,7 +27,7 @@ const centre = (node: InternalNode) => ({
  * Concepts placed by hand: a straight line between the two boxes, from
  * whichever side faces the other concept, with the linking words halfway.
  */
-export function FreeEdge({ id, source, target, label, data, interactionWidth }: EdgeProps<FreeFlowEdge>) {
+function FreeEdgeView({ id, source, target, label, data, interactionWidth }: EdgeProps<FreeFlowEdge>) {
   const [from, to] = [useInternalNode(source), useInternalNode(target)];
   if (!from || !to) return null;
   const a = borderPoint(from, centre(to));
@@ -52,3 +53,5 @@ export function FreeEdge({ id, source, target, label, data, interactionWidth }: 
     </>
   );
 }
+
+export const FreeEdge = memo(FreeEdgeView, sameEdgeProps);

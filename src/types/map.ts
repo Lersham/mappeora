@@ -27,6 +27,8 @@ export interface MapNode {
   width?: number;
   /** Hides the concepts below this one (see lib/collapse.ts). */
   collapsed?: boolean;
+  /** Words written in a colour of their own: the word's position in the name ("0", "1"…) → colour. */
+  wordColors?: Record<string, string>;
 }
 
 export interface MapEdge {

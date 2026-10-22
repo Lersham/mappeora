@@ -132,6 +132,9 @@ export function PhotoTextDialog({ mapId, onAdd, onClose }: Props) {
         // Shown small, so an adult can report what went wrong.
         detail: errorDetail(e),
       });
+    } finally {
+      // The reading is over (or cancelled): the photo is no longer shown.
+      if (photo.webPath.startsWith('blob:')) URL.revokeObjectURL(photo.webPath);
     }
   };
 
@@ -210,8 +213,8 @@ export function PhotoTextDialog({ mapId, onAdd, onClose }: Props) {
         {step.kind === 'reading' && (
           <div className="ocr-progress" aria-live="polite">
             <img src={step.photo} alt="" className="ocr-thumb" />
-            <p>Sto leggendo la pagina…</p>
-            <div className="progress-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={step.progress === null ? undefined : Math.round(step.progress * 100)}>
+            <p id="ocr-reading">Sto leggendo la pagina…</p>
+            <div className="progress-bar" role="progressbar" aria-labelledby="ocr-reading" aria-valuemin={0} aria-valuemax={100} aria-valuenow={step.progress === null ? undefined : Math.round(step.progress * 100)} aria-valuetext={step.progress === null ? undefined : `${Math.round(step.progress * 100)} per cento`}>
               <div className={`progress-fill${step.progress === null ? ' indeterminate' : ''}`} style={step.progress === null ? undefined : { width: `${Math.round(step.progress * 100)}%` }} />
             </div>
             <BigButton icon="stop" label="Annulla" onClick={cancelReading} />

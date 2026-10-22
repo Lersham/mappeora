@@ -21,6 +21,8 @@ let pending: ConceptMap | null = null;
 let timer: ReturnType<typeof setTimeout> | undefined;
 /** Writes one after the other: an older copy never lands after a newer one. */
 let chain: Promise<void> = Promise.resolve();
+/** Number of the last write queued: a failed older one is not tried again, the newer one has the changes. */
+let queued = 0;
 /** The version of each map this tab last read or wrote. */
 const known = new Map<string, number>();
 let slotId: string | null = null;
@@ -100,7 +102,11 @@ function writeSlot() {
   }
 }
 
-async function write(map: ConceptMap) {
+async function write(map: ConceptMap, seq: number) {
+  // Not `updatedAt`: «Annulla» brings back an older one on purpose.
+  const keep = () => {
+    if (seq === queued) pending ??= map;
+  };
   if (useSaveStatus.getState().problem === 'conflict') {
     pending ??= map;
     return;
@@ -109,7 +115,7 @@ async function write(map: ConceptMap) {
     const stored = await storage().get(map.id);
     const base = known.get(map.id);
     if (stored && base !== undefined && stored.updatedAt > base) {
-      pending ??= map;
+      keep();
       setProblem('conflict');
       return;
     }
@@ -119,7 +125,7 @@ async function write(map: ConceptMap) {
     if (useSaveStatus.getState().problem === 'error') setProblem(null);
   } catch {
     // Kept for the next try (the next change, «Riprova», leaving the map).
-    pending ??= map;
+    keep();
     setProblem('error');
   }
 }
@@ -132,7 +138,10 @@ export async function flushAutosave(): Promise<boolean> {
     clearTimeout(timer);
     const map = pending;
     pending = null;
-    if (map) chain = chain.then(() => write(map));
+    if (map) {
+      const seq = ++queued;
+      chain = chain.then(() => write(map, seq));
+    }
     await chain;
     if (useSaveStatus.getState().problem !== null) return false;
     if (pending === null) return true;

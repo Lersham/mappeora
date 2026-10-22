@@ -1,3 +1,4 @@
+import { spokenWordAt, spokenWords } from '../../lib/spokenWords';
 import { DEFAULT_LANG, preferredVoice, type ListenOptions, type SpeakOptions, type SpeechService, type Voice } from './types';
 
 // The Web Speech recognition API is still prefixed in Chrome/Safari and
@@ -99,13 +100,13 @@ export class WebSpeechService implements SpeechService {
       // of the time each word takes, until the voice reports a real one.
       let reported = false;
       let guess: ReturnType<typeof setTimeout> | undefined;
-      const words = [...text.matchAll(/\S+/g)];
+      const words = spokenWords(text);
       const estimate = (i: number) => {
         if (reported || i >= words.length || mine !== this.generation || !options.onWord) return;
-        const [word] = words[i];
-        const at = words[i].index ?? 0;
-        options.onWord(at, at + word.length);
-        guess = setTimeout(() => estimate(i + 1), wordMs(word) / (options.rate ?? 1));
+        const { start, end } = words[i];
+        options.onWord(start, end);
+        const ms = text.slice(start, end).split(/\s+/).reduce((sum, word) => sum + wordMs(word), 0);
+        guess = setTimeout(() => estimate(i + 1), ms / (options.rate ?? 1));
       };
       const stopGuessing = () => clearTimeout(guess);
       utterance.onstart = () => estimate(0);
@@ -115,7 +116,8 @@ export class WebSpeechService implements SpeechService {
         stopGuessing();
         // Some engines omit charLength: fall back to the next whitespace.
         const end = e.charLength ? e.charIndex + e.charLength : nextWordEnd(text, e.charIndex);
-        options.onWord(e.charIndex, end);
+        const word = spokenWordAt(text, e.charIndex, end);
+        options.onWord(word.start, word.end);
       };
       utterance.onend = () => {
         stopGuessing();

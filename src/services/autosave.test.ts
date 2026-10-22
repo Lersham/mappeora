@@ -5,12 +5,12 @@ import { useMapStore } from '../store/mapStore';
 import { flushAutosave, recovered, showMap, startAutosave, useSaveStatus } from './autosave';
 
 const db = new Map<string, ConceptMap>();
-const broken = { yes: false };
+const broken = { yes: false, failNext: 0 };
 vi.mock('./storage', () => ({
   storage: () => ({
     get: async (id: string) => db.get(id),
     save: async (map: ConceptMap) => {
-      if (broken.yes) throw new Error('full');
+      if (broken.yes || broken.failNext-- > 0) throw new Error('full');
       db.set(map.id, map);
     },
   }),
@@ -27,6 +27,7 @@ function openNew() {
 
 beforeEach(() => {
   broken.yes = false;
+  broken.failNext = 0;
   showMap(null);
 });
 
@@ -67,5 +68,18 @@ describe('autosave', () => {
     await recovered();
     expect(db.get(map.id)?.title).toBe('Nuova');
     expect(localStorage.getItem('mappeora-unsaved')).toBe(null);
+  });
+
+  it('a failed older save does not come back over a newer one that went through', async () => {
+    const map = openNew();
+    broken.failNext = 1;
+    useMapStore.getState().setTitle('A1');
+    const first = flushAutosave();
+    useMapStore.getState().setTitle('A2');
+    const second = flushAutosave();
+    await Promise.all([first, second]);
+    await flushAutosave();
+    expect(db.get(map.id)?.title).toBe('A2');
+    expect(useSaveStatus.getState().problem).toBe(null);
   });
 });

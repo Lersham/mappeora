@@ -62,11 +62,11 @@ Per ogni casella: ✅, ❌ con una nota, oppure «lenta» con i secondi misurati
   - senza internet (su Android si usa il riconoscimento sul dispositivo, se c'è l'italiano offline);
   - con un permesso negato.
 - **«Dal libro»** con foto vere: un libro sul banco con la luce della finestra, una fotocopia, un quaderno a righe (la scrittura a mano non è supportata: deve dirlo con chiarezza).
-- **Gesti sul concetto** (un tocco sul concetto scelto apre «Immagine e colore»; tenerlo premuto mezzo secondo e alzare il dito apre il nome). Non sono mai stati provati su un dispositivo fisico, solo con un tocco emulato in Chromium:
+- **Gesti sul concetto** (un tocco sul concetto scelto apre «Nome, colore e immagine»; tenerlo premuto mezzo secondo e alzare il dito apre il nome). Non sono mai stati provati su un dispositivo fisico, solo con un tocco emulato in Chromium:
   - iPad e iPhone (Safari): la tastiera compare quando si alza il dito? Il menu o la lente di ingrandimento del testo non compaiono sul concetto?
   - Android, app e Chrome: stessa domanda; nessun menu del browser dopo la pressione.
-  - Mouse (computer, Chromebook): tenere premuto funziona come sul touch.
-  - Un tocco lento sul concetto scelto apre il dialogo quando non si voleva? Se succede spesso, valutare di spostare «Immagine e colore» sulla pressione prolungata.
+  - Mouse (computer, Chromebook): tenere premuto funziona come sul touch; il doppio clic apre «Nome, colore e immagine».
+  - Un tocco lento sul concetto scelto apre il dialogo quando non si voleva? Se succede spesso, valutare di spostare «Nome, colore e immagine» sulla pressione prolungata.
 - **Prestazioni:**
   - sul telefono economico, la mappa d'esempio (37 concetti) e una da 130 concetti;
   - trascinare, aggiungere, leggere;

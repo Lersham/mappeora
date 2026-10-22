@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_COLOR, NODE_COLORS, branchColors } from './palette';
+import { COLOR_NAMES, DEFAULT_COLOR, MORE_COLORS, NODE_COLORS, TEXT_COLOR, TEXT_COLORS, TEXT_COLOR_NAMES, branchColors } from './palette';
 
 const at = (id: string, x: number, y: number) => ({ id, position: { x, y } });
 const link = (source: string, target: string) => ({ id: `${source}-${target}`, source, target });
@@ -23,5 +23,29 @@ describe('branchColors', () => {
     expect(colors.solo).not.toBe(colors.a);
     expect(colors.solo).not.toBe(DEFAULT_COLOR);
     expect(branchColors([], [])).toEqual({});
+  });
+});
+
+describe('word colours', () => {
+  const luminance = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contrast = (a: string, b: string) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  it('every coloured word can be read on every concept colour', () => {
+    for (const text of TEXT_COLORS) {
+      for (const background of [...NODE_COLORS, ...MORE_COLORS, DEFAULT_COLOR]) {
+        expect(contrast(text, background), `${text} su ${background}`).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it('every colour has a name to read aloud', () => {
+    for (const c of [...NODE_COLORS, ...MORE_COLORS, DEFAULT_COLOR]) expect(COLOR_NAMES[c]).toBeTruthy();
+    for (const c of [...TEXT_COLORS, TEXT_COLOR]) expect(TEXT_COLOR_NAMES[c]).toBeTruthy();
   });
 });

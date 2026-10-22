@@ -79,7 +79,7 @@ export const nodes = (page: Page): Locator => page.locator('.concept-node');
 /** Adds a concept under `parent` and names it: a new concept opens ready for typing. */
 export async function addConcept(page: Page, parent: string, label: string) {
   const target = await onScreen(page, node(page, parent));
-  // «Concetto» adds under the concept in hand: tapping it again would open «Immagine e colore».
+  // «Concetto» adds under the concept in hand: tapping it again would open «Nome, colore e immagine».
   if (!(await node(page, parent).first().evaluate((el) => el.classList.contains('is-selected')))) await target.click();
   await page.getByRole('button', { name: 'Concetto', exact: true }).click();
   const input = page.getByRole('textbox', { name: 'Testo del concetto' });

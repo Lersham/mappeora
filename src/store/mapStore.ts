@@ -7,6 +7,7 @@ import { collapseInfo } from '../lib/collapse';
 import { moveUnder, removeBranch, removeLiftingChildren } from '../lib/branch';
 import { DEFAULT_SIZE } from '../lib/ladder';
 import { NEW_CONCEPT_LABEL } from '../lib/mapFactory';
+import { remapWordColors } from '../lib/wordColors';
 
 type Size = { width: number; height: number };
 
@@ -81,6 +82,14 @@ function changes<T extends object>(item: T, patch: Partial<T>): boolean {
   });
 }
 
+/** A renamed concept keeps its coloured words on the same words. */
+function patched(node: MapNode, patch: Partial<Omit<MapNode, 'id'>>): MapNode {
+  const next = { ...node, ...patch };
+  if (patch.label !== undefined && !('wordColors' in patch)) next.wordColors = remapWordColors(node.label, patch.label, node.wordColors);
+  if (!next.wordColors) delete next.wordColors;
+  return next;
+}
+
 function edit(state: MapState, fn: (map: ConceptMap) => Partial<ConceptMap>, opts: { touch?: boolean } = {}): Partial<MapState> {
   if (!state.map) return {};
   const patch = fn(state.map);
@@ -150,7 +159,7 @@ export const useMapStore = create<MapState>()(
 
       updateNode: (id, patch) =>
         set((s) =>
-          edit(s, (map) => (map.nodes.some((n) => n.id === id && changes(n, patch)) ? { nodes: map.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)) } : {})),
+          edit(s, (map) => (map.nodes.some((n) => n.id === id && changes(n, patch)) ? { nodes: map.nodes.map((n) => (n.id === id ? patched(n, patch) : n)) } : {})),
         ),
 
       toggleCollapsed: (id) => {
@@ -199,7 +208,8 @@ export const useMapStore = create<MapState>()(
         const gone = new Set(ids);
         set((s) => ({
           ...edit(s, (map) =>
-            map.nodes.some((n) => gone.has(n.id))
+            // The last concept stays: a map without any does not open again.
+            map.nodes.some((n) => gone.has(n.id)) && !map.nodes.every((n) => gone.has(n.id))
               ? {
                   nodes: map.nodes.filter((n) => !gone.has(n.id)),
                   edges: map.edges.filter((e) => !gone.has(e.source) && !gone.has(e.target)),
@@ -213,7 +223,7 @@ export const useMapStore = create<MapState>()(
       removeLiftingChildren: (id) => {
         const map = get().map;
         const next = map && removeLiftingChildren(map, id);
-        if (!next) return false;
+        if (!next || next.nodes.length === 0) return false;
         set((s) => ({ ...edit(s, () => next), selectedId: s.selectedId === id ? null : s.selectedId }));
         return true;
       },
@@ -222,6 +232,7 @@ export const useMapStore = create<MapState>()(
         const map = get().map;
         if (!map) return;
         const next = removeBranch(map, id);
+        if (next.nodes.length === 0) return;
         set((s) => ({ ...edit(s, () => next), selectedId: next.nodes.some((n) => n.id === s.selectedId) ? s.selectedId : null }));
       },
 
