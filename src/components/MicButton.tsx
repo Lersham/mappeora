@@ -1,5 +1,6 @@
 import { useDictation, DICTATION_ERRORS } from '../hooks/useDictation';
 import { Icon } from './Icon';
+import { SpokenError } from './SpokenError';
 
 interface Props {
   /** Receives the live transcript while the child is speaking, then the final one. */
@@ -28,7 +29,7 @@ export function MicButton({ onText, onStart, label = 'Detta' }: Props) {
       >
         <Icon name={d.listening ? 'stop' : 'mic'} />
       </button>
-      {d.error && <span className="field-error" role="alert">{DICTATION_ERRORS[d.error]}</span>}
+      {d.error && <SpokenError inline>{DICTATION_ERRORS[d.error]}</SpokenError>}
     </>
   );
 }

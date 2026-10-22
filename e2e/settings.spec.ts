@@ -65,7 +65,7 @@ test('Testo grande, OpenDyslexic e spaziatura ampia: le finestre di scelta resta
   const fits = async (dialog: Locator) => {
     await expect(dialog).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
-    return dialog.locator('.overlay-card').evaluate((card) => card.scrollWidth <= card.clientWidth + 1);
+    return dialog.locator('.dialog-body').evaluate((body) => body.scrollWidth <= body.clientWidth + 1);
   };
   await page.goto('/');
   await page.getByRole('button', { name: 'Nuova mappa' }).click();
@@ -103,12 +103,12 @@ test('Testo grande, OpenDyslexic e spaziatura ampia: in nessuna schermata parole
   await page.getByRole('button', { name: 'Esempi', exact: true }).click();
   await looks('Esempi');
   await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-  await expect(page.locator('.concept-node')).toHaveCount(37);
+  await expect(page.locator('.concept-node')).toHaveCount(39);
   await looks('la mappa');
   await page.locator('.concept-node').first().click();
   await toolbar(page, 'Immagine');
-  await looks('Immagine e colore');
-  await close('Immagine e colore');
+  await looks('Nome, colore e immagine');
+  await close('Nome, colore e immagine');
   const bar = page.getByRole('navigation', { name: 'Strumenti' });
   if (await bar.getByRole('button', { name: 'Altro', exact: true }).isVisible()) {
     await bar.getByRole('button', { name: 'Altro', exact: true }).click();

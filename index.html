@@ -5,11 +5,53 @@
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#fffdf7" />
-    <title>MappAmi</title>
+    <meta name="theme-color" content="#ffffff" />
+    <!-- Classic blocking script, on purpose: it must run before the first paint (CSP: script-src 'self', no inline scripts). -->
+    <script src="/theme-init.js"></script>
+    <noscript><style>#root{display:none}</style></noscript>
+    <title>MappAmi – mappe concettuali con la voce, anche per DSA</title>
+    <meta
+      name="description"
+      content="Crea mappe concettuali con la voce: lettura ad alta voce, dettatura e caratteri per la dislessia. Funziona offline, senza account né pubblicità."
+    />
+    <link rel="canonical" href="https://mapp-ami.vercel.app/" />
+    <meta name="application-name" content="MappAmi" />
+    <meta name="apple-mobile-web-app-title" content="MappAmi" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MappAmi" />
+    <meta property="og:locale" content="it_IT" />
+    <meta property="og:title" content="MappAmi – mappe concettuali con la voce, anche per DSA" />
+    <meta
+      property="og:description"
+      content="Crea mappe concettuali con la voce: lettura ad alta voce, dettatura e caratteri per la dislessia. Funziona offline, senza account né pubblicità."
+    />
+    <meta property="og:url" content="https://mapp-ami.vercel.app/" />
+    <meta property="og:image" content="https://mapp-ami.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="La mascotte di MappAmi con la sua mappa concettuale e la scritta «Mappe concettuali che si ascoltano»." />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- First paint: React replaces it as soon as the app is ready. Text only, system font, colours from the page itself. -->
+    <div id="root">
+      <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;padding:1rem;text-align:center;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif">
+        <p style="margin:0;font-size:2rem;font-weight:700;line-height:1.2">MappAmi</p>
+        <p role="status" style="margin:0;font-size:1.125rem">Sto caricando…</p>
+      </div>
+    </div>
+    <noscript>
+      <div style="padding:2rem 1rem;max-width:36rem;margin:0 auto;font:1.125rem/1.6 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif">
+        <h1 style="font-size:1.75rem">MappAmi</h1>
+        <p>MappAmi ha bisogno di JavaScript per funzionare. Attivalo nel browser e riprova.</p>
+        <p>
+          <a href="/mappe-concettuali-dsa.html">Che cos’è MappAmi</a> ·
+          <a href="/installa.html">Come installarla</a> ·
+          <a href="/privacy.html">Privacy</a> ·
+          <a href="/crediti.html">Crediti</a>
+        </p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

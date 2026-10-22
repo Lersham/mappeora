@@ -1,6 +1,6 @@
 import type { ConceptMap, MapSummary } from '../types/map';
 import { storage } from './storage';
-import { isNative } from './platform';
+import { isAppleMobile, isHomeScreenApp, isNative } from './platform';
 import { shareFile } from './export';
 import { MAP_FILE_EXTENSION, serializeArchive, textToDataUrl } from '../lib/mapFile';
 
@@ -114,10 +114,7 @@ export function snoozeBackup(now = Date.now()) {
  */
 export function homeScreenHintNeeded(): boolean {
   if (isNative() || readState().homeHintSeen) return false;
-  const nav = navigator as Navigator & { standalone?: boolean };
-  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const installed = nav.standalone === true || window.matchMedia?.('(display-mode: standalone)').matches;
-  return ios && !installed;
+  return isAppleMobile() && !isHomeScreenApp();
 }
 
 export function homeScreenHintSeen() {

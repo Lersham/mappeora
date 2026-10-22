@@ -9,7 +9,7 @@ test.describe('Immagini nei concetti', () => {
     await expect(page.getByRole('button', { name: /Illustrazioni/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('group', { name: 'Scegli da dove' }).getByRole('button')).toHaveCount(2); // illustrations, photos and Google: no CAA symbols
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('Vesuvio');
-    await page.getByRole('button', { name: 'vulcano', exact: true }).click();
+    await page.locator('.illustration-tile[aria-label="vulcano"]').click();
     await expect(node(page, 'Il vulcano').locator('.concept-illustration')).toHaveAttribute('src', /^data:image\/png;base64,/);
   });
 
@@ -19,7 +19,7 @@ test.describe('Immagini nei concetti', () => {
     await node(page, 'Il vulcano').click();
     await toolbar(page, 'Immagine');
     await page.getByRole('searchbox', { name: 'Cerca un\'immagine' }).fill('vulcano');
-    const tile = page.getByRole('button', { name: 'vulcano', exact: true });
+    const tile = page.locator('.illustration-tile[aria-label="vulcano"]');
     await expect(tile).toHaveText('🌋'); // the preview could not load
     await tile.click();
     await expect(node(page, 'Il vulcano').locator('.concept-emoji')).toHaveText('🌋');
@@ -51,6 +51,39 @@ test.describe('Immagini nei concetti', () => {
     }, PNG_1PX.toString('base64'));
     await page.getByRole('button', { name: 'Incolla immagine' }).click();
     await expect(node(page, 'Il Colosseo').locator('.concept-photo')).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
+  });
+
+  test('stringendo il concetto la foto resta dentro il riquadro', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'gli appunti del browser si provano sul computer');
+    await newMap(page, 'Il Colosseo');
+    const concept = node(page, 'Il Colosseo');
+    await concept.click();
+    await toolbar(page, 'Immagine');
+    await page.getByRole('button', { name: /Foto e Google/ }).click();
+    // A wide photo, larger than the narrowest concept.
+    await page.evaluate(async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 300;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#c96';
+      ctx.fillRect(0, 0, 400, 300);
+      const blob = await new Promise<Blob>((done) => canvas.toBlob((b) => done(b!), 'image/png'));
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    });
+    await page.getByRole('button', { name: 'Incolla immagine' }).click();
+    const photo = concept.locator('.concept-photo');
+    await expect(photo).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
+    await concept.click();
+    await concept.getByRole('button', { name: /Larghezza di Il Colosseo/ }).focus();
+    for (let i = 0; i < 30; i++) await page.keyboard.press('ArrowLeft');
+    const inside = () =>
+      photo.evaluate((img) => {
+        const p = img.getBoundingClientRect();
+        const n = img.closest('.concept-node')!.getBoundingClientRect();
+        return p.left >= n.left - 0.5 && p.right <= n.right + 0.5;
+      });
+    await expect.poll(inside).toBe(true);
   });
 
   test('tornando da Google l’immagine copiata arriva da sola', async ({ page, isMobile }) => {
@@ -139,5 +172,35 @@ test.describe('Immagini nei concetti', () => {
     await page.getByRole('button', { name: 'Dalla galleria' }).click();
     await (await chooser).setFiles({ name: 'foto.png', mimeType: 'image/png', buffer: PNG_1PX });
     await expect(node(page, 'Il mio esperimento').locator('.concept-photo')).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
+  });
+  test('nel concetto ovale con la foto le parole restano dentro il bordo curvo', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'esempio' }).click();
+    await page.getByRole('button', { name: /^La nascita di Roma/ }).click();
+    const root = page.locator('.concept-node.shape-ellisse').filter({ has: page.locator('.concept-photo') });
+    await expect(root).toHaveCount(1);
+    await expect(root.locator('.concept-photo')).toHaveJSProperty('complete', true);
+    // How far in the curved border is at the height of the last line, against where the line starts.
+    const gap = await root.evaluate((el: HTMLElement) => {
+      const s = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      const scale = r.width / el.offsetWidth;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const [a, b = a] = s.borderBottomLeftRadius.split(' ');
+      const px = (v: string, size: number) => (v.endsWith('%') ? (parseFloat(v) / 100) * size : parseFloat(v));
+      // Radii larger than the box are scaled down together, as the browser draws them.
+      const f = Math.min(1, w / (2 * px(a, w)), h / (2 * px(b, h)));
+      const rx = px(a, w) * f;
+      const ry = px(b, h) * f;
+      const range = document.createRange();
+      range.selectNodeContents(el.querySelector('.concept-label')!);
+      const last = [...range.getClientRects()].at(-1)!;
+      const fromBottom = (r.bottom - last.bottom) / scale;
+      const dy = Math.max(0, ry - fromBottom);
+      const inset = rx * (1 - Math.sqrt(Math.max(0, 1 - (dy / ry) ** 2))) + parseFloat(s.borderLeftWidth);
+      return Math.min(last.left - r.left, r.right - last.right) / scale - inset;
+    });
+    expect(gap).toBeGreaterThan(0);
   });
 });

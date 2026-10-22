@@ -220,10 +220,25 @@ test.describe('Schermata iniziale', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'esempio' }).click();
     await page.getByRole('button', { name: /^La Rivoluzione francese/ }).click();
-    await expect(nodes(page)).toHaveCount(37);
+    await expect(nodes(page)).toHaveCount(39);
     await expect(page.locator('.concept-illustration').first()).toHaveAttribute('src', /^data:image\/png/);
+    await expect(page.locator('.concept-photo').first()).toHaveAttribute('src', /^data:image\/jpeg/);
     await page.getByRole('button', { name: 'Mappe' }).click();
     await expect(page.locator('.map-title')).toHaveText(['La Rivoluzione francese']);
+  });
+
+  test('«Esempi» elenca le tre mappe di storia e apre quella sulla civiltà egizia, con foto vere', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'esempio' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Mappe di esempio' });
+    for (const title of ['La civiltà egizia', 'La nascita di Roma', 'La Rivoluzione francese']) {
+      await expect(dialog.getByRole('button', { name: new RegExp(`^${title}`) })).toBeVisible();
+    }
+    await dialog.getByRole('button', { name: /^La civiltà egizia/ }).click();
+    await expect(nodes(page)).toHaveCount(48);
+    await expect(page.locator('.concept-photo').first()).toHaveAttribute('src', /^data:image\/jpeg/);
+    await page.getByRole('button', { name: 'Mappe' }).click();
+    await expect(page.locator('.map-title')).toHaveText(['La civiltà egizia']);
   });
 
   test('i quattro modi per iniziare sono nominati e spiegati; «Dal libro» apre subito la foto', async ({ page }) => {

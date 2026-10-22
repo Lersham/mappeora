@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
+import { Children, isValidElement, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { useBackHandler } from '../lib/backButton';
 
 interface Props {
@@ -98,14 +98,27 @@ export function useModal(onClose: () => void) {
   return { ref, onKeyDown, tabIndex: -1, ...backdrop };
 }
 
-/** Modal card; closes with Esc, Android's Back or by tapping outside. */
+/** The row of buttons at the end of a dialog («Annulla», «Crea»…). */
+function isActions(child: ReactNode) {
+  return isValidElement<{ className?: unknown }>(child) && typeof child.props.className === 'string' && child.props.className.split(' ').includes('dialog-actions');
+}
+
+/**
+ * Modal card; closes with Esc, Android's Back or by tapping outside. Its
+ * buttons stay below the words, which scroll on their own: kept in view over
+ * them, the buttons would half cover what is at the bottom.
+ */
 export function Dialog({ title, onClose, children, className = '', sheet = false }: Props) {
   const modal = useModal(onClose);
+  const parts = Children.toArray(children);
   return (
     <div className={`overlay${sheet ? ' is-sheet' : ''}`} role="dialog" aria-modal="true" aria-label={title} {...modal}>
-      <div className={`overlay-card ${className}`}>
-        <h2 className="dialog-title">{title}</h2>
-        {children}
+      <div className={`overlay-card dialog-card ${className}`}>
+        <div className="dialog-body">
+          <h2 className="dialog-title">{title}</h2>
+          {parts.filter((c) => !isActions(c))}
+        </div>
+        {parts.filter(isActions)}
       </div>
     </div>
   );

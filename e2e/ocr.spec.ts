@@ -24,8 +24,9 @@ test('«Dal libro» offre fotocamera e galleria, e spiega se manca internet', as
   await expect(dialog.getByRole('button', { name: 'Riprova' })).toBeVisible({ timeout: 20_000 });
   // even if the browser thinks it is online (e.g. a school network blocking the CDN)
   await expect(dialog.getByRole('alert')).toContainText('La prima volta serve internet');
-  // Expected here: Tesseract's worker reports the failed download itself.
-  const unrelated = consoleErrors.filter((e) => !/tesseract/i.test(e));
+  // Expected here: Tesseract's worker reports the failed download itself
+  // (Safari says only «Load failed», without the address).
+  const unrelated = consoleErrors.filter((e) => !/tesseract/i.test(e) && e !== 'pageerror: Load failed');
   consoleErrors.splice(0, consoleErrors.length, ...unrelated);
 });
 
@@ -61,8 +62,9 @@ test('dal testo della foto si scelgono le parole: col dito come un evidenziatore
   for (const label of ['Fotosintesi', 'Ossigeno', 'Clorofilla']) await expect(node(page, label)).toBeVisible();
 });
 
-test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', async ({ page, isMobile }) => {
+test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', async ({ page, isMobile, browserName }) => {
   test.skip(!isMobile, 'il dito');
+  test.skip(browserName !== 'chromium', 'il dito vero (CDP) si simula solo in Chromium: qui lo prova il telefono');
   const long = Array.from({ length: 12 }, (_, i) => `Frase ${i} sulle radici profonde degli alberi del bosco.`).join(' ');
   await fakeOcr(page, 'Le piante hanno radici robuste e foglie verdi. ' + long);
   await newMap(page, 'Le piante');
@@ -91,10 +93,15 @@ test('col dito l’evidenziatore va anche a capo; dal bordo il testo scorre', as
   await expect(dialog.locator('.concept-preview .chip')).toHaveText(['Hanno radici robuste']);
 
   // a finger that goes down from a word scrolls back up: the words cover almost all the text
+  // A word in the upper part of the text, on screen (a fixed point may fall in the space between two words).
   const from = await text.evaluate((e) => {
     const r = e.getBoundingClientRect();
-    const word = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 3)?.closest<HTMLElement>('[data-word]')!.getBoundingClientRect();
-    return { x: word!.x + word!.width / 2, y: word!.y + word!.height / 2 };
+    for (const w of e.querySelectorAll<HTMLElement>('[data-word]')) {
+      const b = w.getBoundingClientRect();
+      const p = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+      if (p.y > r.y + r.height / 4 && p.y < r.y + r.height / 2 && document.elementFromPoint(p.x, p.y) === w) return p;
+    }
+    throw new Error('no word on screen');
   });
   const scrolled = await text.evaluate((e) => e.scrollTop);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
