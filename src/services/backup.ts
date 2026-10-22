@@ -67,8 +67,18 @@ export async function restoreMaps(maps: ConceptMap[]): Promise<{ added: number; 
   let added = 0;
   let already = 0;
   for (const map of maps) {
-    const here = await storage().get(map.id);
-    if (!here) {
+    // A map on the device that cannot be read is no reason to stop: the one
+    // in the copy comes back next to it, the other is left as it is.
+    const here = await storage().get(map.id).catch(() => 'broken' as const);
+    if (here === 'broken') {
+      const id = `${map.id}-copia-${map.updatedAt}`;
+      if (await storage().get(id).catch(() => undefined)) {
+        already++;
+        continue;
+      }
+      await storage().save({ ...map, id, title: `${map.title} (dalla copia)` });
+      added++;
+    } else if (!here) {
       await storage().save(map);
       added++;
     } else if (here.updatedAt >= map.updatedAt) {
