@@ -48,6 +48,7 @@ import { layoutOf, templateInfo } from '../../lib/templates';
 import { NEW_MAP_TITLE } from '../../lib/mapFactory';
 import { DEFAULT_COLOR, branchColors } from '../../lib/palette';
 import { closeUpView, MAX_READ_ZOOM, MIN_ZOOM, pageView as pageViewOf, READABLE_PX, revealView } from './camera';
+import { spostaHintDue, spostaHintShown, spostaHintText, spostaUsed } from './spostaHint';
 import { closeUpGroup, isUntouchedNewMap, movedPositions, paintedBranches, parentForNear, parentForNew as parentFor, sheetAnchor, stillInPlace } from './concepts';
 import { parseVoiceCommand } from '../../lib/voiceCommands';
 import { useBackHandler } from '../../lib/backButton';
@@ -226,6 +227,12 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
    * in hand can be dragged, to change its place in the branch. «Sposta» frees them.
    */
   const locked = TOUCH && sheetMode;
+  /** The concept a finger went down on, if any: when the map moves instead, it may have meant to drag it. */
+  const grabbed = useRef<string | null>(null);
+  /** Where «Sposta» is, said once per map at most (see spostaHint.ts). */
+  const spostaHinted = useRef(false);
+  /** A finger went down on a concept not in hand: if the map now moves, say where «Sposta» is. */
+  const spostaCandidate = useRef(false);
   const collapse = useMemo(() => collapseInfo(map), [map]);
   // Only a concept on screen can be the one in hand.
   const selectedNode = map.nodes.find((n) => n.id === selectedId && !collapse.hidden.has(n.id));
@@ -928,7 +935,10 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
               : 'Stai mettendo i concetti dove vuoi. Premi di nuovo per rimetterli sul foglio A4.',
             'aria-pressed': !sheetMode,
             className: 'group-start',
-            onClick: () => actions.setFreeLayout(sheetMode),
+            onClick: () => {
+              if (sheetMode) spostaUsed();
+              actions.setFreeLayout(sheetMode);
+            },
           },
         ]
       : []),
@@ -986,6 +996,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       onPointerDownCapture={(e) => {
         touch();
         if ((e.target as Element).closest('.react-flow')) following.current = false;
+        grabbed.current = (e.target as Element).closest('.react-flow__node')?.getAttribute('data-id') ?? null;
         // Any press, on a concept too, stops the branch tapped a moment ago from
         // coming closer: the view must not glide under a finger that may be about
         // to drag. If the press turns out to be a tap, onNodeClick starts it again.
@@ -1112,6 +1123,23 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           nodeDragThreshold={6}
           fitView
           fitViewOptions={{ padding: 0.3, maxZoom: MAX_READ_ZOOM }}
+          // One finger on a concept that is not in hand moved the map, not the
+          // concept: on the sheet they stay put until «Sposta». Said where it is,
+          // once the map really moves (the start comes with every tap too).
+          onMoveStart={(e) => {
+            const oneFinger = !!e && !('touches' in e && e.touches.length > 1);
+            spostaCandidate.current =
+              oneFinger && locked && editing && !picking && tutorialStep === null && !!grabbed.current && grabbed.current !== selectedId && !spostaHinted.current;
+          }}
+          onMove={() => {
+            if (!spostaCandidate.current) return;
+            spostaCandidate.current = false;
+            if (!spostaHintDue()) return;
+            spostaHinted.current = true;
+            spostaHintShown();
+            showNotice(spostaHintText(crowded));
+          }}
+          onMoveEnd={() => void (spostaCandidate.current = false)}
           minZoom={MIN_ZOOM}
           // The wheel and two fingers on a touchpad scroll the sheet, like a
           // page; Ctrl + wheel, a pinch and the buttons zoom.

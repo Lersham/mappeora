@@ -419,6 +419,10 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
       expect(at(after, b.label).x - at(after, 'Calore del sole').x, b.label).toBeCloseTo(b.x - start.x, 0);
       expect(at(after, b.label).y - at(after, 'Calore del sole').y, b.label).toBeCloseTo(b.y - start.y, 0);
     }
+    // Who meant to drag «Calore del sole» is told where «Sposta» is (on the phone, in «Altro»).
+    const hint = page.getByRole('alert').filter({ hasText: 'premi «Altro» e poi «Sposta»' });
+    await expect(hint).toBeVisible();
+    await hint.getByRole('button', { name: 'Chiudi il messaggio' }).click();
 
     // The concept in hand, and only it, goes where the finger takes it: before «Calore del sole», in its row.
     const tap = await onScreen(page, node(page, 'Vapore'));
@@ -441,6 +445,8 @@ test.describe('Sul telefono i concetti non si spostano per sbaglio', () => {
 
     await toolbar(page, 'Sposta');
     await expect(page.locator('.react-flow__node.draggable')).toHaveCount(9);
+    // «Sposta» found: the hint is not shown again on this device.
+    expect(await page.evaluate(() => localStorage.getItem('mappeora-sposta-hint'))).toBe('3');
     // Pressed again, it puts the concepts back on the sheet: only the one in hand moves.
     await toolbar(page, 'Sposta');
     await expect.poll(() => page.locator('.react-flow__node.draggable').count()).toBeLessThan(2);
