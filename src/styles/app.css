@@ -1020,6 +1020,9 @@ textarea {
 }
 .color-offer-button {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   min-height: 44px;
   padding: 0 14px;
   border: none;
@@ -1790,11 +1793,20 @@ textarea {
 }
 .template-icon {
   /* As a block in the line, it lets the name go to the next line. */
-  display: inline-block;
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
   margin-right: 10px;
-  font-size: 1.6rem;
-  line-height: 1;
+  border-radius: 12px;
+  background: var(--tint);
+  font-size: 1.4rem;
   vertical-align: middle;
+}
+/* The blue is for the choice: the picture of the chosen card takes it. */
+.is-selected .template-icon {
+  background: var(--primary);
+  color: var(--primary-text);
 }
 .template-name {
   font-weight: 600;
@@ -1855,6 +1867,12 @@ textarea {
 }
 .export-kinds .option-card {
   margin: 0;
+}
+/* Narrow cards: the picture on its own line, so the name has the whole width
+   («PDF da stampare» in one piece). */
+.export-kinds .template-icon {
+  display: grid;
+  margin-bottom: 8px;
 }
 .print-frame {
   position: fixed;
@@ -2263,8 +2281,16 @@ textarea {
   gap: 8px;
 }
 .welcome-icon {
-  font-size: 4rem;
   line-height: 1;
+}
+.welcome-glyph {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 16px;
+  background: var(--tint);
+  font-size: 3rem;
 }
 .welcome-mascot {
   height: 96px;

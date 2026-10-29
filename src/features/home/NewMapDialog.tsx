@@ -7,6 +7,7 @@ import { NEW_MAP_TITLE } from '../../lib/mapFactory';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import type { MapTemplate } from '../../types/map';
 import { Icon } from '../../components/Icon';
+import { TemplateIcon } from '../../components/TemplateIcon';
 
 interface Props {
   onCreate(title: string, template: MapTemplate): void;
@@ -45,7 +46,7 @@ export function NewMapDialog({ onCreate, onClose }: Props) {
           <div key={t.id} className={`template-card${template === t.id ? ' is-selected' : ''}`}>
             <button type="button" className="template-pick" onClick={() => setTemplate(t.id)} aria-pressed={template === t.id}>
               <span className="template-icon" aria-hidden>
-                {t.icon}
+                <TemplateIcon template={t.id} />
               </span>
               <span className="template-name">{t.name}</span>
               <span className="template-desc">{t.description}</span>

@@ -3,7 +3,8 @@ import { useReadAloud } from '../hooks/useReadAloud';
 import { Icon } from './Icon';
 
 interface Props {
-  icon: string;
+  /** An <Icon> for a command; an example map keeps its own emoji. */
+  icon: ReactNode;
   name: string;
   /** Shown after the name, not read: e.g. the school subject. */
   extra?: ReactNode;

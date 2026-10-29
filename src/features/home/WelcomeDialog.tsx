@@ -3,6 +3,7 @@ import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { Mascot } from '../../components/Mascot';
+import { Icon, type IconName } from '../../components/Icon';
 
 const SEEN_KEY = 'mappeora-welcome';
 
@@ -31,6 +32,13 @@ interface Page {
   tryBook?: boolean;
 }
 
+/** The icon of the command the page talks about, the same as in the bar. */
+const Glyph = ({ name }: { name: IconName }) => (
+  <span className="welcome-glyph">
+    <Icon name={name} />
+  </span>
+);
+
 const PAGES: Page[] = [
   {
     icon: <Mascot pose="mappa" className="welcome-mascot" />,
@@ -38,23 +46,23 @@ const PAGES: Page[] = [
     text: 'Qui costruisci da solo le tue mappe per studiare. Scrivi o detta i concetti, collegali tra loro, e la mappa si mette in ordine su un foglio.',
   },
   {
-    icon: '📷',
+    icon: <Glyph name="camera" />,
     title: 'Dal libro alla mappa',
     text: 'Fotografa una pagina del libro: MappAmi legge il testo per te. Poi passi il dito sulle parole importanti, come un evidenziatore, e diventano la tua mappa.',
     tryBook: true,
   },
   {
-    icon: '🎤',
+    icon: <Glyph name="mic" />,
     title: 'Scrivi o detta',
     text: 'Con «Concetto» aggiungi un riquadro. Con «Detta» parli e MappAmi scrive per te. Tocca un riquadro per sceglierlo: toccalo ancora per cambiare immagine e colore, tienilo premuto per cambiare il nome.',
   },
   {
-    icon: '🔊',
+    icon: <Glyph name="speak" />,
     title: 'Ascolta la mappa',
     text: 'Con «Leggi» MappAmi legge la mappa ad alta voce e colora la parola che sta dicendo. Tocca un concetto e premi l’altoparlante per sentire solo quello.',
   },
   {
-    icon: '🧠',
+    icon: <Glyph name="brain" />,
     title: 'Ripassa e personalizza',
     text: 'Con «Ripassa» la mappa appare un concetto alla volta, oppure si nasconde e tu provi a ricordare. Con «Aspetto» scegli il carattere, i colori e la voce che ti piacciono.',
   },

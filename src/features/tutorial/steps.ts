@@ -189,7 +189,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: 'Bianca o colorata',
-    text: `La tua mappa è bianca, come un foglio nuovo. Per colorarla premi «Riordina», in basso: la mappa torna in ordine e in alto compare «🎨 Colora i rami». Premilo: ogni ramo prende un colore pastello, uguale per tutti i suoi concetti. Non ti piace? Premi «Annulla». ${IN_ALTRO}`,
+    text: `La tua mappa è bianca, come un foglio nuovo. Per colorarla premi «Riordina», in basso: la mappa torna in ordine e in alto compare «Colora i rami». Premilo: ogni ramo prende un colore pastello, uguale per tutti i suoi concetti. Non ti piace? Premi «Annulla». ${IN_ALTRO}`,
     target: 'riordina',
     first: needsTwoBranches,
     done: (now, start) =>

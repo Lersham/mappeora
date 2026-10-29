@@ -1202,7 +1202,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
                 actions.colorBranches();
               }}
             >
-              🎨 Colora i rami
+              <Icon name="palette" /> Colora i rami
             </button>
             <button type="button" className="pick-banner-close" aria-label="Chiudi" title="Chiudi" onClick={() => setColorOffer(false)}>
               <Icon name="close" />
@@ -1362,7 +1362,7 @@ function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
       {parentLabel ? (
         <>
           <OptionCard
-            icon="⬆️"
+            icon={<Icon name="lift" />}
             name={`Solo «${label}»`}
             description={`${below === 1 ? 'Il concetto che c’è sotto sale' : `I ${below} concetti che ci sono sotto salgono`} di un livello, sotto «${parentLabel}».`}
             onClick={() => {
@@ -1371,7 +1371,7 @@ function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
             }}
           />
           <OptionCard
-            icon="🗑️"
+            icon={<Icon name="trash" />}
             name="Tutto il ramo"
             description={`«${label}» e ${n} sotto.`}
             onClick={() => {
@@ -1393,17 +1393,17 @@ function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
 function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): void; onClose(): void }) {
   return (
     <Dialog title="Ripassa" onClose={onClose} className="review-start" sheet>
-      <OptionCard icon="👣" name="Un passo alla volta" description="La mappa appare un concetto alla volta, letto ad alta voce." onClick={() => onStart('passo')} />
-      <OptionCard icon="🙈" name="Indovina" description="Il concetto è nascosto: prova a ricordarlo, poi premi «Scopri»." onClick={() => onStart('quiz')} />
+      <OptionCard icon={<Icon name="footprints" />} name="Un passo alla volta" description="La mappa appare un concetto alla volta, letto ad alta voce." onClick={() => onStart('passo')} />
+      <OptionCard icon={<Icon name="eye-off" />} name="Indovina" description="Il concetto è nascosto: prova a ricordarlo, poi premi «Scopri»." onClick={() => onStart('quiz')} />
       <OptionCard
-        icon="🙋"
+        icon={<Icon name="hand" />}
         name="Interrogazione"
         description="Tutta la mappa davanti a te, a schermo intero: spiega un concetto alla volta e vai avanti con le frecce."
         onClick={() => onStart('interrogazione')}
       />
       {speech().sttSupported && (
         <OptionCard
-          icon="🗣️"
+          icon={<Icon name="speech" />}
           name="Ripetimi"
           description="Spiega la mappa a voce: i concetti che nomini si accendono. Alla fine ti dico cosa hai saltato."
           onClick={() => onStart('ripetimi')}

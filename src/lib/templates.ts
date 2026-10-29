@@ -4,7 +4,6 @@ import { DEFAULT_COLOR } from './palette';
 
 export interface TemplateInfo {
   id: MapTemplate;
-  icon: string;
   name: string;
   /** Read aloud in the template picker, so keep it short and concrete. */
   description: string;
@@ -20,11 +19,11 @@ export interface TemplateInfo {
 export type MapLayout = 'foglio' | 'albero';
 
 export const TEMPLATES: TemplateInfo[] = [
-  { id: 'libera', icon: '✏️', name: 'Libera', description: 'Una mappa vuota: parti da un concetto e aggiungi quello che vuoi.', layout: 'foglio' },
-  { id: '5w', icon: '❓', name: 'Le 5 W', description: 'Chi, che cosa, quando, dove, perché. Per storia, geografia e per riassumere un racconto.', layout: 'foglio' },
-  { id: 'causa-effetto', icon: '➡️', name: 'Causa ed effetto', description: 'Che cosa succede e perché: le cause sopra, le conseguenze sotto.', layout: 'albero' },
-  { id: 'timeline', icon: '📅', name: 'Linea del tempo', description: 'Fatti in ordine, dall’alto in basso: prima, poi, dopo, alla fine.', layout: 'albero' },
-  { id: 'confronto', icon: '⚖️', name: 'Confronto', description: 'Due cose a confronto: le differenze e che cosa hanno in comune.', layout: 'albero' },
+  { id: 'libera', name: 'Libera', description: 'Una mappa vuota: parti da un concetto e aggiungi quello che vuoi.', layout: 'foglio' },
+  { id: '5w', name: 'Le 5 W', description: 'Chi, che cosa, quando, dove, perché. Per storia, geografia e per riassumere un racconto.', layout: 'foglio' },
+  { id: 'causa-effetto', name: 'Causa ed effetto', description: 'Che cosa succede e perché: le cause sopra, le conseguenze sotto.', layout: 'albero' },
+  { id: 'timeline', name: 'Linea del tempo', description: 'Fatti in ordine, dall’alto in basso: prima, poi, dopo, alla fine.', layout: 'albero' },
+  { id: 'confronto', name: 'Confronto', description: 'Due cose a confronto: le differenze e che cosa hanno in comune.', layout: 'albero' },
 ];
 
 export const templateInfo = (id: MapTemplate): TemplateInfo => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
