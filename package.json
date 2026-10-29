@@ -20,6 +20,7 @@
     "setup:webapp-testing": "pip install playwright==1.56.0",
     "test:e2e": "playwright test",
     "test:csp": "playwright test -c playwright.csp.config.ts",
+    "test:visual": "playwright test -c playwright.visual.config.ts",
     "test:e2e:report": "playwright show-report e2e/report"
   },
   "dependencies": {
