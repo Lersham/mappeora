@@ -184,6 +184,20 @@ test.describe('Editor', () => {
     expect(overlapping(b)).toEqual([]);
   });
 
+  test('«Concetto» premuto più volte di fila, senza dare un nome, mette i concetti accanto', async ({ page }) => {
+    await newMap(page, 'Le stagioni');
+    for (let i = 0; i < 3; i++) {
+      await page.getByRole('button', { name: 'Concetto', exact: true }).click();
+      await page.keyboard.press('Enter');
+      await settled(page);
+    }
+    await showAll(page);
+    const b = await boxes(page);
+    expect(b).toHaveLength(4);
+    // L'idea sopra, i tre concetti sulla stessa riga: in una scala sarebbero quattro righe.
+    expect(new Set(b.map((box) => Math.round(box.y))).size).toBe(2);
+  });
+
   test('rinomina tenendo premuto e il titolo resta quello della mappa', async ({ page }) => {
     await newMap(page, 'Le stagioni');
     await rename(page, 'Le stagioni', 'Le quattro stagioni');

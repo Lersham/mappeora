@@ -1,5 +1,5 @@
 import { collapseInfo } from '../../lib/collapse';
-import { NEW_MAP_TITLE } from '../../lib/mapFactory';
+import { NEW_CONCEPT_LABEL, NEW_MAP_TITLE } from '../../lib/mapFactory';
 import { DEFAULT_COLOR } from '../../lib/palette';
 import type { SheetResult } from '../../lib/sheetLayout';
 import { spanningTree } from '../../lib/tree';
@@ -15,10 +15,21 @@ export function mainConcept(map: Graph, hidden: Set<string>): MapNode | undefine
   return visible.find((n) => n.shape === 'ellisse') ?? visible.find((n) => !targets.has(n.id)) ?? visible[0];
 }
 
-/** Where a new concept goes: under the one in hand if it is on screen, else under the main one. */
-export function parentForNew(map: Graph, selectedId: string | null): string | null {
+/**
+ * Where a new concept goes: under the one in hand if it is on screen, else
+ * under the main one. Pressing «Concetto» again right after adding one, with
+ * no name given to it yet (`justAdded` is still the one in hand), is a list,
+ * not a ladder: the next goes beside it, under the same parent. Once it has
+ * a name, or is touched, the next goes under it.
+ */
+export function parentForNew(map: Graph, selectedId: string | null, justAdded: string | null = null): string | null {
   const hidden = collapseInfo(map).hidden;
-  if (selectedId && map.nodes.some((n) => n.id === selectedId) && !hidden.has(selectedId)) return selectedId;
+  const selected = selectedId ? map.nodes.find((n) => n.id === selectedId) : undefined;
+  if (selected && !hidden.has(selected.id)) {
+    const unnamed = selected.id === justAdded && selected.label === NEW_CONCEPT_LABEL;
+    const beside = unnamed ? spanningTree(map).parent.get(selected.id) : undefined;
+    return beside && !hidden.has(beside) ? beside : selected.id;
+  }
   return mainConcept(map, hidden)?.id ?? null;
 }
 

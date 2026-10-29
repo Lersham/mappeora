@@ -419,9 +419,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     if (removed.length) useMapStore.getState().removeEdges(removed);
   }, []);
 
-  const parentForNew = () => {
+  /** The concept added by the last «Concetto» (or dictation), while nothing else has been touched. */
+  const justAdded = useRef<string | null>(null);
+  const parentForNew = (repeat = false) => {
     const { map: current, selectedId: selected } = useMapStore.getState();
-    return current ? parentFor(current, selected) : null;
+    return current ? parentFor(current, selected, repeat ? justAdded.current : null) : null;
   };
 
   /** Size on screen (px) of a concept's name at the current zoom, and at zoom 1. */
@@ -579,9 +581,10 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   };
 
   /** From the toolbar (or Tab) a concept opens ready for typing; a dictated one already has its name. */
-  const addConcept = (label?: string, parent = parentForNew()) => {
+  const addConcept = (label?: string, parent?: string | null) => {
     cancelCloser();
-    const id = actions.addChild(parent, label);
+    const id = actions.addChild(parent === undefined ? parentForNew(true) : parent, label);
+    justAdded.current = parent === undefined ? id : null;
     if (label === undefined) actions.startEditing(id);
     reveal(id, { readable: label === undefined });
   };
@@ -1069,7 +1072,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         )}
       </header>
 
-      <div className="canvas" ref={canvasRef} onPointerDownCapture={() => (heldOnPress.current = useMapStore.getState().selectedId)}>
+      <div className="canvas" ref={canvasRef} onPointerDownCapture={(e) => {
+        heldOnPress.current = useMapStore.getState().selectedId;
+        // Touching a concept ends the list: «Concetto» now goes under that one.
+        if ((e.target as Element).closest('.react-flow__node')) justAdded.current = null;
+      }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
