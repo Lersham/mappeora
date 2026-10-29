@@ -89,9 +89,9 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    // e2e/ and e2e-csp/ are Playwright suites (npm run test:e2e, test:csp), not Vitest's;
+    // e2e/, e2e-csp/ and e2e-visual/ are Playwright suites (npm run test:e2e, test:csp, test:visual), not Vitest's;
     // .claude/ may hold agent worktrees with their own copy of the tests.
-    exclude: ['**/node_modules/**', 'e2e/**', 'e2e-csp/**', '.claude/**'],
+    exclude: ['**/node_modules/**', 'e2e/**', 'e2e-csp/**', 'e2e-visual/**', '.claude/**'],
     // The default fork pool crashes its workers on Windows ("Unhandled Errors").
     pool: 'threads',
   },
