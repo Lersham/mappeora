@@ -188,7 +188,11 @@ test.describe('Editor', () => {
     await newMap(page, 'Le stagioni');
     for (let i = 0; i < 3; i++) {
       await page.getByRole('button', { name: 'Concetto', exact: true }).click();
-      await page.keyboard.press('Enter');
+      // Invio solo quando il campo del nome ha il fuoco: sul pulsante lo premerebbe un'altra volta.
+      const input = page.getByRole('textbox', { name: 'Testo del concetto' });
+      await expect(input).toBeFocused();
+      await input.press('Enter');
+      await expect(input).toBeHidden();
       await settled(page);
     }
     await showAll(page);
