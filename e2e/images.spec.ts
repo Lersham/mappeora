@@ -33,7 +33,10 @@ test.describe('Immagini nei concetti', () => {
     await page.getByRole('button', { name: /Foto e Google/ }).click();
     const popup = page.waitForEvent('popup');
     await page.getByRole('button', { name: 'Cerca su Google' }).click();
-    const url = new URL((await popup).url());
+    // Opened with «noopener», the window can show up before its address: wait for Google.
+    const google = await popup;
+    await google.waitForURL(/^https:\/\/www\.google\.com\//);
+    const url = new URL(google.url());
     expect(url.hostname).toBe('www.google.com');
     expect(url.searchParams.get('q')).toBe('Il Colosseo');
     expect(url.searchParams.get('safe')).toBe('active');

@@ -704,8 +704,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
       if (kind === 'file') {
         await saveMapFile(map);
       } else {
-        const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff';
-        await exportMap(getNodes(), bg, {
+        await exportMap(getNodes(), {
           format: kind,
           paper,
           pages,

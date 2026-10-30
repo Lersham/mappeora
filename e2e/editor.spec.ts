@@ -381,7 +381,7 @@ test.describe('Editor: scrivere più in fretta e vedere meglio', () => {
     await page.addInitScript(() => {
       if (!localStorage.getItem('mappeora-settings')) {
         const state = { font: 'opendyslexic', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
-        localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+        localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 2 }));
       }
     });
     await page.goto('/');
