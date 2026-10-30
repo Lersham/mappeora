@@ -8,8 +8,19 @@
   --letter-spacing: normal;
   --word-spacing: normal;
   --line-height: 1.4;
+  /* Two corners, plus the round: buttons and small things, cards and sheets. */
+  --radius-sm: 10px;
+  --radius-md: 16px;
 
-  /* The default paper is «bianco»; the others are [data-theme='…'] blocks. */
+  font-size: calc(16px * var(--text-scale));
+  color-scheme: light;
+}
+
+/* The default paper is «bianco»; the others are [data-theme='…'] blocks.
+   A map is always printed and saved on it (.export-paper, see export.ts):
+   the other papers are for reading on screen. */
+:root,
+.export-paper {
   --bg: #ffffff;
   --surface: #ffffff;
   --text: #1f2430;
@@ -35,9 +46,6 @@
   --tint-strong: color-mix(in srgb, var(--border) 65%, var(--surface));
   /* Hairline around cards and bars: separates without boxing everything in. */
   --line: color-mix(in srgb, var(--border) 75%, var(--surface));
-  /* Two corners, plus the round: buttons and small things, cards and sheets. */
-  --radius-sm: 10px;
-  --radius-md: 16px;
   /* "Foglio" maps: each branch has its own colour of line (see BusEdge). */
   --branch-0: #3b6ea5;
   --branch-1: #a85a12;
@@ -45,9 +53,6 @@
   --branch-3: #2c7a4b;
   --branch-4: #b03a5b;
   --branch-5: #0f767c;
-
-  font-size: calc(16px * var(--text-scale));
-  color-scheme: light;
 }
 
 [data-font='atkinson'] { --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif; }

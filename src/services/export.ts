@@ -16,6 +16,8 @@ const ARASAAC_CREDIT =
 /** Margin around the map in the image, in CSS px (a fixed amount: a
  * percentage would leave huge empty bands around a long map). */
 const PADDING = 32;
+/** In a PDF the sheet has its own margin: only room for the concepts' borders. */
+const PDF_PADDING = 8;
 
 export type ExportFormat = 'png' | 'pdf';
 
@@ -27,8 +29,8 @@ export interface ExportOptions {
   /** Web only: open the print dialog instead of downloading. */
   print?: boolean;
   /**
-   * "Versione per la verifica": white background, no colours, no
-   * decorations — a clean compensatory tool to bring to a test.
+   * "Versione per la verifica": no colours, no decorations — a clean
+   * compensatory tool to bring to a test.
    */
   simple: boolean;
   title: string;
@@ -96,17 +98,18 @@ function labelRects(flow: HTMLElement, viewport: HTMLElement): Rect[] {
 let rendering: Promise<unknown> = Promise.resolve();
 
 /**
- * Renders the whole map (not just the visible area) to a PNG. One at a time:
- * a cancelled export finishing late must not take the export classes off the
- * next one while it is being copied.
+ * Renders the whole map (not just the visible area) to a PNG, on white paper
+ * whatever the background chosen for the screen. One at a time: a cancelled
+ * export finishing late must not take the export classes off the next one
+ * while it is being copied.
  */
-function renderMap(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
-  const run = rendering.then(() => renderOnce(nodes, background, simple));
+function renderMap(nodes: Node[], simple: boolean, padding: number): Promise<RenderedMap> {
+  const run = rendering.then(() => renderOnce(nodes, simple, padding));
   rendering = run.catch(() => {});
   return run;
 }
 
-async function renderOnce(nodes: Node[], background: string, simple: boolean): Promise<RenderedMap> {
+async function renderOnce(nodes: Node[], simple: boolean, padding: number): Promise<RenderedMap> {
   const flow = document.querySelector<HTMLElement>('.react-flow');
   const el = flow?.querySelector<HTMLElement>('.react-flow__viewport');
   if (!flow || !el) throw new Error('viewport-not-found');
@@ -118,8 +121,8 @@ async function renderOnce(nodes: Node[], background: string, simple: boolean): P
   const bounds = labels.reduce(union, getNodesBounds(shown));
   // Small minimums only: a narrow "scaletta" must stay narrow to fill a
   // portrait sheet instead of floating in a wide empty image.
-  const width = Math.max(320, Math.ceil(bounds.width + PADDING * 2));
-  const height = Math.max(240, Math.ceil(bounds.height + PADDING * 2));
+  const width = Math.max(320, Math.ceil(bounds.width + padding * 2));
+  const height = Math.max(240, Math.ceil(bounds.height + padding * 2));
   // Real size (zoom 1), centred: the PDF scales it to the sheet.
   const viewport = {
     zoom: 1,
@@ -127,10 +130,10 @@ async function renderOnce(nodes: Node[], background: string, simple: boolean): P
     y: (height - bounds.height) / 2 - bounds.y,
   };
   flow.classList.toggle('export-simple', simple);
-  flow.classList.add('exporting');
+  flow.classList.add('exporting', 'export-paper');
   try {
     const dataUrl = await toPng(el, {
-      backgroundColor: simple ? '#ffffff' : background,
+      backgroundColor: '#ffffff',
       width,
       height,
       pixelRatio: 2,
@@ -155,7 +158,7 @@ async function renderOnce(nodes: Node[], background: string, simple: boolean): P
     ].map((r) => ({ x: r.x + viewport.x, y: r.y + viewport.y, w: r.width, h: r.height }));
     return { dataUrl, width, height, breaks, boxes };
   } finally {
-    flow.classList.remove('export-simple', 'exporting');
+    flow.classList.remove('export-simple', 'exporting', 'export-paper');
   }
 }
 
@@ -356,10 +359,20 @@ function put(doc: Pdf, write: Lettering, lines: string[], s: TextStyle, x: numbe
   lines.forEach((line, i) => doc.text(pdfText(line), x, baseline + i * s.gap, { renderingMode: 'invisible', align }));
 }
 
-async function buildPdf(img: RenderedMap, opts: ExportOptions) {
+/**
+ * The map already says its title, usually in its main concept: the sheet
+ * then doesn't repeat it, and the map gets the room.
+ */
+export function saysTitle(title: string, labels: string[]): boolean {
+  const words = slug(title);
+  return !words || labels.some((label) => `-${slug(label)}-`.includes(`-${words}-`));
+}
+
+async function buildPdf(img: RenderedMap, opts: ExportOptions, titled: boolean) {
   const { jsPDF } = await import('jspdf'); // ~350 KB, only needed here
-  const margin = 12;
-  const footer = opts.usesPictograms ? 8 : 4;
+  // Thin, but wider than what printers cannot reach (about 5 mm): the map gets the rest of the sheet.
+  const margin = 8;
+  const footer = opts.usesPictograms ? 8 : 0;
   const date = new Date().toLocaleDateString('it-IT');
   const pageLabel = (page: number, count: number) => (count > 1 ? `${date} · pagina ${page + 1} di ${count}` : date);
   const write = await lettering([opts.title, pageLabel(0, 2)]);
@@ -371,7 +384,10 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const title = titleLines(opts.title, upright.internal.pageSize.getWidth() - margin * 2 - dateRoom, (t) =>
     write.width(t, TITLE.weight, TITLE.size),
   );
-  const header = 12 + (title.length - 1) * TITLE_LINE;
+  // Without a title one sheet has no header: the date alone would only take
+  // room from the map. More sheets keep their number, to be put in order.
+  const numbered = !titled && opts.pages > 1;
+  const header = titled ? 12 + (title.length - 1) * TITLE_LINE : numbered ? 8 : 0;
   const plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks, img.boxes);
   const doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper, compress: true });
   const pageW = doc.internal.pageSize.getWidth();
@@ -379,12 +395,14 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const boxW = pageW - margin * 2;
   const whole = plan.tiles.length === 1;
   const full = await loadImage(img.dataUrl);
-  const baseline = margin + 6;
+  const baseline = margin + (titled ? 6 : 4);
 
   for (let page = 0; page < plan.pageCount; page++) {
     if (page > 0) doc.addPage(opts.paper, plan.orientation);
-    put(doc, write, title, TITLE, margin, baseline); // the same picture on every sheet: jsPDF keeps one copy
-    put(doc, write, [pageLabel(page, plan.pageCount)], DATE, pageW - margin, baseline, 'right');
+    if (titled) put(doc, write, title, TITLE, margin, baseline); // the same picture on every sheet: jsPDF keeps one copy
+    // Not drawn, but still there to search the PDF and read it aloud.
+    else doc.setFontSize(TITLE.size).text(pdfText(opts.title), margin, margin + 4, { renderingMode: 'invisible' });
+    if (titled || numbered) put(doc, write, [pageLabel(page, plan.pageCount)], DATE, pageW - margin, baseline, 'right');
 
     for (const tile of plan.tiles.filter((t) => t.page === page)) {
       const w = tile.w * plan.scale;
@@ -398,18 +416,19 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions) {
     if (opts.usesPictograms) {
       doc.setFontSize(7);
       doc.setTextColor(100);
-      doc.text(ARASAAC_CREDIT, margin, pageH - margin + 2, { maxWidth: boxW });
+      doc.text(ARASAAC_CREDIT, margin, pageH - margin - 2, { maxWidth: boxW });
     }
   }
   return doc;
 }
 
-export async function exportMap(nodes: Node[], background: string, opts: ExportOptions): Promise<void> {
-  const img = await renderMap(nodes, background, opts.simple);
+export async function exportMap(nodes: Node[], opts: ExportOptions): Promise<void> {
+  const img = await renderMap(nodes, opts.simple, opts.format === 'pdf' ? PDF_PADDING : PADDING);
   if (opts.cancelled?.()) return;
   const base = `${slug(opts.title) || 'mappa'}${opts.simple ? '-verifica' : ''}`;
   if (opts.format === 'png') return shareFile(img.dataUrl, `${base}.png`, opts.title);
-  const doc = await buildPdf(img, opts);
+  const labels = nodes.filter((n) => !n.hidden).map((n) => String(n.data.label ?? ''));
+  const doc = await buildPdf(img, opts, !saysTitle(opts.title, labels));
   if (opts.cancelled?.()) return;
   if (opts.print && !isNative()) return printPdf(doc.output('blob'));
   return shareFile(doc.output('datauristring'), `${base}.pdf`, opts.title);
