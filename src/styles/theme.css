@@ -35,6 +35,9 @@
   --tint-strong: color-mix(in srgb, var(--border) 65%, var(--surface));
   /* Hairline around cards and bars: separates without boxing everything in. */
   --line: color-mix(in srgb, var(--border) 75%, var(--surface));
+  /* Two corners, plus the round: buttons and small things, cards and sheets. */
+  --radius-sm: 10px;
+  --radius-md: 16px;
   /* "Foglio" maps: each branch has its own colour of line (see BusEdge). */
   --branch-0: #3b6ea5;
   --branch-1: #a85a12;

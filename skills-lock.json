@@ -7,6 +7,12 @@
       "skillPath": "skills/accessibility/SKILL.md",
       "computedHash": "612f913bcb03f0787b103c848cd7664b676a9aaf31f25d3270cc69cf5caaab95"
     },
+    "appllama-app-design-skill": {
+      "source": "appllama/appllama-skills",
+      "sourceType": "github",
+      "skillPath": "skills/appllama-app-design-skill/SKILL.md",
+      "computedHash": "023b25559a5e9a4ab85ccffc9612d0d0f650608eb7f281dce8408a32649b2340"
+    },
     "aso": {
       "source": "coreyhaines31/marketingskills",
       "sourceType": "github",

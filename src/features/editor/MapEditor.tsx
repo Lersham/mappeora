@@ -419,9 +419,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
     if (removed.length) useMapStore.getState().removeEdges(removed);
   }, []);
 
-  const parentForNew = () => {
+  /** The concept added by the last «Concetto» (or dictation), while nothing else has been touched. */
+  const justAdded = useRef<string | null>(null);
+  const parentForNew = (repeat = false) => {
     const { map: current, selectedId: selected } = useMapStore.getState();
-    return current ? parentFor(current, selected) : null;
+    return current ? parentFor(current, selected, repeat ? justAdded.current : null) : null;
   };
 
   /** Size on screen (px) of a concept's name at the current zoom, and at zoom 1. */
@@ -579,9 +581,10 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
   };
 
   /** From the toolbar (or Tab) a concept opens ready for typing; a dictated one already has its name. */
-  const addConcept = (label?: string, parent = parentForNew()) => {
+  const addConcept = (label?: string, parent?: string | null) => {
     cancelCloser();
-    const id = actions.addChild(parent, label);
+    const id = actions.addChild(parent === undefined ? parentForNew(true) : parent, label);
+    justAdded.current = parent === undefined ? id : null;
     if (label === undefined) actions.startEditing(id);
     reveal(id, { readable: label === undefined });
   };
@@ -1069,7 +1072,11 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         )}
       </header>
 
-      <div className="canvas" ref={canvasRef} onPointerDownCapture={() => (heldOnPress.current = useMapStore.getState().selectedId)}>
+      <div className="canvas" ref={canvasRef} onPointerDownCapture={(e) => {
+        heldOnPress.current = useMapStore.getState().selectedId;
+        // Touching a concept ends the list: «Concetto» now goes under that one.
+        if ((e.target as Element).closest('.react-flow__node')) justAdded.current = null;
+      }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -1202,7 +1209,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
                 actions.colorBranches();
               }}
             >
-              🎨 Colora i rami
+              <Icon name="palette" /> Colora i rami
             </button>
             <button type="button" className="pick-banner-close" aria-label="Chiudi" title="Chiudi" onClick={() => setColorOffer(false)}>
               <Icon name="close" />
@@ -1362,7 +1369,7 @@ function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
       {parentLabel ? (
         <>
           <OptionCard
-            icon="⬆️"
+            icon={<Icon name="lift" />}
             name={`Solo «${label}»`}
             description={`${below === 1 ? 'Il concetto che c’è sotto sale' : `I ${below} concetti che ci sono sotto salgono`} di un livello, sotto «${parentLabel}».`}
             onClick={() => {
@@ -1371,7 +1378,7 @@ function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
             }}
           />
           <OptionCard
-            icon="🗑️"
+            icon={<Icon name="trash" />}
             name="Tutto il ramo"
             description={`«${label}» e ${n} sotto.`}
             onClick={() => {
@@ -1393,17 +1400,17 @@ function DeleteDialog({ id, onClose }: { id: string; onClose(): void }) {
 function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): void; onClose(): void }) {
   return (
     <Dialog title="Ripassa" onClose={onClose} className="review-start" sheet>
-      <OptionCard icon="👣" name="Un passo alla volta" description="La mappa appare un concetto alla volta, letto ad alta voce." onClick={() => onStart('passo')} />
-      <OptionCard icon="🙈" name="Indovina" description="Il concetto è nascosto: prova a ricordarlo, poi premi «Scopri»." onClick={() => onStart('quiz')} />
+      <OptionCard icon={<Icon name="footprints" />} name="Un passo alla volta" description="La mappa appare un concetto alla volta, letto ad alta voce." onClick={() => onStart('passo')} />
+      <OptionCard icon={<Icon name="eye-off" />} name="Indovina" description="Il concetto è nascosto: prova a ricordarlo, poi premi «Scopri»." onClick={() => onStart('quiz')} />
       <OptionCard
-        icon="🙋"
+        icon={<Icon name="hand" />}
         name="Interrogazione"
         description="Tutta la mappa davanti a te, a schermo intero: spiega un concetto alla volta e vai avanti con le frecce."
         onClick={() => onStart('interrogazione')}
       />
       {speech().sttSupported && (
         <OptionCard
-          icon="🗣️"
+          icon={<Icon name="speech" />}
           name="Ripetimi"
           description="Spiega la mappa a voce: i concetti che nomini si accendono. Alla fine ti dico cosa hai saltato."
           onClick={() => onStart('ripetimi')}

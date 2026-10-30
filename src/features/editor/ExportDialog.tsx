@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { BigButton } from '../../components/BigButton';
 import { OptionCard } from '../../components/OptionCard';
+import { Icon, type IconName } from '../../components/Icon';
 import { SpokenError } from '../../components/SpokenError';
 import { isNative } from '../../services/platform';
 import { TOUCH } from '../../lib/touch';
@@ -17,10 +18,10 @@ export interface ExportChoice {
   print: boolean;
 }
 
-const KINDS: { value: ExportKind; icon: string; label: string; desc: string }[] = [
-  { value: 'pdf', icon: '📄', label: 'PDF da stampare', desc: 'Per il quaderno, la verifica, l’esame.' },
-  { value: 'png', icon: '🖼️', label: 'Immagine', desc: 'Da mandare in chat o mettere in una presentazione.' },
-  { value: 'file', icon: '✏️', label: 'File modificabile', desc: 'Per continuare la mappa su un altro dispositivo o mandarla all’insegnante.' },
+const KINDS: { value: ExportKind; icon: IconName; label: string; desc: string }[] = [
+  { value: 'pdf', icon: 'file-pdf', label: 'PDF da stampare', desc: 'Per il quaderno, la verifica, l’esame.' },
+  { value: 'png', icon: 'picture', label: 'Immagine', desc: 'Da mandare in chat o mettere in una presentazione.' },
+  { value: 'file', icon: 'file-edit', label: 'File modificabile', desc: 'Per continuare la mappa su un altro dispositivo o mandarla all’insegnante.' },
 ];
 
 const PAGES: { value: PageCount; label: string }[] = [
@@ -49,7 +50,7 @@ export function ExportDialog({ busy, error, onExport, onClose }: Props) {
         {KINDS.map((k) => (
           <OptionCard
             key={k.value}
-            icon={k.icon}
+            icon={<Icon name={k.icon} />}
             name={k.label}
             description={k.desc}
             pressed={kind === k.value}

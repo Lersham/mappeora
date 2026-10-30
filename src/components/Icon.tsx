@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpFromLine,
   BookOpen,
   Brain,
   Camera,
@@ -10,9 +11,14 @@ import {
   ClipboardPaste,
   Clock,
   Eye,
+  EyeOff,
+  FilePenLine,
+  FileText,
+  Footprints,
   FolderOpen,
   GraduationCap,
   Hand,
+  Image as ImageIcon,
   ImageOff,
   ImagePlus,
   Link2,
@@ -40,6 +46,7 @@ import {
   Search,
   Share,
   SkipForward,
+  Speech,
   Square,
   Trash2,
   Undo2,
@@ -52,8 +59,10 @@ import {
 /**
  * The icons of the commands: one family of line icons, in the colour of the
  * text. Colour belongs to the map (its concepts and their pictures), so the
- * buttons around it stay quiet. Pictures that explain a choice (templates,
- * review modes, the welcome pages) are emoji, not these.
+ * buttons around it stay quiet. The pictures of a choice (review modes, kinds
+ * of file, the welcome pages) come from here too, not emoji: an emoji is
+ * drawn differently on every device and brings colour the map should have.
+ * The templates show their own shape (TemplateIcon.tsx).
  */
 const ICONS = {
   back: ArrowLeft,
@@ -66,7 +75,11 @@ const ICONS = {
   close: X,
   edit: Pencil,
   eye: Eye,
+  'eye-off': EyeOff,
+  'file-edit': FilePenLine,
+  'file-pdf': FileText,
   focus: Presentation,
+  footprints: Footprints,
   fullscreen: Maximize,
   'fullscreen-exit': Minimize,
   folder: FolderOpen,
@@ -76,9 +89,11 @@ const ICONS = {
   hand: Hand,
   help: CircleHelp,
   image: ImagePlus,
+  picture: ImageIcon,
   'image-off': ImageOff,
   indent: IndentIncrease,
   join: Link2,
+  lift: ArrowUpFromLine,
   lock: Lock,
   map: MapIcon,
   menu: Menu,
@@ -98,6 +113,7 @@ const ICONS = {
   share: Share,
   skip: SkipForward,
   speak: Volume2,
+  speech: Speech,
   stop: Square,
   tidy: Network,
   trash: Trash2,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMap, NEW_MAP_TITLE } from '../../lib/mapFactory';
+import { createMap, NEW_CONCEPT_LABEL, NEW_MAP_TITLE } from '../../lib/mapFactory';
 import type { NodeRole } from '../../lib/sheetLayout';
 import type { MapEdge, MapNode } from '../../types/map';
 import {
@@ -75,6 +75,33 @@ describe('parentForNew', () => {
 
   it('an empty map has nowhere to put it', () => {
     expect(parentForNew({ nodes: [], edges: [] }, null)).toBeNull();
+  });
+
+  describe('again right after adding one', () => {
+    // acqua → (mare, fiume); mare and stagno are new and still unnamed.
+    const fresh = {
+      nodes: [node('acqua'), node('mare', { label: NEW_CONCEPT_LABEL }), node('fiume'), node('lago'), node('stagno', { label: NEW_CONCEPT_LABEL })],
+      edges: [edge('acqua', 'mare'), edge('acqua', 'fiume'), edge('fiume', 'lago'), edge('lago', 'stagno')],
+    };
+
+    it('unnamed: beside it, under the same parent', () => {
+      expect(parentForNew(fresh, 'mare', 'mare')).toBe('acqua');
+      expect(parentForNew(fresh, 'stagno', 'stagno')).toBe('lago');
+    });
+
+    it('once it has a name, under it', () => {
+      expect(parentForNew(water, 'mare', 'mare')).toBe('mare');
+    });
+
+    it('the one just added but no longer in hand does not count', () => {
+      expect(parentForNew(fresh, 'fiume', 'mare')).toBe('fiume');
+      expect(parentForNew(fresh, null, 'mare')).toBe('acqua');
+    });
+
+    it('a main concept just added, with no parent, takes the next under it', () => {
+      const alone = { nodes: [node('idea', { label: NEW_CONCEPT_LABEL })], edges: [] };
+      expect(parentForNew(alone, 'idea', 'idea')).toBe('idea');
+    });
   });
 });
 
