@@ -30,7 +30,7 @@ function contrast(a: string, b: string) {
 async function seed(page: Page, theme: string) {
   await page.addInitScript((theme) => {
     if (!localStorage.getItem('mappeora-settings')) {
-      localStorage.setItem('mappeora-settings', JSON.stringify({ state: { theme }, version: 1 }));
+      localStorage.setItem('mappeora-settings', JSON.stringify({ state: { theme }, version: 2 }));
     }
   }, theme);
 }

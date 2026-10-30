@@ -241,10 +241,6 @@ export function pdfText(text: string): string {
 }
 
 type Pdf = InstanceType<typeof import('jspdf').jsPDF>;
-/** Height of one title line, in mm. */
-const TITLE_LINE = 7;
-/** Bold as in the app's headings: Lexend has 600, the others take their 700. */
-const TITLE_WEIGHT = 600;
 
 interface TextStyle {
   weight: number;
@@ -253,39 +249,7 @@ interface TextStyle {
   /** Between baselines, in mm. */
   gap: number;
 }
-const TITLE: TextStyle = { weight: TITLE_WEIGHT, size: 16, gap: TITLE_LINE };
-const PAGE: TextStyle = { weight: 400, size: 10, gap: 0 };
-
-/** Words on lines at most `width` wide; a longer word (a web address) is cut where it must. */
-export function wrapText(text: string, width: number, measure: (text: string) => number): string[] {
-  const lines: string[] = [];
-  for (const word of text.split(/\s+/).filter(Boolean)) {
-    const last = lines.length - 1;
-    if (last >= 0 && measure(`${lines[last]} ${word}`) <= width) {
-      lines[last] += ` ${word}`;
-      continue;
-    }
-    let rest = [...word]; // never half an emoji
-    while (rest.length > 1 && measure(rest.join('')) > width) {
-      let n = rest.length - 1;
-      while (n > 1 && measure(rest.slice(0, n).join('')) > width) n--;
-      lines.push(rest.slice(0, n).join(''));
-      rest = rest.slice(n);
-    }
-    lines.push(rest.join(''));
-  }
-  return lines;
-}
-
-/** The title on at most two lines, `width` wide (shortened with "…" if longer). */
-export function titleLines(title: string, width: number, measure: (text: string) => number): string[] {
-  const lines = wrapText(title, width, measure);
-  if (lines.length === 0) return ['Mappa'];
-  if (lines.length <= 2) return lines;
-  const second = [...lines.slice(1).join(' ')];
-  while (second.length > 1 && measure(`${second.join('').trimEnd()}…`) > width) second.pop();
-  return [lines[0], `${second.join('').trimEnd()}…`];
-}
+const PAGE: TextStyle = { weight: 400, size: 9, gap: 0 };
 
 /** Text drawn as a picture is sharp on paper at this density (about 300 dpi). */
 const PX_PER_MM = 12;
@@ -301,9 +265,8 @@ interface Lettering {
 }
 
 /**
- * jsPDF only has its own fonts: the words (title, sheet number) are
- * drawn as pictures in the child's reading font, spacing and capitals, like
- * the map.
+ * jsPDF only has its own fonts: the words (the sheet's number) are drawn
+ * as pictures in the child's reading font, spacing and capitals, like the map.
  */
 async function lettering(texts: string[]): Promise<Lettering> {
   const root = document.documentElement;
@@ -323,9 +286,7 @@ async function lettering(texts: string[]): Promise<Lettering> {
     return px;
   };
   // A font that cannot load must not stop the PDF: the canvas then uses a stand-in.
-  await Promise.all(
-    [400, TITLE_WEIGHT].map((w) => document.fonts?.load(`${w} 16px ${family}`, cased(texts.join(' '))).catch(() => [])),
-  );
+  await document.fonts?.load(`400 16px ${family}`, cased(texts.join(' '))).catch(() => []);
 
   return {
     width(text, weight, size) {
@@ -360,33 +321,19 @@ function put(doc: Pdf, write: Lettering, lines: string[], s: TextStyle, x: numbe
 }
 
 /**
- * The map already says its title, usually in its main concept: the sheet
- * then doesn't repeat it, and the map gets the room.
+ * The map alone fills the sheet: no title (the map says it, in its main
+ * concept) and no date. More sheets carry their number, to be put together
+ * in order.
  */
-export function saysTitle(title: string, labels: string[]): boolean {
-  const words = slug(title);
-  return !words || labels.some((label) => `-${slug(label)}-`.includes(`-${words}-`));
-}
-
-async function buildPdf(img: RenderedMap, opts: ExportOptions, titled: boolean) {
+async function buildPdf(img: RenderedMap, opts: ExportOptions) {
   const { jsPDF } = await import('jspdf'); // ~350 KB, only needed here
-  // Thin, but wider than what printers cannot reach (about 5 mm): the map gets the rest of the sheet.
-  const margin = 8;
-  const footer = opts.usesPictograms ? 8 : 0;
-  // More sheets carry their number, to be put together in order. No date: it only took room from the map.
+  // Thin, but wider than what printers cannot reach (4 mm at most): the map gets the rest of the sheet.
+  const margin = 5;
+  const footer = opts.usesPictograms ? 5 : 0;
   const numbered = opts.pages > 1;
+  const header = numbered ? 6 : 0;
   const pageLabel = (page: number, count: number) => `pagina ${page + 1} di ${count}`;
-  const write = await lettering([opts.title, pageLabel(0, 2)]);
-  // The title stops before the widest number on its right ("pagina 4 di 4").
-  const numberRoom = numbered ? write.width(pageLabel(opts.pages - 1, opts.pages), PAGE.weight, PAGE.size) + 6 : 0;
-  // The title is broken for the narrow (upright) sheet: it then fits either
-  // way round, and the header it needs is known before choosing the sheet.
-  const upright = new jsPDF({ orientation: 'portrait', unit: 'mm', format: opts.paper });
-  const title = titleLines(opts.title, upright.internal.pageSize.getWidth() - margin * 2 - numberRoom, (t) =>
-    write.width(t, TITLE.weight, TITLE.size),
-  );
-  // Without a title, and on one sheet, there is no header: the map starts at the top.
-  const header = titled ? 12 + (title.length - 1) * TITLE_LINE : numbered ? 8 : 0;
+  const write = numbered ? await lettering([pageLabel(0, 2)]) : undefined;
   const plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks, img.boxes);
   const doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper, compress: true });
   const pageW = doc.internal.pageSize.getWidth();
@@ -394,14 +341,12 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions, titled: boolean) 
   const boxW = pageW - margin * 2;
   const whole = plan.tiles.length === 1;
   const full = await loadImage(img.dataUrl);
-  const baseline = margin + (titled ? 6 : 4);
 
   for (let page = 0; page < plan.pageCount; page++) {
     if (page > 0) doc.addPage(opts.paper, plan.orientation);
-    if (titled) put(doc, write, title, TITLE, margin, baseline); // the same picture on every sheet: jsPDF keeps one copy
-    // Not drawn, but still there to search the PDF and read it aloud.
-    else doc.setFontSize(TITLE.size).text(pdfText(opts.title), margin, margin + 4, { renderingMode: 'invisible' });
-    if (numbered) put(doc, write, [pageLabel(page, plan.pageCount)], PAGE, pageW - margin, baseline, 'right');
+    // The title is not drawn, but it is there to search the PDF and read it aloud.
+    doc.setFontSize(16).text(pdfText(opts.title), margin, margin + 4, { renderingMode: 'invisible' });
+    if (write) put(doc, write, [pageLabel(page, plan.pageCount)], PAGE, pageW - margin, margin + 3.5, 'right');
 
     for (const tile of plan.tiles.filter((t) => t.page === page)) {
       const w = tile.w * plan.scale;
@@ -415,7 +360,7 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions, titled: boolean) 
     if (opts.usesPictograms) {
       doc.setFontSize(7);
       doc.setTextColor(100);
-      doc.text(ARASAAC_CREDIT, margin, pageH - margin - 2, { maxWidth: boxW });
+      doc.text(ARASAAC_CREDIT, margin, pageH - margin - 1.5, { maxWidth: boxW });
     }
   }
   return doc;
@@ -426,8 +371,7 @@ export async function exportMap(nodes: Node[], opts: ExportOptions): Promise<voi
   if (opts.cancelled?.()) return;
   const base = `${slug(opts.title) || 'mappa'}${opts.simple ? '-verifica' : ''}`;
   if (opts.format === 'png') return shareFile(img.dataUrl, `${base}.png`, opts.title);
-  const labels = nodes.filter((n) => !n.hidden).map((n) => String(n.data.label ?? ''));
-  const doc = await buildPdf(img, opts, !saysTitle(opts.title, labels));
+  const doc = await buildPdf(img, opts);
   if (opts.cancelled?.()) return;
   if (opts.print && !isNative()) return printPdf(doc.output('blob'));
   return shareFile(doc.output('datauristring'), `${base}.pdf`, opts.title);

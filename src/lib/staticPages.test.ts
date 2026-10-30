@@ -400,13 +400,20 @@ describe('static-settings.js', () => {
     const seen = new Set<string>();
     for (const theme of ['crema', 'bianco', 'azzurro', 'scuro']) {
       resetPage();
-      setSettings({ state: { theme } });
+      setSettings({ state: { theme }, version: 2 });
       run(staticSettings);
       expect(document.documentElement.dataset.theme).toBe(theme);
       for (const name of ['--bg', '--card', '--text', '--muted', '--accent', '--accent-text', '--line']) expect(prop(name)).toMatch(/^#[0-9a-f]{6}$/);
       seen.add(prop('--bg'));
     }
     expect(seen.size).toBe(4);
+  });
+
+  it('shows white for «crema» saved before version 2, the old default, as the app does', () => {
+    setSettings({ state: { theme: 'crema' }, version: 1 });
+    run(staticSettings);
+    expect(document.documentElement.dataset.theme).toBe('bianco');
+    expect(prop('--bg')).toBe('#ffffff');
   });
 
   it('leaves the page alone when nothing is saved, or the saved look is odd', () => {

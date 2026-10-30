@@ -55,17 +55,17 @@ test.describe('Stampa e PDF', () => {
     });
   }
 
-  test('la mappa prende il foglio fino a 8 mm dai bordi, senza una cornice bianca in più', async ({ page }) => {
+  test('la mappa prende il foglio fino a 5 mm dai bordi, senza titolo né cornice bianca in più', async ({ page }) => {
     await toolbar(page, 'Salva e manda');
     const download = page.waitForEvent('download');
     await page.locator('.dialog-actions').getByRole('button', { name: 'Salva', exact: true }).click();
     const pdf = await readFile((await (await download).path())!);
     const map = mapOnSheet(pdf);
     // A wide map, on its side: as wide as the sheet less two margins.
-    expect(map.x).toBeCloseTo(8, 0);
-    expect(map.w).toBeCloseTo(297 - 16, 0);
-    // No title over it: the main concept already says «La Rivoluzione francese».
-    expect(210 - (map.y + map.h)).toBeCloseTo(8, 0);
+    expect(map.x).toBeCloseTo(5, 0);
+    expect(map.w).toBeCloseTo(297 - 10, 0);
+    // No title over it: the map starts at the top margin.
+    expect(210 - (map.y + map.h)).toBeCloseTo(5, 0);
   });
 
   test('sfondo bianco e linee scure anche se sullo schermo lo sfondo è scuro', async ({ page }) => {

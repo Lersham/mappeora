@@ -35,7 +35,7 @@ test('Testo grande in stampatello: le parole lunghe di un concetto non vanno a c
   await page.addInitScript(() => {
     if (!localStorage.getItem('mappeora-settings')) {
       const state = { font: 'lexend', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
-      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 2 }));
     }
   });
   await newMap(page, 'Acqua');
@@ -63,7 +63,7 @@ test('iPad verticale con il testo più grande: le barre restano dentro lo scherm
   await page.addInitScript(() => {
     if (!localStorage.getItem('mappeora-settings')) {
       const state = { font: 'lexend', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
-      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 2 }));
     }
   });
   await sampleMap(page);
@@ -80,7 +80,7 @@ test('Testo grande, OpenDyslexic e spaziatura ampia: le finestre di scelta resta
   await page.addInitScript(() => {
     if (!localStorage.getItem('mappeora-settings')) {
       const state = { font: 'opendyslexic', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
-      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 2 }));
     }
   });
   // Measured with the real font, not the one shown while it loads.
@@ -108,7 +108,7 @@ test('Testo grande, OpenDyslexic e spaziatura ampia: in nessuna schermata parole
   await page.addInitScript(() => {
     if (!localStorage.getItem('mappeora-settings')) {
       const state = { font: 'opendyslexic', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
-      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 2 }));
     }
   });
   const looks = async (where: string) => {
@@ -178,7 +178,7 @@ test('Testo grande, OpenDyslexic e spaziatura ampia: con tante mappe, la ricerca
   await page.addInitScript(() => {
     if (!localStorage.getItem('mappeora-settings')) {
       const state = { font: 'opendyslexic', textScale: 1.8, uppercase: true, wideSpacing: true, theme: 'crema' };
-      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+      localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 2 }));
     }
   });
   await openCopy(page, ['Le stagioni', 'Il vulcano', 'Perché piove?', 'Gli animali della savana', 'La Rivoluzione francese', 'Il ciclo dell’acqua', 'I pianeti', 'Le frazioni']);

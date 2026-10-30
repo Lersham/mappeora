@@ -43,6 +43,16 @@ export const useSettings = create<SettingsState>()(
       update: (patch) => set(patch),
       reset: () => set(DEFAULT_SETTINGS),
     }),
-    { name: 'mappeora-settings', version: 1 },
+    {
+      name: 'mappeora-settings',
+      // 2: until October 2026 everyone started on «crema», most without choosing it.
+      // They start on white now, like the sheet the map is printed on. (theme-init.js,
+      // kept tiny, still paints that first launch crema until the app starts.)
+      version: 2,
+      migrate: (saved, version) => {
+        const s = saved as SettingsState;
+        return version < 2 && s.theme === 'crema' ? { ...s, theme: 'bianco' } : s;
+      },
+    },
   ),
 );

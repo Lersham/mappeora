@@ -23,8 +23,11 @@
 
   try {
     var raw = localStorage.getItem('mappeora-settings');
-    var s = raw && JSON.parse(raw).state;
+    var saved = raw && JSON.parse(raw);
+    var s = saved && saved.state;
     if (!s || typeof s !== 'object') return;
+    // «crema» saved before version 2 was the old default, not a choice: white, as in the app.
+    if (s.theme === 'crema' && !(saved.version > 1)) s.theme = 'bianco';
     var root = document.documentElement;
     var has = Object.prototype.hasOwnProperty;
 

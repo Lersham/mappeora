@@ -97,7 +97,7 @@ function report(look: string, screens: [string, Census][]): string {
 for (const look of LOOKS) {
   test(`schermate: ${look.name}`, async ({ page }) => {
     await page.addInitScript((state) => {
-      if (!localStorage.getItem('mappeora-settings')) localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+      if (!localStorage.getItem('mappeora-settings')) localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 2 }));
     }, look.settings);
     const dir = folder(look.name);
     const screens: [string, Census][] = [];

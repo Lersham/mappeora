@@ -147,7 +147,7 @@ for (const theme of ['scuro', 'azzurro'] as const) {
       await page.addInitScript((theme) => {
         if (!localStorage.getItem('mappeora-settings')) {
           const state = { font: 'opendyslexic', textScale: 1.8, uppercase: false, wideSpacing: true, theme, speechRate: 0.9, highlightWords: true };
-          localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 1 }));
+          localStorage.setItem('mappeora-settings', JSON.stringify({ state, version: 2 }));
         }
       }, theme);
     });

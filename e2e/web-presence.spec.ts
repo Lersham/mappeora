@@ -16,7 +16,7 @@ const DARK_BG = 'rgb(29, 33, 41)'; // --bg of «scuro» in theme.css
 const CREAM_BG = 'rgb(253, 248, 236)';
 const WHITE_BG = 'rgb(255, 255, 255)';
 
-const SCURO = { state: { font: 'opendyslexic', textScale: 1.5, uppercase: false, wideSpacing: true, theme: 'scuro' }, version: 1 };
+const SCURO = { state: { font: 'opendyslexic', textScale: 1.5, uppercase: false, wideSpacing: true, theme: 'scuro' }, version: 2 };
 
 async function seed(page: Page, settings: unknown) {
   await page.addInitScript((value) => localStorage.setItem('mappeora-settings', JSON.stringify(value)), settings);
@@ -143,7 +143,7 @@ test.describe('Pagina di presentazione', () => {
     await page.goto('/mappe-concettuali-dsa.html');
     expect(await seriousProblems(page)).toEqual([]);
     for (const theme of ['crema', 'bianco', 'azzurro', 'scuro']) {
-      await page.evaluate((value) => localStorage.setItem('mappeora-settings', JSON.stringify({ state: { theme: value, textScale: 1.8, wideSpacing: true, uppercase: true, font: 'opendyslexic' }, version: 1 })), theme);
+      await page.evaluate((value) => localStorage.setItem('mappeora-settings', JSON.stringify({ state: { theme: value, textScale: 1.8, wideSpacing: true, uppercase: true, font: 'opendyslexic' }, version: 2 })), theme);
       await page.reload();
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
       expect(await seriousProblems(page), theme).toEqual([]);
@@ -155,7 +155,7 @@ test.describe('Pagina di presentazione', () => {
     for (const theme of ['azzurro', 'scuro']) {
       await page.goto('/crediti.html');
       const state = { theme, textScale: 1.8, font: 'opendyslexic', uppercase: true, wideSpacing: true };
-      await page.evaluate((value) => localStorage.setItem('mappeora-settings', JSON.stringify({ state: value, version: 1 })), state);
+      await page.evaluate((value) => localStorage.setItem('mappeora-settings', JSON.stringify({ state: value, version: 2 })), state);
       await page.reload();
       expect(await seriousProblems(page), theme).toEqual([]);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${theme}: scorrimento di lato`).toBe(true);
@@ -170,7 +170,7 @@ test.describe('Pagina di presentazione', () => {
       for (const textScale of [1.15, 1.5, 1.8]) {
         for (const uppercase of [false, true]) {
           const state = { theme: 'crema', font: 'opendyslexic', textScale, uppercase, wideSpacing: true };
-          await page.evaluate((value) => localStorage.setItem('mappeora-settings', JSON.stringify({ state: value, version: 1 })), state);
+          await page.evaluate((value) => localStorage.setItem('mappeora-settings', JSON.stringify({ state: value, version: 2 })), state);
           await page.reload();
           const where = `${width} px, testo ${Math.round(textScale * 100)}%${uppercase ? ', maiuscolo' : ''}`;
           expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${where}: scorrimento di lato`).toBe(true);
@@ -215,7 +215,7 @@ test.describe('Le pagine statiche prendono l’aspetto scelto dal bambino', () =
   });
 
   test('lo sfondo scelto nell’app vale più della modalità scura del sistema', async ({ page }) => {
-    await seed(page, { state: { theme: 'crema' }, version: 1 });
+    await seed(page, { state: { theme: 'crema' }, version: 2 });
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.goto('/crediti.html');
     expect(await bodyBackground(page)).toBe(CREAM_BG);
