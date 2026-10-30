@@ -254,7 +254,7 @@ interface TextStyle {
   gap: number;
 }
 const TITLE: TextStyle = { weight: TITLE_WEIGHT, size: 16, gap: TITLE_LINE };
-const DATE: TextStyle = { weight: 400, size: 10, gap: 0 };
+const PAGE: TextStyle = { weight: 400, size: 10, gap: 0 };
 
 /** Words on lines at most `width` wide; a longer word (a web address) is cut where it must. */
 export function wrapText(text: string, width: number, measure: (text: string) => number): string[] {
@@ -301,7 +301,7 @@ interface Lettering {
 }
 
 /**
- * jsPDF only has its own fonts: the words (header, date) are
+ * jsPDF only has its own fonts: the words (title, sheet number) are
  * drawn as pictures in the child's reading font, spacing and capitals, like
  * the map.
  */
@@ -373,20 +373,19 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions, titled: boolean) 
   // Thin, but wider than what printers cannot reach (about 5 mm): the map gets the rest of the sheet.
   const margin = 8;
   const footer = opts.usesPictograms ? 8 : 0;
-  const date = new Date().toLocaleDateString('it-IT');
-  const pageLabel = (page: number, count: number) => (count > 1 ? `${date} · pagina ${page + 1} di ${count}` : date);
+  // More sheets carry their number, to be put together in order. No date: it only took room from the map.
+  const numbered = opts.pages > 1;
+  const pageLabel = (page: number, count: number) => `pagina ${page + 1} di ${count}`;
   const write = await lettering([opts.title, pageLabel(0, 2)]);
-  // The title stops before the widest date on its right ("pagina 4 di 4").
-  const dateRoom = write.width(pageLabel(opts.pages - 1, opts.pages), DATE.weight, DATE.size) + 6;
+  // The title stops before the widest number on its right ("pagina 4 di 4").
+  const numberRoom = numbered ? write.width(pageLabel(opts.pages - 1, opts.pages), PAGE.weight, PAGE.size) + 6 : 0;
   // The title is broken for the narrow (upright) sheet: it then fits either
   // way round, and the header it needs is known before choosing the sheet.
   const upright = new jsPDF({ orientation: 'portrait', unit: 'mm', format: opts.paper });
-  const title = titleLines(opts.title, upright.internal.pageSize.getWidth() - margin * 2 - dateRoom, (t) =>
+  const title = titleLines(opts.title, upright.internal.pageSize.getWidth() - margin * 2 - numberRoom, (t) =>
     write.width(t, TITLE.weight, TITLE.size),
   );
-  // Without a title one sheet has no header: the date alone would only take
-  // room from the map. More sheets keep their number, to be put in order.
-  const numbered = !titled && opts.pages > 1;
+  // Without a title, and on one sheet, there is no header: the map starts at the top.
   const header = titled ? 12 + (title.length - 1) * TITLE_LINE : numbered ? 8 : 0;
   const plan = planPages(img.width, img.height, opts.paper, opts.pages, { margin, header, footer }, img.breaks, img.boxes);
   const doc = new jsPDF({ orientation: plan.orientation, unit: 'mm', format: opts.paper, compress: true });
@@ -402,7 +401,7 @@ async function buildPdf(img: RenderedMap, opts: ExportOptions, titled: boolean) 
     if (titled) put(doc, write, title, TITLE, margin, baseline); // the same picture on every sheet: jsPDF keeps one copy
     // Not drawn, but still there to search the PDF and read it aloud.
     else doc.setFontSize(TITLE.size).text(pdfText(opts.title), margin, margin + 4, { renderingMode: 'invisible' });
-    if (titled || numbered) put(doc, write, [pageLabel(page, plan.pageCount)], DATE, pageW - margin, baseline, 'right');
+    if (numbered) put(doc, write, [pageLabel(page, plan.pageCount)], PAGE, pageW - margin, baseline, 'right');
 
     for (const tile of plan.tiles.filter((t) => t.page === page)) {
       const w = tile.w * plan.scale;
