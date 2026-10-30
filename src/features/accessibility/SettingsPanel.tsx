@@ -50,7 +50,10 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
   useEffect(() => {
     if (before && !atDefaults) setBefore(null);
   }, [before, atDefaults]);
-  useEffect(() => note.current?.scrollIntoView?.({ block: 'nearest' }), [before]);
+  useEffect(() => {
+    // In braces: newer browsers return a promise, which React would call as a cleanup.
+    note.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [before]);
 
   const reset = () => {
     // A second tap: keep the first snapshot, or «Annulla» would bring back the defaults.

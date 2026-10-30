@@ -11,6 +11,17 @@ async function settings(page: import('@playwright/test').Page) {
 }
 
 test.describe('Aspetto: Ripristina si può annullare', () => {
+  // Like the newer browsers, whatever the one running the tests: scrollIntoView
+  // returns a promise. The panel took it for an effect's cleanup and fell apart.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      const scroll = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = function (this: Element, ...args: Parameters<typeof scroll>) {
+        return scroll.apply(this, args) ?? Promise.resolve();
+      } as typeof scroll;
+    });
+  });
+
   test('«Annulla» rimette carattere, sfondo, maiuscolo e voce di prima', async ({ page }) => {
     const panel = await settings(page);
     const voiceSelect = panel.locator('select');
