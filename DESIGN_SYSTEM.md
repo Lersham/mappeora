@@ -170,6 +170,18 @@ Poi due anelli, che non sono ombre ma segnali:
 - Nelle barre i pulsanti secondari non hanno fondo né cornice; quello
   premuto (`aria-pressed`) si vede.
 
+### Home
+
+- L'intestazione ha solo ciò che serve a ogni apertura: logo, «Aspetto» e,
+  in un browser, «Schermo intero». Nell'app installata (aperta dalla
+  schermata Home) «Schermo intero» non c'è, né nella home né nell'editor: le
+  barre del browser non ci sono già. «Interrogazione» entra comunque da
+  sola a schermo intero.
+- Ciò che si usa una volta («Come funziona») sta in fondo, con «Privacy» e
+  «Crediti». Il piè di pagina deve restare su una riga a testo normale su
+  telefono: se va a capo è più alto e si sposta di più quando arriva
+  l'elenco delle mappe (lo controlla `app-shell.spec.ts`).
+
 ### Scelte, campi, chip
 
 - **`.choice`**: alta almeno 48px, bordo 2px `--border`; scelta = bordo

@@ -208,7 +208,7 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
 }
-/* «Come funziona» and «Aspetto»: small pills, icon and word side by side. */
+/* «Aspetto» (and «Schermo intero», where there is one): small pills, icon and word side by side. */
 .home-header-tools .big-button {
   flex-direction: row;
   gap: 8px;
@@ -254,25 +254,6 @@ textarea {
   .home-header-tools .big-button-label {
     font-size: 0.85rem;
     letter-spacing: normal;
-  }
-  /* «Schermo intero» only as its icon, as in the editor's top bar: the three
-     pills took two rows and pushed «Le mie mappe» down. The word stays for
-     screen readers. */
-  .home-header-tools .home-fullscreen {
-    min-width: 44px;
-    padding: 4px;
-  }
-  .home-header-tools .home-fullscreen .big-button-label {
-    /* Hidden as .sr-only is (see below). */
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
   }
 }
 
@@ -430,12 +411,20 @@ textarea {
   gap: 0 8px;
   margin-top: 40px;
 }
-.home-footer a {
+.home-footer a,
+.home-footer button {
   display: inline-block;
-  padding: 12px 16px;
+  /* Three words in a row on a phone: a wrapped footer is taller, and moves more when the list of maps arrives. */
+  padding: 12px 12px;
+  border: 0;
+  background: none;
   color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
-.home-footer a:hover {
+.home-footer a:hover,
+.home-footer button:hover {
   color: var(--primary);
 }
 /* A reminder that matters (a safety copy, the Home screen on iPhone). */

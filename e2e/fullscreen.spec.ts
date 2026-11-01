@@ -26,6 +26,31 @@ test.describe('Schermo intero', () => {
     await expect(page.getByRole('button', { name: /schermo intero/i })).toHaveCount(0);
   });
 
+  test('nell’app installata (aperta dalla schermata Home) il pulsante non c’è: le barre del browser non ci sono già', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', NO_FULLSCREEN);
+    await page.addInitScript(() => {
+      const real = window.matchMedia.bind(window);
+      window.matchMedia = (q: string) => {
+        const m = real(q);
+        if (/display-mode:\s*standalone/.test(q)) Object.defineProperty(m, 'matches', { value: true });
+        return m;
+      };
+    });
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: 'Aspetto' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /schermo intero/i })).toHaveCount(0);
+
+    await newMap(page, 'Le stagioni');
+    await expect(page.getByRole('button', { name: /schermo intero/i })).toHaveCount(0);
+    // On a phone the tools that do not fit are under «Altro».
+    const more = page.getByRole('navigation', { name: 'Strumenti' }).getByRole('button', { name: 'Altro', exact: true });
+    if (await more.isVisible()) {
+      await more.click();
+      await expect(page.getByRole('dialog', { name: 'Altro' }).getByRole('button', { name: 'Aspetto', exact: true })).toBeVisible();
+      await expect(page.getByRole('dialog', { name: 'Altro' }).getByRole('button', { name: /schermo intero/i })).toHaveCount(0);
+    }
+  });
+
   test('nell’editor il pulsante c’è (sul telefono sotto «Altro») e un dialogo funziona a schermo intero', async ({ page, browserName }) => {
     test.skip(browserName === 'webkit', NO_FULLSCREEN);
     await newMap(page, 'Le stagioni');

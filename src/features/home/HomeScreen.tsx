@@ -250,9 +250,8 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
           <span>MappAmi</span>
         </div>
         <div className="home-header-tools">
-          <BigButton icon="help" label="Come funziona" onClick={() => setWelcomeOpen(true)} />
           <BigButton icon="palette" label="Aspetto" onClick={onOpenSettings} />
-          <FullscreenButton className="home-fullscreen" />
+          <FullscreenButton />
         </div>
       </header>
       <h1 className="home-title">Le mie mappe</h1>
@@ -409,6 +408,10 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       )}
 
       <footer className="home-footer">
+        {/* Shown by itself on a first visit and taught again by «Impara facendo»: here, not in the header where it took a row on every visit. */}
+        <button type="button" onClick={() => setWelcomeOpen(true)}>
+          Come funziona
+        </button>
         <a href={`${import.meta.env.BASE_URL}privacy.html`}>
           <Icon name="lock" className="inline-icon" /> Privacy
         </a>
