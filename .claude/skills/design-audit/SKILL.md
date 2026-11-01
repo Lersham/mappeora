@@ -33,8 +33,8 @@ Read and internalize before forming any opinion:
 You must understand the current system completely before proposing changes.
 
 **Reference files** (read as needed):
-- `references/design-principles.md` — Core design rules and philosophy
-- `references/audit-template.md` — Output format for the phased plan
+- `design-principles.md` — Core design rules and philosophy
+- `audit-template.md` — Output format for the phased plan
 
 ---
 
@@ -73,7 +73,7 @@ For every element on every screen:
 
 ### Step 3: Compile the Plan
 
-Read `references/audit-template.md` for the exact output format. Organize findings into three phases:
+Read `audit-template.md` for the exact output format. Organize findings into three phases:
 
 - **Phase 1 — Critical**: Hierarchy, usability, responsiveness, consistency issues that actively hurt UX
 - **Phase 2 — Refinement**: Spacing, typography, color, alignment, iconography that elevate the experience
