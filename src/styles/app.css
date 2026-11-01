@@ -117,7 +117,7 @@ textarea {
   gap: 8px;
   min-width: 96px;
   min-height: 48px;
-  padding: 8px 18px;
+  padding: 8px 14px;
 }
 .big-button.is-row .big-button-icon,
 .dialog-actions .big-button-icon {
@@ -125,7 +125,8 @@ textarea {
 }
 .big-button.is-row .big-button-label,
 .dialog-actions .big-button-label {
-  font-size: 1rem;
+  /* With large text on a phone «Annulla» and «Crea» still share one row. */
+  font-size: min(1rem, 5.5vw);
 }
 
 .icon-button {
