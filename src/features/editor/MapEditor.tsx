@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentProps } from 'react';
 import { enterFullscreen, exitFullscreen, fullscreenProps, isFullscreen, useFullscreen } from '../../lib/fullscreen';
-import { FullscreenButton, FullscreenHint, fullscreenKind, homeFullscreenProps } from '../../components/FullscreenButton';
+import { FullscreenButton, FullscreenHint, fullscreenKind, homeFullscreenProps, offersFullscreenButton } from '../../components/FullscreenButton';
 import {
   Background,
   type EdgeTypes,
@@ -980,7 +980,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
         onOpenSettings();
       },
     },
-    ...(fullscreenKind() === 'api' ? [{ key: 'fullscreen', ...fullscreenProps(inFullscreen) }] : []),
+    ...(fullscreenKind() === 'api' && offersFullscreenButton() ? [{ key: 'fullscreen', ...fullscreenProps(inFullscreen) }] : []),
     ...(fullscreenKind() === 'home' ? [{ key: 'fullscreen', ...homeFullscreenProps(() => setDialog({ kind: 'fullscreen' })) }] : []),
   ];
   // The tool the tutorial asks for may be in «Altro»: then «Altro» stands out too.
@@ -1066,7 +1066,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           <>
             {/* On a phone the bar is tight: there the way out is the system's (back gesture) or «Altro» in the editor. */}
             <FullscreenButton className="topbar-map icon-only" />
-            <BigButton icon="close" label="Esci" aria-label="Esci" title="Esci" onClick={exitReview} />
+            <BigButton icon="close" label="Esci" aria-label="Esci" title="Esci" className="review-exit" onClick={exitReview} />
           </>
         )}
       </header>
@@ -1416,7 +1416,7 @@ function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): vo
         />
       )}
       <div className="dialog-actions">
-        <BigButton icon="close" label="Annulla" onClick={onClose} />
+        <BigButton icon="close" label="Chiudi" onClick={onClose} />
       </div>
     </Dialog>
   );

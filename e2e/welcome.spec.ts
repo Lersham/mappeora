@@ -74,7 +74,9 @@ test.describe('Benvenuto', () => {
     await welcome.getByRole('button', { name: 'Salta' }).click();
     await expect(welcome).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Come funziona' }).click();
+    // Not in the header, where it took a row on every visit: with «Privacy» and «Crediti».
+    await expect(page.locator('.home-header').getByRole('button', { name: 'Come funziona' })).toHaveCount(0);
+    await page.locator('.home-footer').getByRole('button', { name: 'Come funziona' }).click();
     await expect(welcome.getByRole('heading', { name: 'Benvenuto in MappAmi' })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(welcome).toHaveCount(0);

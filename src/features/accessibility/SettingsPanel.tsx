@@ -169,15 +169,19 @@ export function SettingsPanel({ onClose }: { onClose(): void }) {
         </label>
       )}
 
-      <p className="sample">{SAMPLE}</p>
+      {/* The sentence and the button that reads it, together: the row at the
+          end of the window keeps only «Chiudi», so with large text it does
+          not take half the window. */}
+      <div className="voice-try">
+        <p className="sample">{SAMPLE}</p>
+        <BigButton icon="speak" label="Prova la voce" className="is-row" onClick={() => void readText(SAMPLE)} />
+      </div>
+
+      <div className="settings-reset">
+        <BigButton id="settings-reset" icon="reset" label="Ripristina" className="is-row" onClick={reset} />
+      </div>
 
       <div className="dialog-actions">
-        <BigButton
-          icon="speak"
-          label="Prova la voce"
-          onClick={() => void readText(SAMPLE)}
-        />
-        <BigButton id="settings-reset" icon="reset" label="Ripristina" onClick={reset} />
         <BigButton icon="check" label="Chiudi" variant="primary" onClick={onClose} />
       </div>
       {/* Always in the page: a live region must be there before it speaks. */}

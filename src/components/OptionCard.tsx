@@ -6,7 +6,7 @@ interface Props {
   /** An <Icon> for a command; an example map keeps its own emoji. */
   icon: ReactNode;
   name: string;
-  /** Shown after the name, not read: e.g. the school subject. */
+  /** Shown under the name, not read: e.g. the school subject. */
   extra?: ReactNode;
   description: string;
   pressed?: boolean;

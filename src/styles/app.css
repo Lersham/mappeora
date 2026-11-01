@@ -108,6 +108,26 @@ textarea {
   font-size: 0.8rem;
   font-weight: 600;
 }
+/* Icon beside the word: the buttons at the end of a dialog, and those in
+   its text. Lower than a column (48px, not 56px+), so with large text the
+   row of buttons does not eat the window; wider, so the main one shows. */
+.big-button.is-row,
+.dialog-actions .big-button {
+  flex-direction: row;
+  gap: 8px;
+  min-width: 96px;
+  min-height: 48px;
+  padding: 8px 14px;
+}
+.big-button.is-row .big-button-icon,
+.dialog-actions .big-button-icon {
+  font-size: 1.25rem;
+}
+.big-button.is-row .big-button-label,
+.dialog-actions .big-button-label {
+  /* With large text on a phone «Annulla» and «Crea» still share one row. */
+  font-size: min(1rem, 5.5vw);
+}
 
 .icon-button {
   display: inline-grid;
@@ -172,7 +192,7 @@ textarea {
 .home-brand img {
   flex: none;
   border-radius: var(--radius-sm);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--text) 18%, transparent);
+  box-shadow: var(--shadow-raised);
 }
 .home-title {
   font-size: 1.9rem;
@@ -188,7 +208,7 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
 }
-/* «Come funziona» and «Aspetto»: small pills, icon and word side by side. */
+/* «Aspetto» (and «Schermo intero», where there is one): small pills, icon and word side by side. */
 .home-header-tools .big-button {
   flex-direction: row;
   gap: 8px;
@@ -320,7 +340,7 @@ textarea {
 .start-tile:hover {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--tone, var(--primary)) 45%, var(--line));
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--text) 10%, transparent);
+  box-shadow: var(--shadow-raised);
 }
 .start-tile:active {
   transform: scale(0.99);
@@ -391,12 +411,20 @@ textarea {
   gap: 0 8px;
   margin-top: 40px;
 }
-.home-footer a {
+.home-footer a,
+.home-footer button {
   display: inline-block;
-  padding: 12px 16px;
+  /* Three words in a row on a phone: a wrapped footer is taller, and moves more when the list of maps arrives. */
+  padding: 12px 12px;
+  border: 0;
+  background: none;
   color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
-.home-footer a:hover {
+.home-footer a:hover,
+.home-footer button:hover {
   color: var(--primary);
 }
 /* A reminder that matters (a safety copy, the Home screen on iPhone). */
@@ -477,7 +505,7 @@ textarea {
 }
 .map-card:hover {
   border-color: color-mix(in srgb, var(--primary) 40%, var(--line));
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--text) 10%, transparent);
+  box-shadow: var(--shadow-raised);
 }
 /* The map you worked on last: the one you most likely want. */
 .map-card.is-latest {
@@ -625,7 +653,7 @@ textarea {
   background: var(--surface);
   color: var(--danger);
   font-weight: 600;
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
+  box-shadow: var(--shadow-raised);
 }
 .editor-notice span {
   flex: 1;
@@ -944,7 +972,7 @@ textarea {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+  box-shadow: var(--shadow-raised);
 }
 .selection-bar .big-button {
   flex-direction: row;
@@ -1009,7 +1037,7 @@ textarea {
   background: var(--surface);
   border: 2px solid var(--primary);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 14px rgb(0 0 0 / 0.15);
+  box-shadow: var(--shadow-raised);
 }
 .pick-banner p {
   margin: 0;
@@ -1066,7 +1094,7 @@ textarea {
     padding: 4px 8px;
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
-    box-shadow: 0 4px 18px rgb(0 0 0 / 0.12);
+    box-shadow: var(--shadow-raised);
   }
   .editor.has-dock .toolbar .big-button {
     flex: 0 0 auto;
@@ -1104,7 +1132,7 @@ textarea {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+  box-shadow: var(--shadow-raised);
 }
 .focus-exit .big-button-label {
   font-size: 0.85rem;
@@ -1117,6 +1145,10 @@ textarea {
   --xy-edge-stroke-width: 2.5;
   --xy-controls-button-background-color: var(--surface);
   --xy-controls-button-color: var(--text);
+  /* React Flow's own hover is a light grey: in the dark theme the icon vanished on it. */
+  --xy-controls-button-background-color-hover: var(--tint-strong);
+  --xy-controls-button-color-hover: var(--primary);
+  --xy-controls-button-border-color: var(--line);
   --xy-edge-label-background-color: var(--surface);
   --xy-edge-label-color: var(--text);
 }
@@ -1425,7 +1457,7 @@ textarea {
   padding: var(--card-pad);
   border-radius: var(--radius-md);
   background: var(--surface);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-dialog);
 }
 .dictation {
   display: grid;
@@ -1553,6 +1585,20 @@ textarea {
   border-radius: var(--radius-sm);
   background: var(--surface);
 }
+.voice-try {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.voice-try .sample {
+  flex: 1 1 14em;
+  margin: 0;
+}
+.settings-reset {
+  margin-top: 16px;
+}
 .sample {
   padding: 12px 16px;
   border-radius: var(--radius-sm);
@@ -1571,8 +1617,10 @@ textarea {
 
 .dialog-title {
   margin: 0 0 16px;
-  /* On a phone with large text a long title still fits the window. */
-  font-size: min(1.4rem, 6vw);
+  /* On a phone with large text a long title still fits the window, and
+     stays larger than the headings inside it (1rem): with 6vw it ended up
+     smaller than them at 180%. */
+  font-size: min(1.4rem, 8vw);
   overflow-wrap: break-word;
 }
 /* Keep "Crea" / "Fatto" reachable in long dialogs on small screens: the
@@ -1719,7 +1767,8 @@ textarea {
 .color-swatch {
   width: 48px;
   height: 48px;
-  border: 3px solid rgba(0, 0, 0, 0.2);
+  /* 3:1 on every paper (WCAG 1.4.11): the dark word colours vanished on the dark theme. */
+  border: 3px solid var(--field-border);
   border-radius: 50%;
   cursor: pointer;
 }
@@ -1809,6 +1858,15 @@ textarea {
 .template-name,
 .template-desc {
   overflow-wrap: break-word;
+}
+/* The school subject of an example: a line of its own. After the name, on
+   the same line, it went to the next one alone («La civiltà egizia ·» / «Storia»). */
+.option-subject {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
 }
 .template-desc {
   display: block;
@@ -1911,7 +1969,8 @@ textarea {
 .concept-resize {
   position: absolute;
   top: 50%;
-  right: -20px;
+  /* Outside the concept: at -20px it covered the end of the last word. */
+  right: -28px;
   width: 36px;
   height: 36px;
   transform: translateY(-50%);
@@ -1957,6 +2016,11 @@ textarea {
   content: '';
   position: absolute;
   inset: -6px;
+}
+/* A big map is not covered in «−»: it shows on the concept in hand, under
+   the mouse or the keyboard, and always where a branch is folded («+2»). */
+.react-flow__node:not(:hover, :focus-within) > .concept-node:not(.is-selected) .concept-toggle:not(.is-collapsed) {
+  display: none;
 }
 .concept-toggle.is-collapsed {
   background: var(--primary);
@@ -2323,6 +2387,16 @@ textarea {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+/* In a review the way out keeps its word, also on a phone: beside «←» (back
+   to the maps) a bare ✕ left the child guessing which one ends the review. */
+.topbar .review-exit .big-button-label {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
 }
 .welcome-dots .current {
   color: var(--primary);

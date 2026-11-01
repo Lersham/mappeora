@@ -16,6 +16,13 @@ export function fullscreenKind(): 'api' | 'home' | null {
   return canFullscreen() ? 'api' : null;
 }
 
+/**
+ * The button is offered in a browser, not in an installed app: opened from the
+ * Home screen it already has no browser bars, so there is nothing to hide
+ * (on iPhone and iPad `fullscreenKind` already says so).
+ */
+export const offersFullscreenButton = (): boolean => fullscreenKind() !== null && !isHomeScreenApp();
+
 /** On iPhone and iPad «Schermo intero» explains the Home screen instead. */
 export const homeFullscreenProps = (open: () => void) => ({ icon: 'fullscreen' as const, label: 'Schermo intero', title: 'Schermo intero', onClick: open });
 
@@ -45,7 +52,7 @@ export function FullscreenButton({ className }: { className?: string }) {
   const on = useFullscreen();
   const [hint, setHint] = useState(false);
   const kind = fullscreenKind();
-  if (!kind) return null;
+  if (!kind || !offersFullscreenButton()) return null;
   if (kind === 'api') return <BigButton {...fullscreenProps(on)} className={className} />;
   return (
     <>
