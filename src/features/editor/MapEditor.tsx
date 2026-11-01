@@ -1066,7 +1066,7 @@ function Editor({ onBack, onOpenSettings, initialDialog, tutorial }: Props) {
           <>
             {/* On a phone the bar is tight: there the way out is the system's (back gesture) or «Altro» in the editor. */}
             <FullscreenButton className="topbar-map icon-only" />
-            <BigButton icon="close" label="Esci" aria-label="Esci" title="Esci" onClick={exitReview} />
+            <BigButton icon="close" label="Esci" aria-label="Esci" title="Esci" className="review-exit" onClick={exitReview} />
           </>
         )}
       </header>
@@ -1416,7 +1416,7 @@ function ReviewStartDialog({ onStart, onClose }: { onStart(mode: ReviewMode): vo
         />
       )}
       <div className="dialog-actions">
-        <BigButton icon="close" label="Annulla" onClick={onClose} />
+        <BigButton icon="close" label="Chiudi" onClick={onClose} />
       </div>
     </Dialog>
   );

@@ -252,7 +252,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         <div className="home-header-tools">
           <BigButton icon="help" label="Come funziona" onClick={() => setWelcomeOpen(true)} />
           <BigButton icon="palette" label="Aspetto" onClick={onOpenSettings} />
-          <FullscreenButton />
+          <FullscreenButton className="home-fullscreen" />
         </div>
       </header>
       <h1 className="home-title">Le mie mappe</h1>

@@ -36,7 +36,7 @@ export function ExamplesDialog({ onOpen, onClose }: Props) {
           key={e.file}
           icon={e.icon}
           name={e.title}
-          extra={<span className="muted"> · {e.subject}</span>}
+          extra={<span className="option-subject">{e.subject}</span>}
           description={loading === e.file ? 'Apro la mappa…' : e.description}
           disabled={loading !== null}
           onClick={() => void open(e)}

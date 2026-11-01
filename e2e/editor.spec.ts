@@ -32,6 +32,9 @@ test.describe('Editor', () => {
   test('nasconde e mostra i concetti sotto un ramo', async ({ page }) => {
     await sampleMap(page);
     await expect(nodes(page)).toHaveCount(9);
+    // The «−» shows on the concept under the mouse (or in hand), not on all of them.
+    await expect(node(page, 'Precipitazione').getByRole('button', { name: 'Nascondi i concetti sotto' })).toBeHidden();
+    await node(page, 'Precipitazione').hover();
     await node(page, 'Precipitazione').getByRole('button', { name: 'Nascondi i concetti sotto' }).click();
     await expect(nodes(page)).toHaveCount(7);
     const toggle = node(page, 'Precipitazione').getByRole('button', { name: /Mostra 2 concetti/ });

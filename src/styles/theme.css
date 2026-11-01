@@ -11,6 +11,11 @@
   /* Two corners, plus the round: buttons and small things, cards and sheets. */
   --radius-sm: 10px;
   --radius-md: 16px;
+  /* Two heights: what floats over the page (bars, notices, a card under the
+     mouse) and a window. Black, not ink: in the dark theme a shadow made of
+     --text was a light halo. */
+  --shadow-raised: 0 4px 14px rgb(0 0 0 / 0.13);
+  --shadow-dialog: 0 12px 40px rgb(0 0 0 / 0.25);
 
   font-size: calc(16px * var(--text-scale));
   color-scheme: light;
@@ -111,6 +116,9 @@
   --branch-3: #7fd19c;
   --branch-4: #f08fa8;
   --branch-5: #6fd0d6;
+  /* On a dark page a shadow needs more black to be seen at all. */
+  --shadow-raised: 0 4px 14px rgb(0 0 0 / 0.4);
+  --shadow-dialog: 0 12px 40px rgb(0 0 0 / 0.55);
   color-scheme: dark;
 }
 

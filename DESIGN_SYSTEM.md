@@ -109,7 +109,7 @@ Scala in uso, dalla più frequente:
 | enfasi, primi concetti dei rami | `1.1rem` |
 | concetto principale | `1.3rem` |
 | icona di un pulsante grande, icon-button | `1.35rem` – `1.5rem` |
-| titolo di una finestra | `min(1.4rem, 6vw)` |
+| titolo di una finestra | `min(1.4rem, 8vw)`: sempre più grande delle sezioni (`1rem`), anche col testo al 180% |
 | emoji di un concetto | `2rem` |
 
 ## Spaziature
@@ -139,8 +139,16 @@ nuvola (`40px 32px 44px 28px`).
 
 Poche e morbide, per staccare ciò che galleggia:
 
-- finestre: `0 12px 40px rgba(0, 0, 0, 0.25)`;
-- card ed elementi sollevati: `0 4px 14px` circa, al 10–15% di nero;
+Due token, in `theme.css`, fatti di nero e non di `--text` (nel tema scuro
+un'ombra di `--text` diventava un alone chiaro); il tema scuro ne mette di più:
+
+| Token | Bianco, crema, azzurro | Scuro | Uso |
+|---|---|---|---|
+| `--shadow-raised` | `0 4px 14px` nero 13% | nero 40% | barre sospese, avvisi, card sotto il mouse, logo |
+| `--shadow-dialog` | `0 12px 40px` nero 25% | nero 55% | finestre |
+
+Poi due anelli, che non sono ombre ma segnali:
+
 - concetto scelto: anello `0 0 0 4px` di `--primary` al 30%;
 - concetto letto ad alta voce: anello `0 0 0 6px var(--highlight)`.
 
@@ -153,6 +161,10 @@ Poche e morbide, per staccare ciò che galleggia:
   - `primary`: pieno di `--primary`. **Uno solo per schermata o finestra.**
   - `danger`: testo `--danger`, senza fondo pieno.
   - Disabilitato: `opacity: 0.4`.
+- **In riga** (`.is-row`, e sempre in `.dialog-actions`): icona accanto
+  alla parola, alto 48px, largo almeno 96px. Nelle finestre l'azione
+  principale deve vedersi più delle card sopra; e col testo grande una riga
+  di pulsanti non deve mangiare la finestra.
 - **`.icon-button`**: solo icona, 56×56px, trasparente, `--muted` a riposo e
   `--primary` all'hover. Ha sempre un'etichetta accessibile.
 - Nelle barre i pulsanti secondari non hanno fondo né cornice; quello
@@ -173,7 +185,13 @@ Poche e morbide, per staccare ciò che galleggia:
 - Su telefono (≤ 560px) diventano un **foglio dal basso** (`.is-sheet`) che
   sale con un'animazione breve.
 - I pulsanti in fondo (`.dialog-actions`) restano sempre visibili: è il
-  testo sopra che scorre.
+  testo sopra che scorre. **Pochi**: chiudere o confermare. Un'azione che
+  riguarda una parte del contenuto (es. «Prova la voce») sta accanto a
+  quella parte.
+- Il titolo è sempre più grande delle sezioni interne, a ogni grandezza del
+  testo.
+- Chi non ha niente da annullare si chiude con **«Chiudi»**; «Annulla» solo
+  dove si rinuncia a qualcosa (creare, salvare, eliminare).
 
 ### Concetti della mappa (`.concept-node`)
 
@@ -184,6 +202,11 @@ Poche e morbide, per staccare ciò che galleggia:
   `1.1rem`/`800`.
 - Scelto: bordo `--primary` e anello. Pressione lunga riconosciuta: contorno
   tratteggiato `--primary`.
+- **I controlli attorno a un concetto stanno fuori dal suo bordo**: non
+  coprono mai le parole.
+- Il «−» per nascondere i concetti sotto compare solo sul concetto scelto,
+  sotto il mouse o col focus; un ramo già chiuso mostra sempre il suo «+N».
+- I campioni di colore hanno il bordo `--field-border` (3:1 su ogni sfondo).
 
 ### Icone
 
@@ -235,12 +258,10 @@ primi candidati se si vuole un sistema più rigido:
 
 1. **Spaziature senza token**: valori in px sparsi; quasi tutti sulla scala
    4/8/12/16/24, con alcune eccezioni (`6`, `10`, `14`).
-2. **Ombre senza token**: sei varianti simili (`0 4px 14px` / `16px` /
-   `18px`, nero al 12% o al 15%, o mix con `--text`).
-3. **Scala dei testi lunga**: circa venti valori diversi tra `0.75rem` e
+2. **Scala dei testi lunga**: circa venti valori diversi tra `0.75rem` e
    `2rem`, alcuni vicinissimi (`1.3`, `1.35`, `1.4rem`).
-4. **Breakpoint vicini ma diversi**: `520`/`560`, `640`/`700`, `760`/`900`,
+3. **Breakpoint vicini ma diversi**: `520`/`560`, `640`/`700`, `760`/`900`,
    ognuno usato una o due volte.
-5. **`#1f2430` scritto a mano** nei concetti invece di un token: voluto
+4. **`#1f2430` scritto a mano** nei concetti invece di un token: voluto
    (i fondi dei concetti sono sempre chiari, anche nel tema scuro), ma si
    ripete in più punti.
