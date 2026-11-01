@@ -61,6 +61,12 @@
       "skillPath": "skills/debugging-capacitor/SKILL.md",
       "computedHash": "e2782526d4fd891f40514575fffda70746b0be2480a077842bf7a44f357d6852"
     },
+    "design-audit": {
+      "source": "bencium/bencium-marketplace",
+      "sourceType": "github",
+      "skillPath": "design-audit/skills/design-audit/SKILL.md",
+      "computedHash": "18044a5dfff442f951c5fcead39da4ebd84096cca39e3cb848e677d84938faef"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
