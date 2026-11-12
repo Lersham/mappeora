@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { ConceptMap, MapSummary } from '../../types/map';
+import type { MapSummary } from '../../types/map';
 import { storage } from '../../services/storage';
+import type { TrashedSummary } from '../../services/storage/types';
+import { logError } from '../../services/errorLog';
+import { TrashDialog } from './TrashDialog';
 import { recovered } from '../../services/autosave';
 import { BigButton } from '../../components/BigButton';
 import { useReadAloud } from '../../hooks/useReadAloud';
@@ -94,8 +97,11 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
   const [remind, setRemind] = useState(false);
   const [savedAt, setSavedAt] = useState(lastBackup);
   const [homeHint, setHomeHint] = useState(homeScreenHintNeeded);
-  /** The map just cancelled, and where it was in the list: «Annulla» puts it back. */
-  const [removed, setRemoved] = useState<{ map: ConceptMap; index: number } | null>(null);
+  /** The map just cancelled, and where it was in the list: «Annulla» takes it out of the bin. */
+  const [removed, setRemoved] = useState<{ id: string; title: string; index: number } | null>(null);
+  /** The maps deleted in the last 30 days (see «Mappe cancellate»). */
+  const [trash, setTrash] = useState<TrashedSummary[]>([]);
+  const [trashOpen, setTrashOpen] = useState(false);
   /** The map that takes the focus: the one «Annulla» put back, or the first one «Tutte le mie mappe» showed. */
   const [focusId, setFocusId] = useState<string | null>(null);
   const [allShown, setAllShown] = useState(false);
@@ -108,9 +114,16 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
         setRemind(backupDue(list));
         setListError(null);
         // Back from a safety copy («Apri file»): nothing left to undo.
-        setRemoved((r) => (r && list.some((m) => m.id === r.map.id) ? null : r));
+        setRemoved((r) => (r && list.some((m) => m.id === r.id) ? null : r));
+        // The bin is a help: if it cannot be read, the list still shows.
+        return storage()
+          .trash()
+          .then(setTrash, (e: unknown) => logError(e, 'trash'));
       })
-      .catch(() => setListError('Non riesco a mostrare le tue mappe. Chiudi l’app e riaprila.'));
+      .catch((e: unknown) => {
+        logError(e, 'list');
+        setListError('Non riesco a mostrare le tue mappe. Chiudi l’app e riaprila.');
+      });
   useEffect(refresh, []);
   useEffect(() => {
     if (!focusId || !maps?.some((m) => m.id === focusId)) return;
@@ -120,35 +133,41 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
 
   /**
    * No «Are you sure?»: a child taps OK without reading it, in the browser's
-   * font. The map goes at once, and in its place «Annulla» brings it back
-   * until the child leaves this screen.
+   * font. The map goes to the bin at once; in its place «Annulla» brings it
+   * back, and after that «Mappe cancellate» for 30 days, even if the app was
+   * closed in between.
    */
   const remove = async (m: MapSummary, index: number) => {
-    let map: ConceptMap | undefined;
     try {
-      // A damaged map can still be deleted: it just has no «Annulla».
-      map = await storage().get(m.id).catch(() => undefined);
       await storage().remove(m.id);
       forgetBookPage(m.id);
-    } catch {
+    } catch (e) {
+      logError(e, 'remove');
       setListError(`Non ce l’ho fatta a cancellare "${m.title}". Riprova.`);
       return;
     }
-    setRemoved(map ? { map, index } : null);
+    setRemoved({ id: m.id, title: m.title, index });
     refresh();
+  };
+
+  /** Takes a map out of the bin. False if it could not. */
+  const putBack = async (id: string): Promise<boolean> => {
+    let back: string | undefined;
+    try {
+      back = await storage().restore(id);
+    } catch (e) {
+      logError(e, 'restore');
+      return false;
+    }
+    if (back) setFocusId(back);
+    setRemoved((r) => (r?.id === id ? null : r));
+    refresh();
+    return back !== undefined;
   };
 
   const undoRemove = async () => {
     if (!removed) return;
-    try {
-      await storage().save(removed.map);
-    } catch {
-      setListError(`Non ce l’ho fatta a rimettere "${removed.map.title}". Riprova.`);
-      return;
-    }
-    setFocusId(removed.map.id);
-    setRemoved(null);
-    refresh();
+    if (!(await putBack(removed.id))) setListError(`Non ce l’ho fatta a rimettere "${removed.title}". Riprova.`);
   };
 
   const importFile = async () => {
@@ -178,6 +197,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
       );
       refresh();
     } catch (e) {
+      if (!(e instanceof MapFileError)) logError(e, 'import');
       setImportError(e instanceof MapFileError ? e.message : 'Non riesco ad aprire questo file.');
       // Maps put back before the error are already on the device.
       refresh();
@@ -203,7 +223,7 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     <BigButton icon="save" label={saving ? 'Salvo…' : 'Salva tutte le mappe'} disabled={saving} onClick={() => void saveAll()} />
   );
 
-  const all = (maps ?? []).filter((m) => m.id !== removed?.map.id).map(({ title, ...m }) => ({ ...m, title: title.trim() || 'Mappa senza titolo' }));
+  const all = (maps ?? []).filter((m) => m.id !== removed?.id).map(({ title, ...m }) => ({ ...m, title: title.trim() || 'Mappa senza titolo' }));
   // Never hide just one map: «Tutte le mie mappe» would take its place.
   const long = all.length > RECENT + 1;
   const searching = long && query.trim() !== '';
@@ -235,8 +255,8 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
     cards.splice(
       Math.min(removed.index, cards.length),
       0,
-      <li key={`removed-${removed.map.id}`} className="map-removed">
-        <p id="map-removed-text">Hai cancellato «{removed.map.title.trim() || 'Mappa senza titolo'}».</p>
+      <li key={`removed-${removed.id}`} className="map-removed">
+        <p id="map-removed-text">Hai cancellato «{removed.title.trim() || 'Mappa senza titolo'}».</p>
         <BigButton icon="undo" label="Annulla" aria-describedby="map-removed-text" autoFocus onClick={() => void undoRemove()} />
       </li>,
     );
@@ -384,6 +404,15 @@ export function HomeScreen({ onOpen, onCreate, onStartFromBook, onStartTutorial,
           }}
         />
       )}
+
+      {trash.length > 0 && (
+        <p className="trash-link">
+          <button type="button" className="link-button" onClick={() => setTrashOpen(true)}>
+            <Icon name="trash" className="inline-icon" /> Mappe cancellate ({trash.length})
+          </button>
+        </p>
+      )}
+      {trashOpen && <TrashDialog maps={trash} onRestore={putBack} onClose={() => setTrashOpen(false)} />}
 
       {/* After the list is known: it comes in above these, and they would jump down. */}
       {loaded && (

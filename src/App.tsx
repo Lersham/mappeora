@@ -5,6 +5,7 @@ import { SettingsPanel } from './features/accessibility/SettingsPanel';
 import { useMapStore, untracked } from './store/mapStore';
 import { useSettings } from './store/settingsStore';
 import { storage } from './services/storage';
+import { logError } from './services/errorLog';
 import { createMap, NEW_MAP_TITLE, TUTORIAL_TITLE } from './lib/mapFactory';
 import { THEME_COLOR } from './lib/themeColor';
 import { NewMapDialog } from './features/home/NewMapDialog';
@@ -168,7 +169,8 @@ export default function App() {
       const map = { ...stored, nodes: stored.nodes.map(({ audio: _audio, ...n }: typeof stored.nodes[number] & { audio?: unknown }) => n) };
       showMap(map);
       void embedOldImages(map);
-    } catch {
+    } catch (e) {
+      logError(e, 'open');
       setHomeError('Non riesco ad aprire questa mappa. Riprova.');
     }
   };

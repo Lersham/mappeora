@@ -22,6 +22,11 @@ export function NewMapDialog({ onCreate, onClose }: Props) {
   const creating = useRef(false);
   // A card still being read stops with the dialog.
   useEffect(() => () => void stop(), [stop]);
+  const create = () => {
+    if (creating.current) return;
+    creating.current = true;
+    onCreate(title.trim() || NEW_MAP_TITLE, template);
+  };
 
   return (
     <Dialog title="Nuova mappa" onClose={onClose} className="new-map-dialog">
@@ -34,7 +39,15 @@ export function NewMapDialog({ onCreate, onClose }: Props) {
             maxLength={1000}
             autoFocus
             placeholder="es. Il ciclo dell'acqua"
+            enterKeyHint="go"
             onChange={(e) => setTitle(e.target.value)}
+            // «Vai» on the keyboard creates the map, with the model chosen (Libera unless another was picked).
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                create();
+              }
+            }}
           />
           <MicButton onText={setTitle} />
         </div>
@@ -64,11 +77,7 @@ export function NewMapDialog({ onCreate, onClose }: Props) {
           icon="check"
           label="Crea"
           variant="primary"
-          onClick={() => {
-            if (creating.current) return;
-            creating.current = true;
-            onCreate(title.trim() || NEW_MAP_TITLE, template);
-          }}
+          onClick={create}
         />
       </div>
     </Dialog>

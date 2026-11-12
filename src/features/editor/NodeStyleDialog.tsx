@@ -19,6 +19,8 @@ import { useMapStore } from '../../store/mapStore';
 import { photoToDataUrl, pickPhoto, type PhotoSource } from '../../services/photo';
 import { PasteError, fromPasteEvent, openGoogleImages, pastedToDataUrl, readClipboardImage } from '../../services/webImage';
 import type { MapNode, NodeShape } from '../../types/map';
+import { AdultGate } from '../../components/AdultGate';
+import { isNative } from '../../services/platform';
 
 const GOOGLE_STEPS = [
   'Premi «Cerca su Google»: si apre Google Immagini con il filtro per ragazzi.',
@@ -156,11 +158,15 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
     await usePasted(pasted);
   };
 
-  const searchGoogle = () => {
+  /** In the installed app, a grown-up says yes before the child leaves it for the web. */
+  const [askAdult, setAskAdult] = useState(false);
+  const goToGoogle = () => {
+    setAskAdult(false);
     awayAtGoogle.current = true;
     setPasteHint(false);
     openGoogleImages(query);
   };
+  const searchGoogle = () => (isNative() ? setAskAdult(true) : goToGoogle());
 
   // Back from Google (the app or tab shows again): the picture just copied
   // goes in by itself, where the browser lets the app read the clipboard.
@@ -242,162 +248,165 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
   };
 
   return (
-    <Dialog title="Nome, colore e immagine" onClose={close} className="style-dialog">
-      <fieldset>
-        <legend>Nome</legend>
-        <div className="search-row">
-          <input
-            className="text-field"
-            value={name}
-            aria-label="Nome del concetto"
-            enterKeyHint="done"
-            onChange={(e) => setName(e.target.value)}
-            onBlur={() => saveName()}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') saveName();
-            }}
-          />
-          <MicButton
-            onText={(t) => {
-              setName(t);
-              saveName(t);
-            }}
-            label="Detta il nome"
-          />
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Colore</legend>
-        <div className="choice-row">
-          {[...NODE_COLORS, ...MORE_COLORS, DEFAULT_COLOR].map((c) => (
-            <button
-              key={c}
-              type="button"
-              className="color-swatch"
-              style={{ background: c }}
-              aria-label={`Colore ${COLOR_NAMES[c] ?? c}`}
-              title={COLOR_NAMES[c]}
-              aria-pressed={node.color === c}
-              onClick={() => updateNode(node.id, { color: c })}
-            />
-          ))}
-        </div>
-      </fieldset>
-
-      <WordColors node={node} />
-
-      <fieldset>
-        <legend>Forma</legend>
-        <div className="choice-row">
-          {SHAPES.map((s) => (
-            <button key={s.value} type="button" className="choice" aria-pressed={(node.shape ?? 'rettangolo') === s.value} onClick={() => updateNode(node.id, { shape: s.value })}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      {node.width && (
+    <>
+      <Dialog title="Nome, colore e immagine" onClose={close} className="style-dialog">
         <fieldset>
-          <legend>Larghezza</legend>
-          <div className="choice-row">
-            <button type="button" className="choice" onClick={() => updateNode(node.id, { width: undefined })}>
-              Automatica
-            </button>
-          </div>
-        </fieldset>
-      )}
-
-      <h3 className="photo-web-title">Immagine</h3>
-      <div className="choice-row" role="group" aria-label="Scegli da dove">
-        {TABS.map((t) => (
-          <button key={t.value} type="button" className="choice" aria-pressed={tab === t.value} onClick={() => setTab(t.value)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'illustrazioni' && (
-        <>
-          {searchRow}
-          {illustrations && illustrations.length === 0 && (
-            <p className="muted">{query.trim() ? 'Nessuna illustrazione per questa parola. Eccone alcune:' : 'Scrivi o detta una parola, oppure scegli:'}</p>
-          )}
-          {busy && (
-            <p className="muted" role="status">
-              Preparo l’immagine…
-            </p>
-          )}
-          <div className="picto-grid" aria-busy={busy}>
-            {shownIllustrations.map((i) => (
-              <IllustrationTile key={i.path} illustration={i} disabled={busy} onChoose={() => void chooseIllustration(i)} />
-            ))}
-          </div>
-          <p className="credit">{ILLUSTRATIONS_CREDIT}</p>
-        </>
-      )}
-
-      {tab === 'foto' && (
-        <>
-          <div className="photo-sources">
-            <BigButton icon="camera" label="Scatta una foto" disabled={busy} onClick={() => void addPhoto('camera')} />
-            <BigButton icon="gallery" label="Dalla galleria" disabled={busy} onClick={() => void addPhoto('gallery')} />
-          </div>
-          <p className="muted small">Una figura del libro, un esperimento, un disegno fatto da te.</p>
-
-          <h3 className="photo-web-title">Da Google Immagini</h3>
-          {searchRow}
-          <div className="photo-sources">
-            <BigButton icon="search" label="Cerca su Google" disabled={busy || !query.trim()} onClick={searchGoogle} />
-            <BigButton
-              icon="paste"
-              label="Incolla immagine"
-              variant={pasteHint ? 'primary' : 'default'}
-              disabled={busy}
-              onClick={() => void pasteFromClipboard()}
-            />
-          </div>
-          {pasteHint && (
-            <SpokenError className="muted small" role="status">
-              Hai copiato un’immagine? Premi «Incolla immagine».
-            </SpokenError>
-          )}
-          <Listenable text={GOOGLE_STEPS.join(' ')} label="Ascolta come fare">
-            <ol className="photo-web-steps muted small">
-              {GOOGLE_STEPS.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          </Listenable>
-          {showPasteBox && (
-            <textarea
-              className="text-field paste-box"
-              rows={2}
-              aria-label="Riquadro dove incollare l’immagine"
-              placeholder="Tieni premuto qui e scegli «Incolla»"
-              autoFocus
-              value=""
-              onChange={() => {}}
-              onPaste={(e) => {
-                const pasted = fromPasteEvent(e);
-                e.preventDefault();
-                e.stopPropagation();
-                if (pasted) void usePasted(pasted);
-                else setPhotoError('Negli appunti non c’è un’immagine.');
+          <legend>Nome</legend>
+          <div className="search-row">
+            <input
+              className="text-field"
+              value={name}
+              aria-label="Nome del concetto"
+              enterKeyHint="done"
+              onChange={(e) => setName(e.target.value)}
+              onBlur={() => saveName()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveName();
               }}
             />
-          )}
-          {photoError && <SpokenError>{photoError}</SpokenError>}
-          <p className="credit">Le immagini trovate su Google appartengono ai loro autori: usale solo per studiare.</p>
-        </>
-      )}
+            <MicButton
+              onText={(t) => {
+                setName(t);
+                saveName(t);
+              }}
+              label="Detta il nome"
+            />
+          </div>
+        </fieldset>
 
-      <div className="dialog-actions">
-        {node.image && <BigButton icon="image-off" label="Togli immagine" onClick={() => choose(undefined)} />}
-        <BigButton icon="check" label="Fatto" variant="primary" onClick={close} />
-      </div>
-    </Dialog>
+        <fieldset>
+          <legend>Colore</legend>
+          <div className="choice-row">
+            {[...NODE_COLORS, ...MORE_COLORS, DEFAULT_COLOR].map((c) => (
+              <button
+                key={c}
+                type="button"
+                className="color-swatch"
+                style={{ background: c }}
+                aria-label={`Colore ${COLOR_NAMES[c] ?? c}`}
+                title={COLOR_NAMES[c]}
+                aria-pressed={node.color === c}
+                onClick={() => updateNode(node.id, { color: c })}
+              />
+            ))}
+          </div>
+        </fieldset>
+
+        <WordColors node={node} />
+
+        <fieldset>
+          <legend>Forma</legend>
+          <div className="choice-row">
+            {SHAPES.map((s) => (
+              <button key={s.value} type="button" className="choice" aria-pressed={(node.shape ?? 'rettangolo') === s.value} onClick={() => updateNode(node.id, { shape: s.value })}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        {node.width && (
+          <fieldset>
+            <legend>Larghezza</legend>
+            <div className="choice-row">
+              <button type="button" className="choice" onClick={() => updateNode(node.id, { width: undefined })}>
+                Automatica
+              </button>
+            </div>
+          </fieldset>
+        )}
+
+        <h3 className="photo-web-title">Immagine</h3>
+        <div className="choice-row" role="group" aria-label="Scegli da dove">
+          {TABS.map((t) => (
+            <button key={t.value} type="button" className="choice" aria-pressed={tab === t.value} onClick={() => setTab(t.value)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'illustrazioni' && (
+          <>
+            {searchRow}
+            {illustrations && illustrations.length === 0 && (
+              <p className="muted">{query.trim() ? 'Nessuna illustrazione per questa parola. Eccone alcune:' : 'Scrivi o detta una parola, oppure scegli:'}</p>
+            )}
+            {busy && (
+              <p className="muted" role="status">
+                Preparo l’immagine…
+              </p>
+            )}
+            <div className="picto-grid" aria-busy={busy}>
+              {shownIllustrations.map((i) => (
+                <IllustrationTile key={i.path} illustration={i} disabled={busy} onChoose={() => void chooseIllustration(i)} />
+              ))}
+            </div>
+            <p className="credit">{ILLUSTRATIONS_CREDIT}</p>
+          </>
+        )}
+
+        {tab === 'foto' && (
+          <>
+            <div className="photo-sources">
+              <BigButton icon="camera" label="Scatta una foto" disabled={busy} onClick={() => void addPhoto('camera')} />
+              <BigButton icon="gallery" label="Dalla galleria" disabled={busy} onClick={() => void addPhoto('gallery')} />
+            </div>
+            <p className="muted small">Una figura del libro, un esperimento, un disegno fatto da te.</p>
+
+            <h3 className="photo-web-title">Da Google Immagini</h3>
+            {searchRow}
+            <div className="photo-sources">
+              <BigButton icon="search" label="Cerca su Google" disabled={busy || !query.trim()} onClick={searchGoogle} />
+              <BigButton
+                icon="paste"
+                label="Incolla immagine"
+                variant={pasteHint ? 'primary' : 'default'}
+                disabled={busy}
+                onClick={() => void pasteFromClipboard()}
+              />
+            </div>
+            {pasteHint && (
+              <SpokenError className="muted small" role="status">
+                Hai copiato un’immagine? Premi «Incolla immagine».
+              </SpokenError>
+            )}
+            <Listenable text={GOOGLE_STEPS.join(' ')} label="Ascolta come fare">
+              <ol className="photo-web-steps muted small">
+                {GOOGLE_STEPS.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </Listenable>
+            {showPasteBox && (
+              <textarea
+                className="text-field paste-box"
+                rows={2}
+                aria-label="Riquadro dove incollare l’immagine"
+                placeholder="Tieni premuto qui e scegli «Incolla»"
+                autoFocus
+                value=""
+                onChange={() => {}}
+                onPaste={(e) => {
+                  const pasted = fromPasteEvent(e);
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (pasted) void usePasted(pasted);
+                  else setPhotoError('Negli appunti non c’è un’immagine.');
+                }}
+              />
+            )}
+            {photoError && <SpokenError>{photoError}</SpokenError>}
+            <p className="credit">Le immagini trovate su Google appartengono ai loro autori: usale solo per studiare.</p>
+          </>
+        )}
+
+        <div className="dialog-actions">
+          {node.image && <BigButton icon="image-off" label="Togli immagine" onClick={() => choose(undefined)} />}
+          <BigButton icon="check" label="Fatto" variant="primary" onClick={close} />
+        </div>
+      </Dialog>
+      {askAdult && <AdultGate what="aprire Google Immagini" onPass={goToGoogle} onClose={() => setAskAdult(false)} />}
+    </>
   );
 }
 

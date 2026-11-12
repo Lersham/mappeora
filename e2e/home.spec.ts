@@ -139,6 +139,16 @@ test.describe('Schermata iniziale', () => {
     expect(native).toBe(0);
   });
 
+  test('nel nome della mappa, Invio («Vai» sulla tastiera) la crea', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nuova mappa' }).click();
+    const name = page.getByPlaceholder("es. Il ciclo dell'acqua");
+    await expect(name).toHaveAttribute('enterkeyhint', 'go');
+    await name.fill('Il vulcano');
+    await name.press('Enter');
+    await expect(page.locator('.title-input')).toHaveValue('Il vulcano');
+  });
+
   test('cancella una mappa senza chiedere; «Annulla», al suo posto, la rimette', async ({ page }) => {
     await newMap(page, 'Prima');
     await newMap(page, 'Da cancellare');
@@ -156,7 +166,7 @@ test.describe('Schermata iniziale', () => {
     await expect(page.getByRole('button', { name: /^Da cancellare/ })).toBeFocused();
     await expect(page.locator('.map-removed')).toHaveCount(0);
 
-    // Leaving the screen makes it final.
+    // Leaving the screen ends «Annulla», not the map: it waits in the bin.
     await page.getByRole('button', { name: 'Cancella Da cancellare' }).click();
     await page.getByRole('button', { name: 'Cancella Prima' }).click();
     await expect(page.locator('.map-card')).toHaveCount(0);
@@ -166,6 +176,15 @@ test.describe('Schermata iniziale', () => {
     await expect(page.getByText('Non hai ancora mappe')).toBeVisible();
     await mascot(page.locator('.empty'), 'indica');
     await expect(page.locator('.map-removed')).toHaveCount(0);
+
+    await page.getByRole('button', { name: /Mappe cancellate \(2\)/ }).click();
+    const bin = page.getByRole('dialog', { name: 'Mappe cancellate' });
+    await expect(bin.locator('.map-removed strong')).toHaveText(['Prima', 'Da cancellare']);
+    await bin.getByRole('button', { name: 'Rimetti' }).first().click();
+    await expect(bin.locator('.map-removed strong')).toHaveText(['Da cancellare']);
+    await bin.getByRole('button', { name: 'Chiudi' }).click();
+    await expect(page.locator('.map-title')).toHaveText(['Prima']);
+    await expect(page.getByRole('button', { name: /Mappe cancellate \(1\)/ })).toBeVisible();
   });
 
   test('con tante mappe: le ultime 5, «Tutte le mie mappe» e la ricerca', async ({ page }) => {

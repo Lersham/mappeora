@@ -3,6 +3,8 @@ import type { ConceptMap } from '../types/map';
 import { mapHistory, useMapStore } from '../store/mapStore';
 import { newId } from '../lib/id';
 import { storage } from './storage';
+import { logError } from './errorLog';
+import { sanitizeStoredMap } from '../lib/mapFile';
 
 const DELAY_MS = 600;
 /** The last changes, kept here while the page closes (see `recovered`). */
@@ -18,6 +20,8 @@ export const useSaveStatus = create<{ problem: SaveProblem }>(() => ({ problem: 
 const setProblem = (problem: SaveProblem) => useSaveStatus.setState({ problem });
 
 let pending: ConceptMap | null = null;
+/** The copy being written now: until it is on the device, the slot keeps it too. */
+let inFlight: ConceptMap | null = null;
 let timer: ReturnType<typeof setTimeout> | undefined;
 /** Writes one after the other: an older copy never lands after a newer one. */
 let chain: Promise<void> = Promise.resolve();
@@ -25,7 +29,8 @@ let chain: Promise<void> = Promise.resolve();
 let queued = 0;
 /** The version of each map this tab last read or wrote. */
 const known = new Map<string, number>();
-let slotId: string | null = null;
+/** The copy in the slot: only saving that very copy empties it. */
+let slotMap: ConceptMap | null = null;
 
 /** Call before showing a map just read or created: later saves start from it. */
 export function opened(map: ConceptMap) {
@@ -82,9 +87,10 @@ export function discardPending() {
   setProblem(null);
 }
 
-function clearSlot(id: string) {
-  if (slotId !== id) return;
-  slotId = null;
+function clearSlot(saved: ConceptMap) {
+  // A newer copy written to the slot while this one was being saved stays there.
+  if (slotMap !== saved) return;
+  slotMap = null;
   try {
     localStorage.removeItem(SLOT);
   } catch {
@@ -93,10 +99,13 @@ function clearSlot(id: string) {
 }
 
 function writeSlot() {
-  if (!pending || useSaveStatus.getState().problem === 'conflict') return;
+  // A save under way when the page goes away (tens of ms on the web, more
+  // across the native bridge) may never end: its copy goes in the slot.
+  const map = pending ?? inFlight;
+  if (!map || useSaveStatus.getState().problem === 'conflict') return;
   try {
-    localStorage.setItem(SLOT, JSON.stringify(pending));
-    slotId = pending.id;
+    localStorage.setItem(SLOT, JSON.stringify(map));
+    slotMap = map;
   } catch {
     // Too big (photos) or storage blocked: the normal save still runs.
   }
@@ -111,22 +120,27 @@ async function write(map: ConceptMap, seq: number) {
     pending ??= map;
     return;
   }
+  inFlight = map;
   try {
-    const stored = await storage().get(map.id);
+    // Only the date: reading the whole map (photos and all) at every save was slow, and on Android a big one may not be readable in one go.
+    const stored = await storage().updatedAt(map.id);
     const base = known.get(map.id);
-    if (stored && base !== undefined && stored.updatedAt > base) {
+    if (stored !== undefined && base !== undefined && stored > base) {
       keep();
       setProblem('conflict');
       return;
     }
     await storage().save(map);
     known.set(map.id, map.updatedAt);
-    clearSlot(map.id);
+    clearSlot(map);
     if (useSaveStatus.getState().problem === 'error') setProblem(null);
-  } catch {
+  } catch (e) {
     // Kept for the next try (the next change, «Riprova», leaving the map).
     keep();
     setProblem('error');
+    logError(e, 'autosave');
+  } finally {
+    if (inFlight === map) inFlight = null;
   }
 }
 
@@ -165,20 +179,22 @@ export function recovered(): Promise<void> {
     if (!raw) return;
     let map: ConceptMap | undefined;
     try {
-      const parsed = JSON.parse(raw) as ConceptMap;
-      if (typeof parsed?.id === 'string' && Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) map = parsed;
-    } catch {
+      // Same checks as a map read from the device: the slot is only text in localStorage.
+      map = sanitizeStoredMap(JSON.parse(raw));
+    } catch (e) {
       // Unreadable: dropped below.
+      logError(e, 'recovered');
     }
     try {
       if (map) {
-        const stored = await storage().get(map.id);
-        if (!stored || stored.updatedAt < map.updatedAt) await storage().save(map);
+        const stored = await storage().updatedAt(map.id);
+        if (stored === undefined || stored < map.updatedAt) await storage().save(map);
       }
       localStorage.removeItem(SLOT);
-    } catch {
+    } catch (e) {
       // Kept for the next try: opening a map, or the next start.
       recovery = undefined;
+      logError(e, 'recovered');
     }
   })();
   return recovery;
