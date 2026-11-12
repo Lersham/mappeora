@@ -91,14 +91,37 @@ function readWordColors(v: unknown): MapNode['wordColors'] {
   return colors.length > 0 ? (Object.fromEntries(colors) as Record<string, string>) : undefined;
 }
 
-function readNode(v: unknown): MapNode | undefined {
+/** Never copied from a record: they would reach the object's prototype. */
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+/**
+ * The fields of `v` this version does not know, as they are. A map saved by
+ * a newer MappAmi and opened by an older one (a tab not reloaded yet, an
+ * app not updated) keeps them: the next save would otherwise wipe them out.
+ * Only for maps read from the device: a file from elsewhere brings nothing
+ * this version cannot check.
+ */
+function unknownFields(v: Record<string, unknown>, known: ReadonlySet<string>): Record<string, unknown> {
+  const extra: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(v)) {
+    if (!known.has(key) && !UNSAFE_KEYS.has(key) && value !== undefined) extra[key] = value;
+  }
+  return extra;
+}
+
+// `audio`: the voice notes of older maps, removed on purpose (not a field from a newer version).
+const NODE_KEYS: ReadonlySet<string> = new Set(['id', 'label', 'position', 'color', 'shape', 'image', 'collapsed', 'width', 'wordColors', 'audio']);
+const EDGE_KEYS: ReadonlySet<string> = new Set(['id', 'source', 'target', 'label']);
+const MAP_KEYS: ReadonlySet<string> = new Set(['id', 'title', 'createdAt', 'updatedAt', 'template', 'freeLayout', 'nodes', 'edges']);
+
+function readNode(v: unknown, stored = false): MapNode | undefined {
   if (!isObj(v) || !isObj(v.position)) return undefined;
   const id = str(v.id, 100);
   const label = str(v.label);
   const x = coord(v.position.x);
   const y = coord(v.position.y);
   if (!id || label === undefined || x === undefined || y === undefined) return undefined;
-  const node: MapNode = { id, label, position: { x, y } };
+  const node: MapNode = { ...(stored && unknownFields(v, NODE_KEYS)), id, label, position: { x, y } };
   const color = str(v.color, 32);
   if (color && /^#[0-9a-f]{3,8}$/i.test(color)) node.color = color;
   if (SHAPES.includes(v.shape as NodeShape)) node.shape = v.shape as NodeShape;
@@ -111,14 +134,16 @@ function readNode(v: unknown): MapNode | undefined {
   return node;
 }
 
-function readEdge(v: unknown, nodeIds: Set<string>): MapEdge | undefined {
+function readEdge(v: unknown, nodeIds: Set<string>, stored = false): MapEdge | undefined {
   if (!isObj(v)) return undefined;
   const id = str(v.id, 100);
   const source = str(v.source, 100);
   const target = str(v.target, 100);
   if (!id || !source || !target || !nodeIds.has(source) || !nodeIds.has(target)) return undefined;
   const label = str(v.label);
-  return label ? { id, source, target, label } : { id, source, target };
+  const edge: MapEdge = { ...(stored && unknownFields(v, EDGE_KEYS)), id, source, target };
+  if (label) edge.label = label;
+  return edge;
 }
 
 /**
@@ -160,7 +185,7 @@ export function parseAnyMapFile(text: string): { archive: boolean; maps: Concept
  * object): same sanitising as a file, but it keeps id and dates. A damaged
  * record fails here, not later in the editor.
  */
-export const sanitizeStoredMap = (stored: unknown): ConceptMap => readMap(stored, { keepId: true });
+export const sanitizeStoredMap = (stored: unknown): ConceptMap => readMap(stored, { keepId: true, stored: true });
 
 export function parseStoredMap(text: string): ConceptMap {
   let stored: unknown;
@@ -186,17 +211,23 @@ function readJson(text: string): Record<string, unknown> {
   return data;
 }
 
-function readMap(m: unknown, { keepId }: { keepId: boolean }): ConceptMap {
+/**
+ * `stored`: a map from the device's own storage. It keeps the fields this
+ * version does not know, and the size limits do not apply: they stop absurd
+ * files, while the editor sets none, and a big map of the child's own must
+ * still open.
+ */
+function readMap(m: unknown, { keepId, stored = false }: { keepId: boolean; stored?: boolean }): ConceptMap {
   if (!isObj(m)) throw new MapFileError('La mappa nel file è vuota o rovinata.');
   const tooBig = () => new MapFileError('La mappa nel file è troppo grande.');
   const nodes: MapNode[] = [];
   const seen = new Set<string>();
   for (const raw of Array.isArray(m.nodes) ? m.nodes : []) {
-    const node = readNode(raw);
+    const node = readNode(raw, stored);
     if (node && !seen.has(node.id)) {
       seen.add(node.id);
       nodes.push(node);
-      if (nodes.length > MAX_NODES) throw tooBig();
+      if (!stored && nodes.length > MAX_NODES) throw tooBig();
     }
   }
   if (nodes.length === 0) throw new MapFileError('La mappa nel file è vuota o rovinata.');
@@ -206,7 +237,7 @@ function readMap(m: unknown, { keepId }: { keepId: boolean }): ConceptMap {
   const edgeIds = new Set<string>();
   const pairs = new Set<string>();
   for (const raw of Array.isArray(m.edges) ? m.edges : []) {
-    const edge = readEdge(raw, seen);
+    const edge = readEdge(raw, seen, stored);
     if (!edge || edge.source === edge.target) continue;
     const pair = `${edge.source}\u0000${edge.target}`;
     if (pairs.has(pair)) continue;
@@ -214,12 +245,13 @@ function readMap(m: unknown, { keepId }: { keepId: boolean }): ConceptMap {
     if (edgeIds.has(edge.id)) edge.id = newId();
     edgeIds.add(edge.id);
     edges.push(edge);
-    if (edges.length > MAX_EDGES) throw tooBig();
+    if (!stored && edges.length > MAX_EDGES) throw tooBig();
   }
 
   const now = Date.now();
   const id = keepId ? str(m.id, 100) : undefined;
   return {
+    ...(stored && unknownFields(m, MAP_KEYS)),
     id: id || newId(),
     title: str(m.title, SHORT_TEXT_MAX)?.trim() || 'Mappa importata',
     createdAt: num(m.createdAt) ?? now,

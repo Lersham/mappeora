@@ -52,9 +52,9 @@ La stessa pagina è dentro l'app: schermata iniziale → «🔒 Privacy».
   - nessun SDK di terze parti per statistiche o pubblicità (ML Kit invia a Google solo dati tecnici di diagnostica, dichiarati sopra);
   - permessi minimi (microfono solo per la dettatura; i permessi per l'impronta digitale aggiunti dal plugin SQLite sono tolti);
   - informativa privacy pubblica.
-- **Da valutare**: «Cerca su Google Immagini» apre il browser su Google (con SafeSearch). Le norme per le famiglie chiedono attenzione ai link
-  che portano fuori dall'app. Se Google lo segnala in revisione: chiedere conferma a un adulto prima di aprire il browser, oppure nascondere
-  il pulsante nella versione Android.
+- Link fuori dall'app: «Cerca su Google Immagini» apre il browser su Google (con SafeSearch), e le norme per le famiglie chiedono attenzione
+  ai link che portano fuori dall'app. Nell'app installata (Android e iOS) il pulsante chiede prima il permesso di un adulto, con una
+  moltiplicazione (`src/components/AdultGate.tsx`); sul web no, perché lo studente è già in un browser.
 
 ## 6. Classificazione dei contenuti (questionario IARC)
 

@@ -164,4 +164,38 @@ describe('mapFile', () => {
     expect(() => parseStoredMap('{"id":"x","nodes":[]}')).toThrow(MapFileError);
     expect(() => sanitizeStoredMap(null)).toThrow(MapFileError);
   });
+
+  it('a map read from the device keeps the fields of a newer version, a file does not', () => {
+    const map = createMap('Dal futuro');
+    const newer = {
+      ...map,
+      tags: ['storia'],
+      nodes: map.nodes.map((n) => ({ ...n, note: 'appunto' })),
+      edges: [],
+    };
+    const stored = sanitizeStoredMap(JSON.parse(JSON.stringify(newer)));
+    expect((stored as unknown as { tags: string[] }).tags).toEqual(['storia']);
+    expect((stored.nodes[0] as unknown as { note: string }).note).toBe('appunto');
+    const opened = parseMapFile(serializeMap(newer as typeof map));
+    expect('tags' in opened).toBe(false);
+    expect('note' in opened.nodes[0]).toBe(false);
+  });
+
+  it('never copies a key that reaches the prototype, nor the voice notes of older maps', () => {
+    const map = createMap('Prova');
+    const text = JSON.stringify(map).replace('"title"', '"__proto__":{"polluted":true},"title"');
+    const node = JSON.stringify(map.nodes[0]);
+    const withAudio = text.replace(node, node.replace('"id"', '"audio":"data:audio/webm;base64,AAAA","id"'));
+    const stored = parseStoredMap(withAudio);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(Object.getPrototypeOf(stored)).toBe(Object.prototype);
+    expect('audio' in stored.nodes[0]).toBe(false);
+  });
+
+  it('a big map of the child’s own still opens: the size limits are for files', () => {
+    const map = createMap('Enorme');
+    const nodes = Array.from({ length: 2500 }, (_, i) => ({ id: `n${i}`, label: `${i}`, position: { x: i, y: 0 } }));
+    expect(sanitizeStoredMap({ ...map, nodes, edges: [] }).nodes).toHaveLength(2500);
+    expect(() => parseMapFile(serializeMap({ ...map, nodes, edges: [] }))).toThrow(/troppo grande/);
+  });
 });

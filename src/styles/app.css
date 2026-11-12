@@ -580,6 +580,18 @@ textarea {
 .map-removed .big-button-label {
   font-size: 0.9rem;
 }
+/* «Mappe cancellate»: under the list, quiet; in its dialog, each map as the «Annulla» row. */
+.trash-link {
+  margin: 16px 0 0;
+  text-align: center;
+}
+.trash-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 /* Many maps: a search above the list, the older ones behind a button. */
 .map-search-result {
   margin: 0 0 12px;
