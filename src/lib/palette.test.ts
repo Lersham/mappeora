@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COLOR_NAMES, DEFAULT_COLOR, MORE_COLORS, NODE_COLORS, TEXT_COLOR, TEXT_COLORS, TEXT_COLOR_NAMES, branchColors } from './palette';
+import { COLOR_NAMES, DEFAULT_COLOR, MORE_COLORS, NEUTRAL_COLORS, NODE_COLORS, TEXT_COLOR, TEXT_COLORS, TEXT_COLOR_NAMES, branchColors } from './palette';
 
 const at = (id: string, x: number, y: number) => ({ id, position: { x, y } });
 const link = (source: string, target: string) => ({ id: `${source}-${target}`, source, target });
@@ -38,14 +38,14 @@ describe('word colours', () => {
 
   it('every coloured word can be read on every concept colour', () => {
     for (const text of TEXT_COLORS) {
-      for (const background of [...NODE_COLORS, ...MORE_COLORS, DEFAULT_COLOR]) {
+      for (const background of [...NODE_COLORS, ...MORE_COLORS, ...NEUTRAL_COLORS, DEFAULT_COLOR]) {
         expect(contrast(text, background), `${text} su ${background}`).toBeGreaterThanOrEqual(3);
       }
     }
   });
 
   it('every colour has a name to read aloud', () => {
-    for (const c of [...NODE_COLORS, ...MORE_COLORS, DEFAULT_COLOR]) expect(COLOR_NAMES[c]).toBeTruthy();
+    for (const c of [...NODE_COLORS, ...MORE_COLORS, ...NEUTRAL_COLORS, DEFAULT_COLOR]) expect(COLOR_NAMES[c]).toBeTruthy();
     for (const c of [...TEXT_COLORS, TEXT_COLOR]) expect(TEXT_COLOR_NAMES[c]).toBeTruthy();
   });
 });

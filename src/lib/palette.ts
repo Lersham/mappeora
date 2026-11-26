@@ -11,11 +11,30 @@ export const NODE_COLORS = ['#a0e7e5', '#ffd166', '#cdb4db', '#b4f8c8', '#ffaebc
 /** More colours to choose by hand (not used by «Colora i rami»): light too, under dark words. */
 export const MORE_COLORS = ['#ffc49b', '#ff9e9e', '#a9c8ff', '#d4b8ff', '#d9f2a0', '#e6cfae', '#dedede'] as const;
 
+/** Quiet, greyed tones for boxes that should not shout: the words on them stand out more. */
+export const NEUTRAL_COLORS = ['#e8e0d0', '#d8cfc4', '#cfdccb', '#d3dde6', '#dcd6e6', '#ecd5d1'] as const;
+
 /**
  * Colours for a single word of a concept: dark enough to read on every
- * concept colour, as the usual dark grey words are.
+ * concept colour, as the usual dark grey words are. The bright ones are as
+ * vivid as that allows (3:1 on the darkest box, the light red): a bright
+ * orange or yellow cannot be, so there is none.
  */
-export const TEXT_COLORS = ['#b71c1c', '#9a3c00', '#1b5e20', '#0d47a1', '#6a1b9a', '#ad1457', '#5d4037'] as const;
+export const TEXT_COLORS = [
+  '#b71c1c',
+  '#9a3c00',
+  '#1b5e20',
+  '#0d47a1',
+  '#6a1b9a',
+  '#ad1457',
+  '#5d4037',
+  '#c90000',
+  '#007300',
+  '#006c75',
+  '#0f4bff',
+  '#7b1cff',
+  '#b000b0',
+] as const;
 
 /** The usual colour of a concept's words (see .concept-node in app.css). */
 export const TEXT_COLOR = '#1f2430';
@@ -58,6 +77,12 @@ export const COLOR_NAMES: Record<string, string> = {
   '#d9f2a0': 'verde chiaro',
   '#e6cfae': 'nocciola',
   '#dedede': 'grigio',
+  '#e8e0d0': 'sabbia',
+  '#d8cfc4': 'tortora',
+  '#cfdccb': 'salvia',
+  '#d3dde6': 'grigio azzurro',
+  '#dcd6e6': 'glicine',
+  '#ecd5d1': 'cipria',
 };
 
 /** Names of the word colours, read aloud instead of the code. */
@@ -69,5 +94,11 @@ export const TEXT_COLOR_NAMES: Record<string, string> = {
   '#6a1b9a': 'viola',
   '#ad1457': 'fucsia',
   '#5d4037': 'marrone',
+  '#c90000': 'rosso acceso',
+  '#007300': 'verde acceso',
+  '#006c75': 'turchese',
+  '#0f4bff': 'blu elettrico',
+  '#7b1cff': 'viola acceso',
+  '#b000b0': 'magenta',
   '#1f2430': 'nero',
 };
