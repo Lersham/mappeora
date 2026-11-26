@@ -746,7 +746,7 @@ test.describe('Editor: colori del concetto e delle parole', () => {
     await newMap(page, 'Gli animali');
     await settled(page);
     const dialog = await styleDialog(page, 'Gli animali');
-    await expect(dialog.getByRole('group', { name: 'Colore', exact: true }).getByRole('button')).toHaveCount(14);
+    await expect(dialog.getByRole('group', { name: 'Colore', exact: true }).getByRole('button')).toHaveCount(20);
     await dialog.getByRole('button', { name: 'Colore viola' }).click();
     await dialog.getByRole('button', { name: 'Fatto' }).click();
     await expect(node(page, 'Gli animali')).toHaveCSS('background-color', 'rgb(212, 184, 255)');
@@ -756,7 +756,7 @@ test.describe('Editor: colori del concetto e delle parole', () => {
     await newMap(page, 'Il governo');
     await settled(page);
     const dialog = await styleDialog(page, 'Il governo');
-    const red = dialog.getByRole('button', { name: 'Colore della parola: rosso' });
+    const red = dialog.getByRole('button', { name: 'Colore della parola: rosso', exact: true });
     // No word picked yet: nothing to colour.
     await expect(red).toBeDisabled();
     await dialog.getByRole('group', { name: 'Parole del nome' }).getByRole('button', { name: 'governo' }).click();
@@ -784,7 +784,7 @@ test.describe('Editor: colori del concetto e delle parole', () => {
     await settled(page);
     const dialog = await styleDialog(page, 'Governo');
     await expect(dialog.getByRole('group', { name: 'Parole del nome' })).toHaveCount(0);
-    await dialog.getByRole('button', { name: 'Colore della parola: blu' }).click();
+    await dialog.getByRole('button', { name: 'Colore della parola: blu', exact: true }).click();
     await expect(node(page, 'Governo').locator('.concept-label span[style]')).toHaveCSS('color', 'rgb(13, 71, 161)');
   });
 });

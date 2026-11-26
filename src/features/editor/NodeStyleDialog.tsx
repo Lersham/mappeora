@@ -13,7 +13,7 @@ import {
   type Illustration,
 } from '../../services/illustrations';
 import { toIllustrationDataUrl } from '../../services/embed';
-import { COLOR_NAMES, DEFAULT_COLOR, MORE_COLORS, NODE_COLORS, TEXT_COLOR, TEXT_COLORS, TEXT_COLOR_NAMES } from '../../lib/palette';
+import { COLOR_NAMES, DEFAULT_COLOR, MORE_COLORS, NEUTRAL_COLORS, NODE_COLORS, TEXT_COLOR, TEXT_COLORS, TEXT_COLOR_NAMES } from '../../lib/palette';
 import { labelWords } from '../../lib/wordColors';
 import { useMapStore } from '../../store/mapStore';
 import { photoToDataUrl, pickPhoto, type PhotoSource } from '../../services/photo';
@@ -277,7 +277,7 @@ export function NodeStyleDialog({ node, onClose }: { node: MapNode; onClose(): v
         <fieldset>
           <legend>Colore</legend>
           <div className="choice-row">
-            {[...NODE_COLORS, ...MORE_COLORS, DEFAULT_COLOR].map((c) => (
+            {[...NODE_COLORS, ...MORE_COLORS, ...NEUTRAL_COLORS, DEFAULT_COLOR].map((c) => (
               <button
                 key={c}
                 type="button"
